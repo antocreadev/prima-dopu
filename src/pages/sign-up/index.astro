@@ -1,14 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { SignIn } from "@clerk/astro/components";
+import { SignUp } from "@clerk/astro/components";
 ---
 
-<Layout title="Connexion">
+<Layout title="Inscription">
   <div class="flex items-center justify-center min-h-[70vh]">
-    <SignIn 
+    <SignUp 
       fallbackRedirectUrl="/"
-      signUpFallbackRedirectUrl="/"
-      signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/"
+      signInUrl="/sign-in"
     />
   </div>
 </Layout>
