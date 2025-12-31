@@ -1,0 +1,98 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+if (!userId) {
+  return Astro.redirect("/");
+}
+
+// Récupérer les infos utilisateur depuis Clerk
+const user = await Astro.locals.currentUser();
+---
+
+<Layout title="Profil">
+  <SignedOut>
+    <div class="text-center py-20">
+      <p class="text-slate-600">
+        Veuillez vous connecter pour accéder à cette page.
+      </p>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div class="max-w-2xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8">Mon Profil</h1>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+        <div class="flex items-center gap-6 mb-8">
+          {
+            user?.imageUrl && (
+              <img
+                src={user.imageUrl}
+                alt="Avatar"
+                class="w-24 h-24 rounded-full border-4 border-indigo-100"
+              />
+            )
+          }
+          <div>
+            <h2 class="text-2xl font-semibold">
+              {user?.firstName}
+              {user?.lastName}
+            </h2>
+            <p class="text-slate-600">
+              {user?.emailAddresses?.[0]?.emailAddress}
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="border-t border-slate-200 pt-4">
+            <h3 class="font-medium text-slate-800 mb-2">
+              Informations du compte
+            </h3>
+            <dl class="space-y-2">
+              <div class="flex justify-between">
+                <dt class="text-slate-600">ID Utilisateur</dt>
+                <dd class="font-mono text-sm text-slate-500">
+                  {userId?.slice(0, 20)}...
+                </dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-slate-600">Membre depuis</dt>
+                <dd class="text-slate-800">
+                  {
+                    user?.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString("fr-FR")
+                      : "N/A"
+                  }
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="border-t border-slate-200 pt-4">
+            <h3 class="font-medium text-slate-800 mb-4">Actions rapides</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <a
+                href="/library"
+                class="flex items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <span class="text-2xl">📚</span>
+                <span class="font-medium">Ma bibliothèque</span>
+              </a>
+              <a
+                href="/history"
+                class="flex items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <span class="text-2xl">📜</span>
+                <span class="font-medium">Mon historique</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>

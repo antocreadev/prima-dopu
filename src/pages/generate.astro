@@ -1,0 +1,1145 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+import { getUserReferences, getUserFolders } from "../lib/db";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+if (!userId) {
+  return Astro.redirect("/");
+}
+
+const references = getUserReferences(userId);
+const folders = getUserFolders(userId);
+
+// Organiser les références par dossier
+const refsWithoutFolder = references.filter(r => !r.folder_id);
+const refsByFolder: Record<string, typeof references> = {};
+folders.forEach(f => {
+  refsByFolder[f.id] = references.filter(r => r.folder_id === f.id);
+});
+---
+
+<Layout title="Générer">
+  <SignedOut>
+    <div class="text-center py-20">
+      <p class="text-slate-600">
+        Veuillez vous connecter pour accéder à cette page.
+      </p>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-2">Nouvelle génération</h1>
+      <p class="text-slate-600 mb-8">
+        Créez votre visualisation avant/après en quelques étapes
+      </p>
+
+      <!-- Indicateur d'étapes -->
+      <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center">
+          <div
+            id="step1Indicator"
+            class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold"
+          >
+            1
+          </div>
+          <div class="w-24 h-1 bg-slate-200" id="step1Line"></div>
+          <div
+            id="step2Indicator"
+            class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold"
+          >
+            2
+          </div>
+          <div class="w-24 h-1 bg-slate-200" id="step2Line"></div>
+          <div
+            id="step3Indicator"
+            class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold"
+          >
+            3
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 1: Upload photo -->
+      <div id="step1" class="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 class="text-xl font-semibold mb-4">
+          📸 Étape 1 : Téléchargez votre photo
+        </h2>
+        <p class="text-slate-600 mb-4">
+          Sélectionnez une photo de l'espace que vous souhaitez transformer
+        </p>
+
+        <!-- Conseil photo horizontale -->
+        <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-4">
+          <div class="phone-rotate-animation flex-shrink-0">
+            <div class="phone-icon">
+              <svg width="40" height="60" viewBox="0 0 40 60" class="text-amber-600">
+                <rect x="4" y="4" width="32" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="20" cy="50" r="3" fill="currentColor"/>
+                <rect x="14" y="8" width="12" height="2" rx="1" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <p class="font-medium text-amber-800">📱 Conseil : Prenez la photo en mode paysage</p>
+            <p class="text-sm text-amber-700 mt-1">Tournez votre téléphone à l'horizontale pour de meilleurs résultats</p>
+          </div>
+        </div>
+
+        <style>
+          .phone-rotate-animation {
+            animation: rotatePhone 2s ease-in-out infinite;
+          }
+          @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            30%, 70% { transform: rotate(-90deg); }
+          }
+          .phone-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+          }
+        </style>
+
+        <div
+          class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors"
+          id="dropZone"
+        >
+          <input type="file" id="imageInput" accept="image/*" class="hidden" />
+          <div id="uploadPlaceholder">
+            <div class="text-5xl mb-4">📷</div>
+            <p class="text-slate-600 mb-2">Glissez-déposez une image ici</p>
+            <p class="text-slate-400 text-sm mb-4">ou</p>
+            <button
+              type="button"
+              id="selectImageBtn"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Sélectionner une image
+            </button>
+          </div>
+          <div id="imagePreview" class="hidden">
+            <img
+              id="previewImg"
+              src=""
+              alt="Aperçu"
+              class="max-h-64 mx-auto rounded-lg"
+            />
+            <button
+              type="button"
+              id="changeImageBtn"
+              class="mt-4 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Changer l'image
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button
+            type="button"
+            id="toStep2Btn"
+            class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            Continuer →
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape 2: Instructions -->
+      <div
+        id="step2"
+        class="bg-white rounded-xl border border-slate-200 p-6 hidden"
+      >
+        <h2 class="text-xl font-semibold mb-4">
+          🎨 Étape 2 : Ajoutez vos instructions
+        </h2>
+        <p class="text-slate-600 mb-6">
+          Définissez les modifications à appliquer à chaque zone
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <!-- Aperçu image -->
+          <div>
+            <h3 class="font-medium text-slate-700 mb-2">Votre image</h3>
+            <img
+              id="step2PreviewImg"
+              src=""
+              alt="Image originale"
+              class="w-full rounded-lg border border-slate-200"
+            />
+          </div>
+
+          <!-- Liste des instructions -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-medium text-slate-700">Instructions</h3>
+              <button
+                type="button"
+                id="addInstructionBtn"
+                class="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+              >
+                + Ajouter une instruction
+              </button>
+            </div>
+
+            <div
+              id="instructionsList"
+              class="space-y-3 max-h-80 overflow-y-auto"
+            >
+              <!-- Les instructions seront ajoutées ici dynamiquement -->
+            </div>
+
+            <div id="noInstructions" class="text-center py-8 text-slate-400">
+              Aucune instruction. Cliquez sur "Ajouter une instruction" pour
+              commencer.
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-between">
+          <button
+            type="button"
+            id="backToStep1Btn"
+            class="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            ← Retour
+          </button>
+          <button
+            type="button"
+            id="toStep3Btn"
+            class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            Générer →
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape 3: Résultat -->
+      <div
+        id="step3"
+        class="bg-white rounded-xl border border-slate-200 p-6 hidden"
+      >
+        <h2 class="text-xl font-semibold mb-4">✨ Étape 3 : Résultat</h2>
+
+        <div id="generatingState" class="text-center py-12">
+          <!-- Loader animé -->
+          <div class="relative w-24 h-24 mx-auto mb-6">
+            <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+            <div class="absolute inset-3 rounded-full border-4 border-purple-400 border-b-transparent animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+            <div class="absolute inset-0 flex items-center justify-center text-3xl">🎨</div>
+          </div>
+          
+          <p class="text-lg font-medium text-slate-800 mb-2">Génération en cours...</p>
+          
+          <!-- Étapes de progression -->
+          <div id="generationSteps" class="max-w-md mx-auto mt-6 text-left space-y-2">
+            <div id="step-upload" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+              <span class="step-icon text-xl">⏳</span>
+              <span class="text-sm text-slate-600">Envoi des images...</span>
+            </div>
+            <div id="step-analyze" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+              <span class="step-icon text-xl">⏳</span>
+              <span class="text-sm text-slate-600">Analyse de l'espace...</span>
+            </div>
+            <div id="step-plan" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+              <span class="step-icon text-xl">⏳</span>
+              <span class="text-sm text-slate-600">Planification des modifications...</span>
+            </div>
+            <div id="step-generate" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+              <span class="step-icon text-xl">⏳</span>
+              <span class="text-sm text-slate-600">Génération de l'image...</span>
+            </div>
+          </div>
+          
+          <p class="text-xs text-slate-400 mt-6">Cela peut prendre jusqu'à 2 minutes</p>
+        </div>
+
+        <div id="resultState" class="hidden">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-medium text-slate-700 mb-2">Avant</h3>
+              <img
+                id="resultBeforeImg"
+                src=""
+                alt="Avant"
+                class="w-full rounded-lg border border-slate-200"
+              />
+            </div>
+            <div>
+              <h3 class="font-medium text-slate-700 mb-2">
+                Après (généré par IA)
+              </h3>
+              <img
+                id="resultAfterImg"
+                src=""
+                alt="Après"
+                class="w-full rounded-lg border border-slate-200 hidden"
+              />
+              <div
+                id="resultDescription"
+                class="prose prose-sm max-w-none p-4 bg-slate-50 rounded-lg border border-slate-200 max-h-80 overflow-y-auto hidden"
+              >
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-between">
+            <a
+              href="/history"
+              class="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Voir l'historique
+            </a>
+            <button
+              type="button"
+              id="newGenerationBtn"
+              class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            >
+              Nouvelle génération
+            </button>
+          </div>
+        </div>
+
+        <div id="errorState" class="hidden text-center py-12">
+          <div class="text-5xl mb-4">❌</div>
+          <p class="text-lg text-red-600">Une erreur est survenue</p>
+          <p id="errorMessage" class="text-sm text-slate-400 mt-2"></p>
+          <button
+            type="button"
+            id="retryBtn"
+            class="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal d'ajout d'instruction -->
+      <div
+        id="instructionModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+      >
+        <div
+          class="bg-white rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
+        >
+          <h2 class="text-xl font-semibold mb-4">Ajouter une instruction</h2>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Zone à modifier *
+            </label>
+            <input
+              type="text"
+              id="instructionLocation"
+              placeholder="Ex: tout le sol, mur de droite, tous les murs..."
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+
+            <!-- Suggestions rapides -->
+            <div class="mt-2 flex flex-wrap gap-1">
+              <button
+                type="button"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                data-zone="tout le sol"
+              >
+                🟫 Sol complet
+              </button>
+              <button
+                type="button"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                data-zone="mur de gauche"
+              >
+                ⬅️ Mur gauche
+              </button>
+              <button
+                type="button"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                data-zone="mur de droite"
+              >
+                ➡️ Mur droite
+              </button>
+              <button
+                type="button"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                data-zone="mur du fond"
+              >
+                ⬆️ Mur fond
+              </button>
+              <button
+                type="button"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                data-zone="plafond"
+              >
+                🔝 Plafond
+              </button>
+            </div>
+
+            <div class="mt-2 text-xs text-slate-500">
+              <p class="font-medium mb-1">
+                💡 Conseils pour de meilleurs résultats :
+              </p>
+              <ul class="list-disc list-inside space-y-0.5">
+                <li>
+                  <strong>Soyez précis</strong> : "mur de droite" plutôt que "mur"
+                </li>
+                <li>
+                  <strong>Une zone par instruction</strong> : créez une instruction
+                  par zone
+                </li>
+                <li>
+                  <strong>Pour le sol</strong> : précisez "pose horizontale" ou "pose
+                  verticale" si souhaité
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Référence *
+            </label>
+
+            <div class="mb-3">
+              <div class="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  id="useLibraryBtn"
+                  class="flex-1 px-3 py-2 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium"
+                >
+                  📚 Bibliothèque
+                </button>
+                <button
+                  type="button"
+                  id="useNewBtn"
+                  class="flex-1 px-3 py-2 border-2 border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-300"
+                >
+                  📷 Nouvelle
+                </button>
+              </div>
+            </div>
+
+            <!-- Sélection depuis la bibliothèque -->
+            <div id="librarySelection">
+              {
+                references.length > 0 ? (
+                  <div>
+                    {/* Tabs des dossiers */}
+                    <div class="flex gap-1 mb-3 overflow-x-auto pb-2 scrollbar-hide">
+                      <button
+                        type="button"
+                        class="folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-indigo-100 text-indigo-700 font-medium"
+                        data-folder="all"
+                      >
+                        📚 Tout ({references.length})
+                      </button>
+                      {refsWithoutFolder.length > 0 && (
+                        <button
+                          type="button"
+                          class="folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          data-folder="none"
+                        >
+                          📄 Sans dossier ({refsWithoutFolder.length})
+                        </button>
+                      )}
+                      {folders.map((folder) => (
+                        refsByFolder[folder.id]?.length > 0 && (
+                          <button
+                            type="button"
+                            class="folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center gap-1"
+                            data-folder={folder.id}
+                          >
+                            <span class="w-2 h-2 rounded-sm" style={`background-color: ${folder.color}`}></span>
+                            {folder.name} ({refsByFolder[folder.id]?.length || 0})
+                          </button>
+                        )
+                      ))}
+                    </div>
+                    
+                    {/* Grille toutes les références */}
+                    <div id="refs-all" class="refs-grid grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
+                      {references.map((ref) => (
+                        <label class="cursor-pointer ref-item" data-folder={ref.folder_id || "none"}>
+                          <input
+                            type="radio"
+                            name="selectedReference"
+                            value={ref.id}
+                            data-path={ref.image_path}
+                            data-name={ref.name || ""}
+                            class="hidden peer"
+                          />
+                          <div class="peer-checked:ring-2 peer-checked:ring-indigo-500 rounded-lg overflow-hidden border border-slate-200">
+                            <img
+                              src={`/api/images${ref.image_path.replace("/uploads", "")}`}
+                              alt={ref.name || "Référence"}
+                              class="w-full aspect-square object-cover"
+                            />
+                            <p class="p-1 text-xs truncate text-center">
+                              {ref.name || "Sans nom"}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div class="text-center py-4 text-slate-400 text-sm">
+                    Aucune référence dans votre bibliothèque.
+                    <a
+                      href="/library"
+                      class="text-indigo-600 hover:underline block mt-1"
+                    >
+                      Ajouter des références
+                    </a>
+                  </div>
+                )
+              }
+            </div>
+
+            <!-- Upload nouvelle référence -->
+            <div id="newReferenceUpload" class="hidden">
+              <input
+                type="file"
+                id="newReferenceInput"
+                accept="image/*"
+                class="hidden"
+              />
+              <div
+                id="newRefDropZone"
+                class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors"
+              >
+                <div id="newRefPlaceholder">
+                  <p class="text-slate-600 text-sm">
+                    Cliquez ou glissez une image
+                  </p>
+                </div>
+                <div id="newRefPreview" class="hidden">
+                  <img
+                    id="newRefPreviewImg"
+                    src=""
+                    alt="Aperçu"
+                    class="max-h-24 mx-auto rounded"
+                  />
+                </div>
+              </div>
+              <div class="mt-2">
+                <label class="block text-xs text-slate-500 mb-1">Nom et description (aide l'IA à comprendre)</label>
+                <input
+                  type="text"
+                  id="newReferenceName"
+                  placeholder="Ex: Parquet chêne clair, Carrelage métro blanc, Peinture gris anthracite..."
+                  class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              id="cancelInstructionBtn"
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              id="confirmInstructionBtn"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Ajouter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>
+
+<script>
+  interface Instruction {
+    id: string;
+    location: string;
+    referenceId?: string;
+    referencePath: string;
+    referenceName?: string;
+    isNew?: boolean;
+    newFile?: File;
+  }
+
+  let currentStep = 1;
+  let selectedImage: File | null = null;
+  let instructions: Instruction[] = [];
+  let useLibrary = true;
+  let newReferenceFile: File | null = null;
+
+  // Éléments DOM
+  const step1 = document.getElementById("step1")!;
+  const step2 = document.getElementById("step2")!;
+  const step3 = document.getElementById("step3")!;
+  const imageInput = document.getElementById("imageInput") as HTMLInputElement;
+  const selectImageBtn = document.getElementById("selectImageBtn")!;
+  const dropZone = document.getElementById("dropZone")!;
+  const uploadPlaceholder = document.getElementById("uploadPlaceholder")!;
+  const imagePreview = document.getElementById("imagePreview")!;
+  const previewImg = document.getElementById("previewImg") as HTMLImageElement;
+  const changeImageBtn = document.getElementById("changeImageBtn")!;
+  const toStep2Btn = document.getElementById("toStep2Btn") as HTMLButtonElement;
+  const step2PreviewImg = document.getElementById(
+    "step2PreviewImg"
+  ) as HTMLImageElement;
+  const backToStep1Btn = document.getElementById("backToStep1Btn")!;
+  const toStep3Btn = document.getElementById("toStep3Btn") as HTMLButtonElement;
+  const addInstructionBtn = document.getElementById("addInstructionBtn")!;
+  const instructionsList = document.getElementById("instructionsList")!;
+  const noInstructions = document.getElementById("noInstructions")!;
+  const instructionModal = document.getElementById("instructionModal")!;
+  const instructionLocation = document.getElementById(
+    "instructionLocation"
+  ) as HTMLInputElement;
+  const useLibraryBtn = document.getElementById("useLibraryBtn")!;
+  const useNewBtn = document.getElementById("useNewBtn")!;
+  const librarySelection = document.getElementById("librarySelection")!;
+  const newReferenceUpload = document.getElementById("newReferenceUpload")!;
+  const newReferenceInput = document.getElementById(
+    "newReferenceInput"
+  ) as HTMLInputElement;
+  const newRefDropZone = document.getElementById("newRefDropZone")!;
+  const newRefPlaceholder = document.getElementById("newRefPlaceholder")!;
+  const newRefPreview = document.getElementById("newRefPreview")!;
+  const newRefPreviewImg = document.getElementById(
+    "newRefPreviewImg"
+  ) as HTMLImageElement;
+  const newReferenceName = document.getElementById(
+    "newReferenceName"
+  ) as HTMLInputElement;
+  const cancelInstructionBtn = document.getElementById("cancelInstructionBtn")!;
+  const confirmInstructionBtn = document.getElementById(
+    "confirmInstructionBtn"
+  )!;
+  const generatingState = document.getElementById("generatingState")!;
+  const resultState = document.getElementById("resultState")!;
+  const errorState = document.getElementById("errorState")!;
+  const resultBeforeImg = document.getElementById(
+    "resultBeforeImg"
+  ) as HTMLImageElement;
+  const resultAfterImg = document.getElementById(
+    "resultAfterImg"
+  ) as HTMLImageElement;
+  const resultDescription = document.getElementById("resultDescription")!;
+  const errorMessage = document.getElementById("errorMessage")!;
+  const newGenerationBtn = document.getElementById("newGenerationBtn")!;
+  const retryBtn = document.getElementById("retryBtn")!;
+
+  // Indicateurs
+  const step1Indicator = document.getElementById("step1Indicator")!;
+  const step2Indicator = document.getElementById("step2Indicator")!;
+  const step3Indicator = document.getElementById("step3Indicator")!;
+  const step1Line = document.getElementById("step1Line")!;
+  const step2Line = document.getElementById("step2Line")!;
+
+  function updateStepIndicators() {
+    step1Indicator.className =
+      currentStep >= 1
+        ? "w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold"
+        : "w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold";
+    step2Indicator.className =
+      currentStep >= 2
+        ? "w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold"
+        : "w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold";
+    step3Indicator.className =
+      currentStep >= 3
+        ? "w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold"
+        : "w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold";
+    step1Line.className =
+      currentStep >= 2 ? "w-24 h-1 bg-indigo-600" : "w-24 h-1 bg-slate-200";
+    step2Line.className =
+      currentStep >= 3 ? "w-24 h-1 bg-indigo-600" : "w-24 h-1 bg-slate-200";
+  }
+
+  function goToStep(step: number) {
+    currentStep = step;
+    step1.classList.toggle("hidden", step !== 1);
+    step2.classList.toggle("hidden", step !== 2);
+    step3.classList.toggle("hidden", step !== 3);
+    updateStepIndicators();
+  }
+
+  // Étape 1 - Upload image
+  selectImageBtn.addEventListener("click", () => imageInput.click());
+  changeImageBtn.addEventListener("click", () => imageInput.click());
+
+  imageInput.addEventListener("change", (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) handleImageSelect(file);
+  });
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("border-indigo-400", "bg-indigo-50");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-indigo-400", "bg-indigo-50");
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("border-indigo-400", "bg-indigo-50");
+    const file = e.dataTransfer?.files?.[0];
+    if (file && isImageFile(file)) handleImageSelect(file);
+  });
+
+  // Fonction helper pour convertir les chemins d'images vers l'API
+  function getImageUrl(path: string): string {
+    if (path.startsWith("blob:") || path.startsWith("data:")) {
+      return path; // URL blob ou data URL - pas de conversion
+    }
+    if (path.startsWith("/uploads/")) {
+      return `/api/images${path.replace("/uploads", "")}`;
+    }
+    return path;
+  }
+
+  // Vérifie si c'est un fichier image (inclut HEIC/HEIF)
+  function isImageFile(file: File): boolean {
+    const ext = file.name.toLowerCase().split(".").pop() || "";
+    const imageExts = [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "webp",
+      "heic",
+      "heif",
+      "hif",
+      "bmp",
+      "tiff",
+    ];
+    return file.type.startsWith("image/") || imageExts.includes(ext);
+  }
+
+  // Vérifie si c'est un format Apple nécessitant conversion
+  function isAppleFormat(file: File): boolean {
+    const ext = file.name.toLowerCase().split(".").pop() || "";
+    return ["heic", "heif", "hif"].includes(ext);
+  }
+
+  async function handleImageSelect(file: File) {
+    selectedImage = file;
+
+    // Pour les formats Apple (HEIC/HEIF), convertir via l'API pour l'aperçu
+    if (isAppleFormat(file)) {
+      uploadPlaceholder.innerHTML =
+        '<div class="text-5xl mb-4">🔄</div><p class="text-slate-600">Conversion en cours...</p>';
+
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const response = await fetch("/api/convert-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Échec de la conversion");
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        previewImg.src = url;
+        step2PreviewImg.src = url;
+      } catch (error) {
+        console.error("Erreur conversion aperçu:", error);
+        // Fallback: afficher un placeholder
+        previewImg.src = "";
+        previewImg.alt =
+          "Format HEIC - Aperçu non disponible (la génération fonctionnera)";
+      }
+    } else {
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      step2PreviewImg.src = url;
+    }
+
+    uploadPlaceholder.innerHTML = `
+      <div class="text-5xl mb-4">📷</div>
+      <p class="text-slate-600 mb-2">Glissez-déposez une image ici</p>
+      <p class="text-slate-400 text-sm mb-4">ou</p>
+      <button
+        type="button"
+        id="selectImageBtn"
+        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+      >
+        Sélectionner une image
+      </button>
+    `;
+    uploadPlaceholder.classList.add("hidden");
+    imagePreview.classList.remove("hidden");
+    toStep2Btn.disabled = false;
+  }
+
+  toStep2Btn.addEventListener("click", () => goToStep(2));
+  backToStep1Btn.addEventListener("click", () => goToStep(1));
+
+  // Étape 2 - Instructions
+  function updateInstructionsList() {
+    if (instructions.length === 0) {
+      noInstructions.classList.remove("hidden");
+      instructionsList.innerHTML = "";
+      toStep3Btn.disabled = true;
+    } else {
+      noInstructions.classList.add("hidden");
+      toStep3Btn.disabled = false;
+      instructionsList.innerHTML = instructions
+        .map(
+          (instr, idx) => `
+        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+          <img src="${getImageUrl(instr.referencePath)}" alt="Référence" class="w-12 h-12 rounded object-cover" />
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-slate-800 truncate">${instr.location}</p>
+            <p class="text-sm text-slate-500 truncate">${instr.referenceName || "Sans nom"}</p>
+          </div>
+          <button type="button" class="delete-instruction p-2 text-red-500 hover:bg-red-50 rounded-lg" data-idx="${idx}">
+            🗑️
+          </button>
+        </div>
+      `
+        )
+        .join("");
+
+      document.querySelectorAll(".delete-instruction").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt(
+            (e.currentTarget as HTMLElement).dataset.idx || "0"
+          );
+          instructions.splice(idx, 1);
+          updateInstructionsList();
+        });
+      });
+    }
+  }
+
+  addInstructionBtn.addEventListener("click", () => {
+    instructionLocation.value = "";
+    newReferenceName.value = "";
+    newReferenceFile = null;
+    newRefPlaceholder.classList.remove("hidden");
+    newRefPreview.classList.add("hidden");
+    document
+      .querySelectorAll('input[name="selectedReference"]')
+      .forEach((el) => {
+        (el as HTMLInputElement).checked = false;
+      });
+    useLibrary = true;
+    useLibraryBtn.className =
+      "flex-1 px-3 py-2 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium";
+    useNewBtn.className =
+      "flex-1 px-3 py-2 border-2 border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-300";
+    librarySelection.classList.remove("hidden");
+    newReferenceUpload.classList.add("hidden");
+    instructionModal.classList.remove("hidden");
+    instructionModal.classList.add("flex");
+
+    // Ajouter les gestionnaires pour les suggestions de zone
+    document.querySelectorAll(".zone-suggestion").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const zone = (e.currentTarget as HTMLElement).dataset.zone || "";
+        instructionLocation.value = zone;
+        instructionLocation.focus();
+      });
+    });
+  });
+
+  useLibraryBtn.addEventListener("click", () => {
+    useLibrary = true;
+    useLibraryBtn.className =
+      "flex-1 px-3 py-2 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium";
+    useNewBtn.className =
+      "flex-1 px-3 py-2 border-2 border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-300";
+    librarySelection.classList.remove("hidden");
+    newReferenceUpload.classList.add("hidden");
+  });
+
+  // Gestion des tabs de dossiers dans la modal
+  const folderTabs = document.querySelectorAll(".folder-tab");
+  const refItems = document.querySelectorAll(".ref-item");
+
+  folderTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const folderId = (tab as HTMLElement).dataset.folder;
+
+      // Mise à jour des styles des tabs
+      folderTabs.forEach((t) => {
+        if (t === tab) {
+          t.className =
+            "folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-indigo-100 text-indigo-700 font-medium flex items-center gap-1";
+        } else {
+          t.className =
+            "folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center gap-1";
+        }
+      });
+
+      // Filtrer les références
+      refItems.forEach((item) => {
+        const itemFolder = (item as HTMLElement).dataset.folder;
+        if (folderId === "all") {
+          (item as HTMLElement).style.display = "";
+        } else if (folderId === "none") {
+          (item as HTMLElement).style.display = itemFolder === "none" ? "" : "none";
+        } else {
+          (item as HTMLElement).style.display = itemFolder === folderId ? "" : "none";
+        }
+      });
+    });
+  });
+
+  useNewBtn.addEventListener("click", () => {
+    useLibrary = false;
+    useNewBtn.className =
+      "flex-1 px-3 py-2 border-2 border-indigo-500 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium";
+    useLibraryBtn.className =
+      "flex-1 px-3 py-2 border-2 border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-300";
+    librarySelection.classList.add("hidden");
+    newReferenceUpload.classList.remove("hidden");
+  });
+
+  newRefDropZone.addEventListener("click", () => newReferenceInput.click());
+  newReferenceInput.addEventListener("change", async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      newReferenceFile = file;
+
+      // Pour les formats Apple, convertir pour l'aperçu
+      if (isAppleFormat(file)) {
+        newRefPlaceholder.innerHTML =
+          '<div class="text-2xl">🔄</div><p class="text-xs text-slate-500">Conversion...</p>';
+        try {
+          const formData = new FormData();
+          formData.append("image", file);
+          const response = await fetch("/api/convert-image", {
+            method: "POST",
+            body: formData,
+          });
+          if (!response.ok) throw new Error("Échec");
+          const blob = await response.blob();
+          newRefPreviewImg.src = URL.createObjectURL(blob);
+        } catch {
+          newRefPreviewImg.src = "";
+        }
+      } else {
+        newRefPreviewImg.src = URL.createObjectURL(file);
+      }
+
+      newRefPlaceholder.classList.add("hidden");
+      newRefPreview.classList.remove("hidden");
+    }
+  });
+
+  cancelInstructionBtn.addEventListener("click", () => {
+    instructionModal.classList.add("hidden");
+    instructionModal.classList.remove("flex");
+  });
+
+  confirmInstructionBtn.addEventListener("click", async () => {
+    const location = instructionLocation.value.trim();
+    if (!location) {
+      alert("Veuillez entrer un emplacement");
+      return;
+    }
+
+    if (useLibrary) {
+      const selected = document.querySelector(
+        'input[name="selectedReference"]:checked'
+      ) as HTMLInputElement;
+      if (!selected) {
+        alert("Veuillez sélectionner une référence");
+        return;
+      }
+      instructions.push({
+        id: crypto.randomUUID(),
+        location,
+        referenceId: selected.value,
+        referencePath: selected.dataset.path || "",
+        referenceName: selected.dataset.name || undefined,
+      });
+    } else {
+      if (!newReferenceFile) {
+        alert("Veuillez sélectionner une image");
+        return;
+      }
+      instructions.push({
+        id: crypto.randomUUID(),
+        location,
+        referencePath: URL.createObjectURL(newReferenceFile),
+        referenceName: newReferenceName.value.trim() || undefined,
+        isNew: true,
+        newFile: newReferenceFile,
+      });
+    }
+
+    updateInstructionsList();
+    instructionModal.classList.add("hidden");
+    instructionModal.classList.remove("flex");
+  });
+
+  instructionModal.addEventListener("click", (e) => {
+    if (e.target === instructionModal) {
+      instructionModal.classList.add("hidden");
+      instructionModal.classList.remove("flex");
+    }
+  });
+
+  // Étape 3 - Génération
+  function updateGenerationStep(stepId: string, status: 'pending' | 'active' | 'done' | 'error') {
+    const step = document.getElementById(stepId);
+    if (!step) return;
+    
+    const icon = step.querySelector('.step-icon') as HTMLElement;
+    step.classList.remove('opacity-50', 'bg-green-50', 'bg-indigo-50', 'bg-red-50');
+    
+    switch (status) {
+      case 'pending':
+        step.classList.add('opacity-50');
+        icon.textContent = '⏳';
+        break;
+      case 'active':
+        step.classList.add('bg-indigo-50');
+        icon.textContent = '🔄';
+        icon.classList.add('animate-spin');
+        break;
+      case 'done':
+        step.classList.add('bg-green-50');
+        icon.textContent = '✅';
+        icon.classList.remove('animate-spin');
+        break;
+      case 'error':
+        step.classList.add('bg-red-50');
+        icon.textContent = '❌';
+        icon.classList.remove('animate-spin');
+        break;
+    }
+  }
+
+  function resetGenerationSteps() {
+    ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
+      updateGenerationStep(id, 'pending');
+    });
+  }
+
+  async function simulateProgress() {
+    // Simuler la progression pendant l'attente de la réponse
+    updateGenerationStep('step-upload', 'active');
+    await new Promise(r => setTimeout(r, 1500));
+    updateGenerationStep('step-upload', 'done');
+    
+    updateGenerationStep('step-analyze', 'active');
+    await new Promise(r => setTimeout(r, 3000));
+    updateGenerationStep('step-analyze', 'done');
+    
+    updateGenerationStep('step-plan', 'active');
+    await new Promise(r => setTimeout(r, 2000));
+    updateGenerationStep('step-plan', 'done');
+    
+    updateGenerationStep('step-generate', 'active');
+  }
+
+  toStep3Btn.addEventListener("click", async () => {
+    goToStep(3);
+    generatingState.classList.remove("hidden");
+    resultState.classList.add("hidden");
+    errorState.classList.add("hidden");
+    resetGenerationSteps();
+
+    // Lancer l'animation de progression
+    const progressPromise = simulateProgress();
+
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedImage!);
+      formData.append(
+        "instructions",
+        JSON.stringify(
+          instructions.map((i) => ({
+            location: i.location,
+            referenceId: i.referenceId,
+            referenceName: i.referenceName,
+            isNew: i.isNew,
+          }))
+        )
+      );
+
+      // Ajouter les nouvelles références
+      instructions.forEach((instr, idx) => {
+        if (instr.isNew && instr.newFile) {
+          formData.append(`newRef_${idx}`, instr.newFile);
+        }
+      });
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la génération");
+      }
+
+      // Marquer toutes les étapes comme terminées
+      ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
+        updateGenerationStep(id, 'done');
+      });
+
+      resultBeforeImg.src = result.originalImage;
+
+      // Afficher l'image générée si disponible
+      if (result.generatedImage) {
+        resultAfterImg.src = result.generatedImage;
+        resultAfterImg.classList.remove("hidden");
+        resultDescription.classList.add("hidden");
+      } else if (result.description) {
+        // Fallback sur la description si pas d'image
+        resultDescription.innerHTML = `<p class="whitespace-pre-wrap">${result.description}</p>`;
+        resultDescription.classList.remove("hidden");
+        resultAfterImg.classList.add("hidden");
+      }
+
+      generatingState.classList.add("hidden");
+      resultState.classList.remove("hidden");
+    } catch (error: any) {
+      console.error("Erreur:", error);
+      // Marquer l'étape en cours comme erreur
+      ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
+        const step = document.getElementById(id);
+        if (step && !step.classList.contains('bg-green-50')) {
+          updateGenerationStep(id, 'error');
+        }
+      });
+      generatingState.classList.add("hidden");
+      errorState.classList.remove("hidden");
+      errorMessage.textContent = error.message || "Erreur inconnue";
+    }
+  });
+
+  newGenerationBtn.addEventListener("click", () => {
+    selectedImage = null;
+    instructions = [];
+    uploadPlaceholder.classList.remove("hidden");
+    imagePreview.classList.add("hidden");
+    toStep2Btn.disabled = true;
+    updateInstructionsList();
+    goToStep(1);
+  });
+
+  retryBtn.addEventListener("click", () => {
+    goToStep(2);
+  });
+</script>

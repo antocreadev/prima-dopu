@@ -1,0 +1,665 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+import {
+  getUserReferences,
+  createReference,
+  deleteReference,
+  getUserFolders,
+  createFolder,
+  deleteFolder,
+  updateFolder,
+  moveReferenceToFolder,
+} from "../lib/db";
+import { saveImage, deleteImage } from "../lib/storage";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+if (!userId) {
+  return Astro.redirect("/");
+}
+
+// Récupérer le dossier sélectionné depuis l'URL
+const url = new URL(Astro.request.url);
+const selectedFolderId = url.searchParams.get("folder");
+
+// Gestion des actions POST
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+
+  if (action === "add") {
+    const file = formData.get("image") as File;
+    const name = formData.get("name") as string;
+    const folderId = formData.get("folder_id") as string;
+
+    if (file && file.size > 0) {
+      const imagePath = await saveImage(file, userId, "references");
+      createReference(userId, imagePath, name || undefined, folderId || undefined);
+    }
+  } else if (action === "delete") {
+    const id = formData.get("id") as string;
+    const ref = await import("../lib/db").then((m) => m.getReference(id));
+    if (ref && ref.user_id === userId) {
+      deleteImage(ref.image_path);
+      deleteReference(id, userId);
+    }
+  } else if (action === "create_folder") {
+    const name = formData.get("name") as string;
+    const color = formData.get("color") as string;
+    if (name) {
+      createFolder(userId, name, color || undefined);
+    }
+  } else if (action === "delete_folder") {
+    const id = formData.get("id") as string;
+    if (id) {
+      deleteFolder(id, userId);
+    }
+  } else if (action === "update_folder") {
+    const id = formData.get("id") as string;
+    const name = formData.get("name") as string;
+    const color = formData.get("color") as string;
+    if (id && name) {
+      updateFolder(id, userId, name, color || undefined);
+    }
+  } else if (action === "move_reference") {
+    const refId = formData.get("ref_id") as string;
+    const folderId = formData.get("folder_id") as string;
+    if (refId) {
+      moveReferenceToFolder(refId, userId, folderId || null);
+    }
+  }
+
+  // Redirection avec cache-buster
+  const redirectUrl = selectedFolderId 
+    ? `/library?folder=${selectedFolderId}&t=${Date.now()}`
+    : `/library?t=${Date.now()}`;
+  return Astro.redirect(redirectUrl);
+}
+
+const folders = getUserFolders(userId);
+const references = selectedFolderId === "none" 
+  ? getUserReferences(userId, null) 
+  : selectedFolderId 
+    ? getUserReferences(userId, selectedFolderId) 
+    : getUserReferences(userId);
+
+// Compter les références par dossier
+const allRefs = getUserReferences(userId);
+const refsWithoutFolder = allRefs.filter(r => !r.folder_id).length;
+const refCountByFolder: Record<string, number> = {};
+folders.forEach(f => {
+  refCountByFolder[f.id] = allRefs.filter(r => r.folder_id === f.id).length;
+});
+
+const folderColors = [
+  { name: "Indigo", value: "#6366f1" },
+  { name: "Rose", value: "#ec4899" },
+  { name: "Vert", value: "#22c55e" },
+  { name: "Orange", value: "#f97316" },
+  { name: "Bleu", value: "#3b82f6" },
+  { name: "Violet", value: "#8b5cf6" },
+  { name: "Rouge", value: "#ef4444" },
+  { name: "Cyan", value: "#06b6d4" },
+];
+
+const currentFolder = selectedFolderId && selectedFolderId !== "none" 
+  ? folders.find(f => f.id === selectedFolderId) 
+  : null;
+---
+
+<Layout title="Bibliothèque">
+  <SignedOut>
+    <div class="text-center py-20">
+      <p class="text-slate-600">
+        Veuillez vous connecter pour accéder à cette page.
+      </p>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold">Ma Bibliothèque</h1>
+          <p class="text-slate-600 mt-1 text-sm sm:text-base">
+            Organisez vos références de matériaux et textures
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button
+            id="addFolderBtn"
+            class="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            <span>📁</span> <span class="hidden sm:inline">Nouveau</span> dossier
+          </button>
+          <button
+            id="addReferenceBtn"
+            class="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            <span>+</span> <span class="hidden sm:inline">Ajouter une</span> référence
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile: Tabs horizontaux pour les dossiers -->
+      <div class="lg:hidden mb-4 overflow-x-auto scrollbar-hide">
+        <div class="flex gap-2 pb-2">
+          <a
+            href="/library"
+            class={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedFolderId ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}
+          >
+            📚 Tout ({allRefs.length})
+          </a>
+          <a
+            href="/library?folder=none"
+            class={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedFolderId === 'none' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}
+          >
+            📄 Sans dossier ({refsWithoutFolder})
+          </a>
+          {folders.map((folder) => (
+            <a
+              href={`/library?folder=${folder.id}`}
+              class={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${selectedFolderId === folder.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}
+            >
+              <span 
+                class="w-2 h-2 rounded-sm" 
+                style={`background-color: ${folder.color}`}
+              ></span>
+              {folder.name} ({refCountByFolder[folder.id] || 0})
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div class="flex gap-6">
+        <!-- Sidebar des dossiers (desktop uniquement) -->
+        <div class="w-64 flex-shrink-0 hidden lg:block">
+          <div class="bg-white rounded-xl border border-slate-200 p-4 sticky top-4">
+            <h3 class="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+              <span>📂</span> Dossiers
+            </h3>
+            <nav class="space-y-1">
+              <a
+                href="/library"
+                class={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${!selectedFolderId ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
+              >
+                <span class="flex items-center gap-2">
+                  <span>📚</span> Tout
+                </span>
+                <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full">{allRefs.length}</span>
+              </a>
+              <a
+                href="/library?folder=none"
+                class={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${selectedFolderId === 'none' ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
+              >
+                <span class="flex items-center gap-2">
+                  <span>📄</span> Sans dossier
+                </span>
+                <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full">{refsWithoutFolder}</span>
+              </a>
+              
+              {folders.length > 0 && <hr class="my-2 border-slate-200" />}
+              
+              {folders.map((folder) => (
+                <div class="group relative">
+                  <a
+                    href={`/library?folder=${folder.id}`}
+                    class={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${selectedFolderId === folder.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                  >
+                    <span class="flex items-center gap-2 truncate">
+                      <span 
+                        class="w-3 h-3 rounded-sm flex-shrink-0" 
+                        style={`background-color: ${folder.color}`}
+                      ></span>
+                      <span class="truncate">{folder.name}</span>
+                    </span>
+                    <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full">{refCountByFolder[folder.id] || 0}</span>
+                  </a>
+                  <div class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button
+                      class="edit-folder-btn p-1 hover:bg-slate-200 rounded text-xs"
+                      data-folder-id={folder.id}
+                      data-folder-name={folder.name}
+                      data-folder-color={folder.color}
+                      title="Modifier"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="flex-1">
+          {currentFolder && (
+            <div class="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
+              <span 
+                class="w-4 h-4 rounded-sm" 
+                style={`background-color: ${currentFolder.color}`}
+              ></span>
+              <h2 class="text-xl font-semibold">{currentFolder.name}</h2>
+              <span class="text-slate-500 text-sm">({references.length} références)</span>
+            </div>
+          )}
+
+          {references.length === 0 ? (
+            <div class="text-center py-20 bg-white rounded-xl border border-slate-200">
+              <div class="text-6xl mb-4">📚</div>
+              <h3 class="text-xl font-medium text-slate-800 mb-2">
+                {selectedFolderId ? "Aucune référence dans ce dossier" : "Aucune référence"}
+              </h3>
+              <p class="text-slate-600 mb-6">
+                {selectedFolderId 
+                  ? "Ajoutez des références ou déplacez-en depuis un autre dossier"
+                  : "Commencez par ajouter vos premières références de matériaux"}
+              </p>
+              <button
+                id="addReferenceBtnEmpty"
+                class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              >
+                Ajouter une référence
+              </button>
+            </div>
+          ) : (
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {references.map((ref) => (
+                <div 
+                  class="bg-white rounded-xl border border-slate-200 overflow-hidden group relative"
+                  data-ref-id={ref.id}
+                >
+                  <img
+                    src={`/api/images${ref.image_path.replace("/uploads", "")}`}
+                    alt={ref.name || "Référence"}
+                    class="w-full aspect-square object-cover"
+                    onerror="this.onerror=null; this.src='/placeholder.png'; this.alt='Image non trouvée';"
+                  />
+                  <div class="p-3">
+                    <p class="font-medium text-slate-800 truncate">
+                      {ref.name || "Sans nom"}
+                    </p>
+                    <div class="flex items-center justify-between mt-1">
+                      <p class="text-xs text-slate-500">
+                        {new Date(ref.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                      {ref.folder_id && folders.find(f => f.id === ref.folder_id) && (
+                        <span 
+                          class="w-2 h-2 rounded-full" 
+                          style={`background-color: ${folders.find(f => f.id === ref.folder_id)?.color}`}
+                          title={folders.find(f => f.id === ref.folder_id)?.name}
+                        ></span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <!-- Actions au survol -->
+                  <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button
+                      class="move-ref-btn p-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg hover:bg-white transition-colors shadow-sm"
+                      data-ref-id={ref.id}
+                      title="Déplacer vers un dossier"
+                    >
+                      📁
+                    </button>
+                    <form method="POST" class="inline">
+                      <input type="hidden" name="action" value="delete" />
+                      <input type="hidden" name="id" value={ref.id} />
+                      <button
+                        type="submit"
+                        onclick="return confirm('Supprimer cette référence ?')"
+                        class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal d'ajout de référence -->
+    <div
+      id="addModal"
+      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <h2 class="text-xl font-semibold mb-4">Ajouter une référence</h2>
+        <form method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="add" />
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Nom et description
+            </label>
+            <input
+              type="text"
+              name="name"
+              placeholder="Ex: Parquet chêne clair, Carrelage métro blanc brillant..."
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+            <p class="text-xs text-slate-500 mt-1">
+              💡 Décrivez le matériau pour aider l'IA à mieux l'appliquer
+            </p>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Dossier
+            </label>
+            <select
+              name="folder_id"
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">Aucun dossier</option>
+              {folders.map((folder) => (
+                <option value={folder.id} selected={selectedFolderId === folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Image *
+            </label>
+            <input
+              type="file"
+              name="image"
+              accept="image/*"
+              required
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700"
+            />
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              id="cancelAddBtn"
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Ajouter
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de création de dossier -->
+    <div
+      id="folderModal"
+      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <h2 class="text-xl font-semibold mb-4" id="folderModalTitle">Nouveau dossier</h2>
+        <form method="POST" id="folderForm">
+          <input type="hidden" name="action" value="create_folder" id="folderAction" />
+          <input type="hidden" name="id" value="" id="folderEditId" />
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Nom du dossier *
+            </label>
+            <input
+              type="text"
+              name="name"
+              id="folderNameInput"
+              placeholder="Ex: Sols, Murs, Cuisine..."
+              required
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-700 mb-2">
+              Couleur
+            </label>
+            <div class="flex gap-2 flex-wrap">
+              {folderColors.map((color, index) => (
+                <label class="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="color"
+                    value={color.value}
+                    checked={index === 0}
+                    class="sr-only peer"
+                  />
+                  <span
+                    class="block w-8 h-8 rounded-lg border-2 border-transparent peer-checked:border-slate-800 peer-checked:scale-110 transition-all"
+                    style={`background-color: ${color.value}`}
+                    title={color.name}
+                  ></span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              id="cancelFolderBtn"
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              id="deleteFolderBtn"
+              class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors hidden"
+            >
+              Supprimer
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              id="folderSubmitBtn"
+            >
+              Créer
+            </button>
+          </div>
+        </form>
+        <!-- Formulaire de suppression séparé -->
+        <form method="POST" id="deleteFolderForm" class="hidden">
+          <input type="hidden" name="action" value="delete_folder" />
+          <input type="hidden" name="id" value="" id="deleteFolderIdInput" />
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de déplacement -->
+    <div
+      id="moveModal"
+      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+        <h2 class="text-xl font-semibold mb-4">Déplacer vers</h2>
+        <form method="POST" id="moveForm">
+          <input type="hidden" name="action" value="move_reference" />
+          <input type="hidden" name="ref_id" value="" id="moveRefId" />
+
+          <div class="space-y-2 mb-6 max-h-64 overflow-y-auto">
+            <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-200">
+              <input type="radio" name="folder_id" value="" class="text-indigo-600" />
+              <span class="flex items-center gap-2">
+                <span>📄</span> Sans dossier
+              </span>
+            </label>
+            {folders.map((folder) => (
+              <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-200">
+                <input type="radio" name="folder_id" value={folder.id} class="text-indigo-600" />
+                <span class="flex items-center gap-2">
+                  <span 
+                    class="w-3 h-3 rounded-sm" 
+                    style={`background-color: ${folder.color}`}
+                  ></span>
+                  {folder.name}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              id="cancelMoveBtn"
+              class="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Déplacer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>
+
+<script>
+  // Modal d'ajout de référence
+  const addModal = document.getElementById("addModal");
+  const addReferenceBtn = document.getElementById("addReferenceBtn");
+  const addReferenceBtnEmpty = document.getElementById("addReferenceBtnEmpty");
+  const cancelAddBtn = document.getElementById("cancelAddBtn");
+
+  function openAddModal() {
+    addModal?.classList.remove("hidden");
+    addModal?.classList.add("flex");
+  }
+
+  function closeAddModal() {
+    addModal?.classList.add("hidden");
+    addModal?.classList.remove("flex");
+  }
+
+  addReferenceBtn?.addEventListener("click", openAddModal);
+  addReferenceBtnEmpty?.addEventListener("click", openAddModal);
+  cancelAddBtn?.addEventListener("click", closeAddModal);
+  addModal?.addEventListener("click", (e) => {
+    if (e.target === addModal) closeAddModal();
+  });
+
+  // Modal de dossier
+  const folderModal = document.getElementById("folderModal");
+  const addFolderBtn = document.getElementById("addFolderBtn");
+  const cancelFolderBtn = document.getElementById("cancelFolderBtn");
+  const folderModalTitle = document.getElementById("folderModalTitle");
+  const folderAction = document.getElementById("folderAction") as HTMLInputElement;
+  const folderEditId = document.getElementById("folderEditId") as HTMLInputElement;
+  const folderNameInput = document.getElementById("folderNameInput") as HTMLInputElement;
+  const folderSubmitBtn = document.getElementById("folderSubmitBtn");
+  const deleteFolderBtn = document.getElementById("deleteFolderBtn");
+  const deleteFolderForm = document.getElementById("deleteFolderForm") as HTMLFormElement;
+  const deleteFolderIdInput = document.getElementById("deleteFolderIdInput") as HTMLInputElement;
+
+  function openFolderModal(editMode = false, folder?: { id: string; name: string; color: string }) {
+    if (editMode && folder) {
+      folderModalTitle!.textContent = "Modifier le dossier";
+      folderAction!.value = "update_folder";
+      folderEditId!.value = folder.id;
+      folderNameInput!.value = folder.name;
+      folderSubmitBtn!.textContent = "Enregistrer";
+      deleteFolderBtn?.classList.remove("hidden");
+      deleteFolderIdInput!.value = folder.id;
+      
+      // Sélectionner la bonne couleur
+      const colorInputs = document.querySelectorAll('input[name="color"]') as NodeListOf<HTMLInputElement>;
+      colorInputs.forEach(input => {
+        input.checked = input.value === folder.color;
+      });
+    } else {
+      folderModalTitle!.textContent = "Nouveau dossier";
+      folderAction!.value = "create_folder";
+      folderEditId!.value = "";
+      folderNameInput!.value = "";
+      folderSubmitBtn!.textContent = "Créer";
+      deleteFolderBtn?.classList.add("hidden");
+      
+      // Réinitialiser la couleur
+      const colorInputs = document.querySelectorAll('input[name="color"]') as NodeListOf<HTMLInputElement>;
+      if (colorInputs[0]) colorInputs[0].checked = true;
+    }
+    
+    folderModal?.classList.remove("hidden");
+    folderModal?.classList.add("flex");
+    folderNameInput?.focus();
+  }
+
+  function closeFolderModal() {
+    folderModal?.classList.add("hidden");
+    folderModal?.classList.remove("flex");
+  }
+
+  addFolderBtn?.addEventListener("click", () => openFolderModal());
+  cancelFolderBtn?.addEventListener("click", closeFolderModal);
+  folderModal?.addEventListener("click", (e) => {
+    if (e.target === folderModal) closeFolderModal();
+  });
+
+  deleteFolderBtn?.addEventListener("click", () => {
+    if (confirm("Supprimer ce dossier ? Les références ne seront pas supprimées.")) {
+      deleteFolderForm?.submit();
+    }
+  });
+
+  // Boutons d'édition de dossier
+  document.querySelectorAll(".edit-folder-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.currentTarget as HTMLElement;
+      openFolderModal(true, {
+        id: target.dataset.folderId!,
+        name: target.dataset.folderName!,
+        color: target.dataset.folderColor!,
+      });
+    });
+  });
+
+  // Modal de déplacement
+  const moveModal = document.getElementById("moveModal");
+  const cancelMoveBtn = document.getElementById("cancelMoveBtn");
+  const moveRefId = document.getElementById("moveRefId") as HTMLInputElement;
+
+  function openMoveModal(refId: string) {
+    moveRefId.value = refId;
+    moveModal?.classList.remove("hidden");
+    moveModal?.classList.add("flex");
+  }
+
+  function closeMoveModal() {
+    moveModal?.classList.add("hidden");
+    moveModal?.classList.remove("flex");
+  }
+
+  document.querySelectorAll(".move-ref-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = e.currentTarget as HTMLElement;
+      openMoveModal(target.dataset.refId!);
+    });
+  });
+
+  cancelMoveBtn?.addEventListener("click", closeMoveModal);
+  moveModal?.addEventListener("click", (e) => {
+    if (e.target === moveModal) closeMoveModal();
+  });
+</script>

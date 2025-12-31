@@ -1,0 +1,85 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+---
+
+<Layout title="Accueil">
+  <SignedOut>
+    <div
+      class="flex flex-col items-center justify-center min-h-[70vh] text-center"
+    >
+      <h1
+        class="text-5xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+      >
+        PrimaDopu
+      </h1>
+      <p class="text-xl text-slate-600 mb-8 max-w-2xl">
+        Transformez vos espaces avec l'IA. Visualisez vos projets de rénovation
+        avant de commencer les travaux.
+      </p>
+      <div class="grid md:grid-cols-3 gap-6 max-w-4xl">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div class="text-4xl mb-4">📸</div>
+          <h3 class="font-semibold text-lg mb-2">1. Téléchargez</h3>
+          <p class="text-slate-600 text-sm">Une photo de votre espace actuel</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div class="text-4xl mb-4">🎨</div>
+          <h3 class="font-semibold text-lg mb-2">2. Personnalisez</h3>
+          <p class="text-slate-600 text-sm">
+            Choisissez vos matériaux et textures
+          </p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div class="text-4xl mb-4">✨</div>
+          <h3 class="font-semibold text-lg mb-2">3. Visualisez</h3>
+          <p class="text-slate-600 text-sm">L'IA génère votre avant/après</p>
+        </div>
+      </div>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div
+      class="flex flex-col items-center justify-center min-h-[60vh] text-center"
+    >
+      <h1 class="text-4xl font-bold mb-6">Bienvenue sur PrimaDopu 👋</h1>
+      <p class="text-xl text-slate-600 mb-8">Que souhaitez-vous faire ?</p>
+      <div class="grid md:grid-cols-2 gap-6 max-w-2xl w-full">
+        <a
+          href="/generate"
+          class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        >
+          <div class="text-4xl mb-4">🎨</div>
+          <h3 class="font-semibold text-xl mb-2">Nouvelle génération</h3>
+          <p class="text-indigo-100 text-sm">Créer un avant/après</p>
+        </a>
+        <a
+          href="/library"
+          class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition-all hover:scale-105"
+        >
+          <div class="text-4xl mb-4">📚</div>
+          <h3 class="font-semibold text-xl mb-2 text-slate-800">
+            Bibliothèque
+          </h3>
+          <p class="text-slate-600 text-sm">Gérer vos références</p>
+        </a>
+        <a
+          href="/history"
+          class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition-all hover:scale-105"
+        >
+          <div class="text-4xl mb-4">📜</div>
+          <h3 class="font-semibold text-xl mb-2 text-slate-800">Historique</h3>
+          <p class="text-slate-600 text-sm">Voir vos générations passées</p>
+        </a>
+        <a
+          href="/profile"
+          class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 hover:shadow-lg transition-all hover:scale-105"
+        >
+          <div class="text-4xl mb-4">👤</div>
+          <h3 class="font-semibold text-xl mb-2 text-slate-800">Profil</h3>
+          <p class="text-slate-600 text-sm">Gérer votre compte</p>
+        </a>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>
