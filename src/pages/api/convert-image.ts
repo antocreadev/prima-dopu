@@ -1,6 +1,23 @@
 import type { APIRoute } from "astro";
 import heicConvert from "heic-convert";
 
+// Headers communs pour toutes les réponses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+/**
+ * Handler OPTIONS pour les requêtes preflight CORS
+ */
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+};
+
 /**
  * Endpoint pour convertir les images HEIC/HEIF en JPEG
  * Utilisé pour l'aperçu dans le navigateur (qui ne supporte pas ces formats)
@@ -13,7 +30,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!file) {
       return new Response(JSON.stringify({ error: "Aucun fichier fourni" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
@@ -40,6 +57,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: {
           "Content-Type": "image/jpeg",
           "Cache-Control": "max-age=3600",
+          ...corsHeaders,
         },
       });
     }
@@ -49,13 +67,14 @@ export const POST: APIRoute = async ({ request }) => {
       headers: {
         "Content-Type": file.type || "image/jpeg",
         "Cache-Control": "max-age=3600",
+        ...corsHeaders,
       },
     });
   } catch (error) {
     console.error("Erreur conversion image:", error);
     return new Response(
       JSON.stringify({ error: "Erreur lors de la conversion de l'image" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
