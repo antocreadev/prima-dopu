@@ -18,7 +18,7 @@ if (!userId) {
 }
 
 // Déterminer le plan de l'utilisateur
-const userPlanInfo = getUserPlanFromAuth(auth.has as any);
+const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
 const creditStats = getCreditStats(userId, userPlanInfo.planType);
 const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
 

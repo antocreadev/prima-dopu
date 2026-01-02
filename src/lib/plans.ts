@@ -5,6 +5,14 @@ import type { PlanType } from "./db";
  * basé sur les features/plans Clerk Billing
  */
 
+// IDs des utilisateurs admin (générations illimitées)
+// Définir dans .env: ADMIN_USER_IDS=user_xxx,user_yyy
+const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "").split(",").filter(Boolean);
+
+export function isAdminUser(userId: string): boolean {
+  return ADMIN_USER_IDS.includes(userId);
+}
+
 export interface UserPlanInfo {
   planType: PlanType;
   planName: string;
@@ -12,7 +20,19 @@ export interface UserPlanInfo {
   monthlyLimit: number | null;
   totalLimit: number | null;
   isPaid: boolean;
+  isAdmin?: boolean;
 }
+
+// Plan admin avec générations illimitées
+export const ADMIN_PLAN: UserPlanInfo = {
+  planType: "pro",
+  planName: "Admin",
+  planKey: "admin",
+  monthlyLimit: null, // Illimité
+  totalLimit: null, // Illimité
+  isPaid: true,
+  isAdmin: true,
+};
 
 // Mapping des plans Clerk vers notre système
 // Clés Clerk: free_user, abonnement_50, abonnement_100
@@ -60,8 +80,14 @@ type HasFunction = (params: Record<string, unknown>) => boolean;
  * Cette fonction doit être appelée côté serveur avec l'objet auth
  */
 export function getUserPlanFromAuth(
-  has: HasFunction | undefined
+  has: HasFunction | undefined,
+  userId?: string | null
 ): UserPlanInfo {
+  // Vérifier si l'utilisateur est admin
+  if (userId && isAdminUser(userId)) {
+    return ADMIN_PLAN;
+  }
+
   if (!has) {
     return CLERK_PLAN_MAPPING.free_user;
   }

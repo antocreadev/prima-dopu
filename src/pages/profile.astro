@@ -15,7 +15,7 @@ if (!userId) {
 const user = await Astro.locals.currentUser();
 
 // Déterminer le plan de l'utilisateur
-const userPlanInfo = getUserPlanFromAuth(auth.has as any);
+const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
 const creditStats = getCreditStats(userId, userPlanInfo.planType);
 const credits = getUserCredits(userId);
 ---

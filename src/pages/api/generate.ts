@@ -38,14 +38,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Vérifier le plan de l'utilisateur et ses crédits
     const authObj = locals.auth();
-    const userPlanInfo = getUserPlanFromAuth(authObj.has as any);
+    const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
+    
+    // Les admins ont des générations illimitées
+    const isAdmin = userPlanInfo.isAdmin === true;
     const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
 
     console.log(
-      `📊 Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${creditCheck.limit}`
+      `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${creditCheck.used}/${creditCheck.limit}`
     );
 
-    if (!creditCheck.canGenerate) {
+    if (!isAdmin && !creditCheck.canGenerate) {
       console.log(`⛔ Limite atteinte: ${creditCheck.reason}`);
       return new Response(
         JSON.stringify({
