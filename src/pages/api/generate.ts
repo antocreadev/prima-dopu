@@ -5,6 +5,9 @@ import {
   createInstruction,
   updateGeneration,
   getReference,
+  canUserGenerate,
+  incrementUserCredits,
+  type PlanType,
 } from "../../lib/db";
 import { saveImage, getAbsolutePath } from "../../lib/storage";
 import {
@@ -12,6 +15,7 @@ import {
   type GenerationInstruction,
   type ModificationType,
 } from "../../lib/gemini";
+import { getUserPlanFromAuth } from "../../lib/plans";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -31,6 +35,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log("📥 NOUVELLE REQUÊTE DE GÉNÉRATION");
     console.log("═".repeat(50));
     console.log(`👤 User: ${userId}`);
+
+    // Vérifier le plan de l'utilisateur et ses crédits
+    const authObj = locals.auth();
+    const userPlanInfo = getUserPlanFromAuth(authObj.has as any);
+    const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
+
+    console.log(
+      `📊 Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${creditCheck.limit}`
+    );
+
+    if (!creditCheck.canGenerate) {
+      console.log(`⛔ Limite atteinte: ${creditCheck.reason}`);
+      return new Response(
+        JSON.stringify({
+          error: creditCheck.reason,
+          noCredits: true,
+          used: creditCheck.used,
+          limit: creditCheck.limit,
+        }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
     const formData = await request.formData();
     const image = formData.get("image") as File;
@@ -159,6 +188,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: "completed",
         generated_image_path: result.imagePath,
       });
+
+      // Incrémenter les crédits utilisés après une génération réussie
+      incrementUserCredits(userId);
+      console.log(`💳 Crédit consommé pour ${userId}`);
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`\n✅ GÉNÉRATION TERMINÉE en ${duration}s`);

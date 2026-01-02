@@ -1,13 +1,30 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
-import { getUserReferences, getUserFolders } from "../lib/db";
+import {
+  getUserReferences,
+  getUserFolders,
+  getCreditStats,
+  canUserGenerate,
+  type PlanType,
+} from "../lib/db";
+import { getUserPlanFromAuth } from "../lib/plans";
 
 const auth = Astro.locals.auth();
 const userId = auth.userId;
 
 if (!userId) {
   return Astro.redirect("/");
+}
+
+// Déterminer le plan de l'utilisateur
+const userPlanInfo = getUserPlanFromAuth(auth.has as any);
+const creditStats = getCreditStats(userId, userPlanInfo.planType);
+const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
+
+// Rediriger si plus de crédits
+if (!creditCheck.canGenerate) {
+  return Astro.redirect("/no-credits");
 }
 
 const references = getUserReferences(userId);
@@ -31,10 +48,54 @@ folders.forEach((f) => {
   </SignedOut>
   <SignedIn>
     <div class="max-w-4xl mx-auto">
-      <h1 class="text-3xl font-bold mb-2">Nouvelle génération</h1>
-      <p class="text-slate-600 mb-8">
-        Créez votre visualisation avant/après en quelques étapes
-      </p>
+      <!-- En-tête avec crédits -->
+      <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
+      >
+        <div>
+          <h1 class="text-3xl font-bold mb-2">Nouvelle génération</h1>
+          <p class="text-slate-600">
+            Créez votre visualisation avant/après en quelques étapes
+          </p>
+        </div>
+
+        <!-- Badge des crédits -->
+        <div
+          class:list={[
+            "flex items-center gap-3 px-4 py-3 rounded-xl border",
+            creditStats.remaining <= 2
+              ? "bg-orange-50 border-orange-200"
+              : "bg-slate-50 border-slate-200",
+          ]}
+        >
+          <div class="text-center">
+            <div
+              class:list={[
+                "text-2xl font-bold",
+                creditStats.remaining === 0
+                  ? "text-red-600"
+                  : creditStats.remaining <= 2
+                    ? "text-orange-600"
+                    : "text-slate-900",
+              ]}
+            >
+              {creditStats.remaining}
+            </div>
+            <div class="text-xs text-slate-500">
+              restant{creditStats.remaining > 1 ? "s" : ""}
+            </div>
+          </div>
+          <div class="w-px h-8 bg-slate-300"></div>
+          <div class="text-sm">
+            <div class="font-medium text-slate-800">
+              Plan {creditStats.planName}
+            </div>
+            <a href="/pricing" class="text-orange-600 hover:underline text-xs">
+              {userPlanInfo.isPaid ? "Gérer" : "Upgrader"}
+            </a>
+          </div>
+        </div>
+      </div>
 
       <!-- Indicateur d'étapes -->
       <div class="flex items-center justify-center mb-8">
@@ -1184,6 +1245,11 @@ folders.forEach((f) => {
       const result = await response.json();
 
       if (!response.ok) {
+        // Si plus de crédits, rediriger vers la page appropriée
+        if (result.noCredits) {
+          window.location.href = "/no-credits";
+          return;
+        }
         throw new Error(result.error || "Erreur lors de la génération");
       }
 

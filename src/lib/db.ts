@@ -335,3 +335,181 @@ export function deleteInstruction(id: string): boolean {
   const result = stmt.run(id);
   return result.changes > 0;
 }
+
+// ==========================================
+// SYSTÈME DE CRÉDITS / ABONNEMENTS
+// ==========================================
+
+// Créer la table des crédits utilisateur
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_credits (
+    user_id TEXT PRIMARY KEY,
+    total_generations INTEGER DEFAULT 0,
+    monthly_generations INTEGER DEFAULT 0,
+    last_monthly_reset TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+export interface UserCredits {
+  user_id: string;
+  total_generations: number;
+  monthly_generations: number;
+  last_monthly_reset: string | null;
+  created_at: string;
+}
+
+// Limites par plan
+export const PLAN_LIMITS = {
+  free: { monthly: null, total: 3 }, // 3 générations au total, pas de reset mensuel
+  standard: { monthly: 20, total: null }, // 20/mois, illimité au total
+  pro: { monthly: 50, total: null }, // 50/mois, illimité au total
+} as const;
+
+export type PlanType = keyof typeof PLAN_LIMITS;
+
+// Obtenir ou créer les crédits d'un utilisateur
+export function getUserCredits(userId: string): UserCredits {
+  let credits = db
+    .prepare("SELECT * FROM user_credits WHERE user_id = ?")
+    .get(userId) as UserCredits | undefined;
+
+  if (!credits) {
+    // Créer l'entrée pour un nouvel utilisateur
+    db.prepare(
+      `
+      INSERT INTO user_credits (user_id, total_generations, monthly_generations, last_monthly_reset)
+      VALUES (?, 0, 0, ?)
+    `
+    ).run(userId, new Date().toISOString().slice(0, 7)); // Format: "2026-01"
+
+    credits = db
+      .prepare("SELECT * FROM user_credits WHERE user_id = ?")
+      .get(userId) as UserCredits;
+  }
+
+  return credits;
+}
+
+// Vérifier et réinitialiser les crédits mensuels si nécessaire
+export function checkAndResetMonthlyCredits(userId: string): UserCredits {
+  const credits = getUserCredits(userId);
+  const currentMonth = new Date().toISOString().slice(0, 7); // Format: "2026-01"
+
+  if (credits.last_monthly_reset !== currentMonth) {
+    // Nouveau mois, réinitialiser les crédits mensuels
+    db.prepare(
+      `
+      UPDATE user_credits 
+      SET monthly_generations = 0, last_monthly_reset = ?
+      WHERE user_id = ?
+    `
+    ).run(currentMonth, userId);
+
+    return getUserCredits(userId);
+  }
+
+  return credits;
+}
+
+// Vérifier si un utilisateur peut générer (selon son plan)
+export function canUserGenerate(
+  userId: string,
+  planType: PlanType
+): {
+  canGenerate: boolean;
+  reason?: string;
+  credits: UserCredits;
+  limit: number;
+  used: number;
+} {
+  const credits = checkAndResetMonthlyCredits(userId);
+  const limits = PLAN_LIMITS[planType];
+
+  if (planType === "free") {
+    // Plan gratuit: vérifie le total (3 max au total)
+    const canGenerate = credits.total_generations < (limits.total || 0);
+    return {
+      canGenerate,
+      reason: canGenerate
+        ? undefined
+        : "Vous avez utilisé vos 3 générations gratuites. Passez à un abonnement pour continuer.",
+      credits,
+      limit: limits.total || 0,
+      used: credits.total_generations,
+    };
+  } else {
+    // Plans payants: vérifie le mensuel
+    const monthlyLimit = limits.monthly || 0;
+    const canGenerate = credits.monthly_generations < monthlyLimit;
+    return {
+      canGenerate,
+      reason: canGenerate
+        ? undefined
+        : `Vous avez atteint votre limite de ${monthlyLimit} générations ce mois-ci.`,
+      credits,
+      limit: monthlyLimit,
+      used: credits.monthly_generations,
+    };
+  }
+}
+
+// Incrémenter les crédits après une génération réussie
+export function incrementUserCredits(userId: string): void {
+  const credits = checkAndResetMonthlyCredits(userId);
+
+  db.prepare(
+    `
+    UPDATE user_credits 
+    SET total_generations = total_generations + 1,
+        monthly_generations = monthly_generations + 1
+    WHERE user_id = ?
+  `
+  ).run(userId);
+}
+
+// Obtenir les statistiques de crédit pour l'affichage
+export function getCreditStats(
+  userId: string,
+  planType: PlanType
+): {
+  used: number;
+  limit: number;
+  remaining: number;
+  percentage: number;
+  isUnlimited: boolean;
+  planName: string;
+} {
+  const credits = checkAndResetMonthlyCredits(userId);
+  const limits = PLAN_LIMITS[planType];
+
+  const planNames: Record<PlanType, string> = {
+    free: "Gratuit",
+    standard: "Standard",
+    pro: "Pro",
+  };
+
+  if (planType === "free") {
+    const limit = limits.total || 3;
+    const used = credits.total_generations;
+    return {
+      used,
+      limit,
+      remaining: Math.max(0, limit - used),
+      percentage: Math.min(100, (used / limit) * 100),
+      isUnlimited: false,
+      planName: planNames[planType],
+    };
+  } else {
+    const limit = limits.monthly || 0;
+    const used = credits.monthly_generations;
+    return {
+      used,
+      limit,
+      remaining: Math.max(0, limit - used),
+      percentage: Math.min(100, (used / limit) * 100),
+      isUnlimited: false,
+      planName: planNames[planType],
+    };
+  }
+}

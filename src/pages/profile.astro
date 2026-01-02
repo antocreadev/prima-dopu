@@ -1,6 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
+import { getCreditStats, getUserCredits, type PlanType } from "../lib/db";
+import { getUserPlanFromAuth } from "../lib/plans";
 
 const auth = Astro.locals.auth();
 const userId = auth.userId;
@@ -11,6 +13,11 @@ if (!userId) {
 
 // Récupérer les infos utilisateur depuis Clerk
 const user = await Astro.locals.currentUser();
+
+// Déterminer le plan de l'utilisateur
+const userPlanInfo = getUserPlanFromAuth(auth.has as any);
+const creditStats = getCreditStats(userId, userPlanInfo.planType);
+const credits = getUserCredits(userId);
 ---
 
 <Layout title="Profil">
@@ -48,6 +55,109 @@ const user = await Astro.locals.currentUser();
         </div>
 
         <div class="space-y-4">
+          <!-- Section Abonnement -->
+          <div class="border-t border-slate-200 pt-4">
+            <h3 class="font-medium text-slate-800 mb-4">💳 Mon abonnement</h3>
+
+            <div
+              class:list={[
+                "rounded-xl p-4 mb-4",
+                userPlanInfo.isPaid
+                  ? "bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200"
+                  : "bg-slate-50 border border-slate-200",
+              ]}
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <span
+                    class:list={[
+                      "inline-block px-3 py-1 rounded-full text-sm font-semibold",
+                      userPlanInfo.planType === "pro"
+                        ? "bg-slate-800 text-white"
+                        : userPlanInfo.planType === "standard"
+                          ? "bg-orange-500 text-white"
+                          : "bg-slate-200 text-slate-700",
+                    ]}
+                  >
+                    {creditStats.planName}
+                  </span>
+                </div>
+                <a
+                  href="/pricing"
+                  class="text-sm text-orange-600 hover:underline font-medium"
+                >
+                  {
+                    userPlanInfo.isPaid
+                      ? "Gérer l'abonnement"
+                      : "Passer à un plan payant →"
+                  }
+                </a>
+              </div>
+
+              <!-- Barre de progression des crédits -->
+              <div class="mb-2">
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-slate-600">Crédits utilisés</span>
+                  <span class="font-semibold text-slate-800"
+                    >{creditStats.used} / {creditStats.limit}</span
+                  >
+                </div>
+                <div
+                  class="w-full bg-white/70 rounded-full h-3 overflow-hidden"
+                >
+                  <div
+                    class:list={[
+                      "h-full rounded-full transition-all",
+                      creditStats.percentage >= 100
+                        ? "bg-red-500"
+                        : creditStats.percentage >= 80
+                          ? "bg-orange-500"
+                          : "bg-green-500",
+                    ]}
+                    style={`width: ${creditStats.percentage}%`}
+                  >
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-sm">
+                <span
+                  class:list={[
+                    "font-medium",
+                    creditStats.remaining === 0
+                      ? "text-red-600"
+                      : creditStats.remaining <= 2
+                        ? "text-orange-600"
+                        : "text-green-600",
+                  ]}
+                >
+                  {creditStats.remaining} génération{
+                    creditStats.remaining > 1 ? "s" : ""
+                  } restante{creditStats.remaining > 1 ? "s" : ""}
+                </span>
+                <span class="text-slate-500">
+                  {userPlanInfo.planType === "free" ? "au total" : "ce mois-ci"}
+                </span>
+              </div>
+            </div>
+
+            <!-- Stats totales -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-slate-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-slate-900">
+                  {credits.total_generations}
+                </div>
+                <div class="text-xs text-slate-500">Générations totales</div>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-slate-900">
+                  {credits.monthly_generations}
+                </div>
+                <div class="text-xs text-slate-500">Ce mois-ci</div>
+              </div>
+            </div>
+          </div>
+
           <div class="border-t border-slate-200 pt-4">
             <h3 class="font-medium text-slate-800 mb-2">
               Informations du compte

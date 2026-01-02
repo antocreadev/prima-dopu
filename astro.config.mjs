@@ -5,12 +5,12 @@ import { frFR } from "@clerk/localizations";
 
 import tailwindcss from "@tailwindcss/vite";
 
+import react from "@astrojs/react";
+
 export default defineConfig({
-  integrations: [
-    clerk({
-      localization: frFR,
-    }),
-  ],
+  integrations: [clerk({
+    localization: frFR,
+  }), react()],
   adapter: node({ mode: "standalone" }),
   output: "server",
 

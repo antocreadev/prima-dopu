@@ -1,0 +1,238 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const plan = Astro.url.searchParams.get("plan") || "standard";
+---
+
+<Layout title="S'abonner - PrimaDopu">
+  <SignedOut>
+    <div class="text-center py-20">
+      <p class="text-slate-600">
+        Veuillez vous connecter pour accéder à cette page.
+      </p>
+      <a
+        href="/sign-in"
+        class="text-orange-600 hover:underline mt-4 inline-block"
+      >
+        Se connecter
+      </a>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div class="max-w-2xl mx-auto">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-900 mb-4">
+          Finaliser votre abonnement
+        </h1>
+        <p class="text-slate-600">
+          Vous avez choisi le plan <strong class="text-orange-600 capitalize"
+            >{plan}</strong
+          >
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+        <!-- Résumé du plan choisi -->
+        <div class="border-b border-slate-200 pb-6 mb-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900 capitalize">
+                {plan}
+              </h2>
+              <p class="text-slate-600 text-sm">
+                {
+                  plan === "standard"
+                    ? "20 générations / mois"
+                    : "50 générations / mois"
+                }
+              </p>
+            </div>
+            <div class="text-right">
+              <span class="text-3xl font-bold text-slate-900">
+                {plan === "standard" ? "50€" : "100€"}
+              </span>
+              <span class="text-slate-500">/mois</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Avantages -->
+        <div class="mb-8">
+          <h3 class="font-semibold text-slate-800 mb-4">Ce qui est inclus :</h3>
+          <ul class="space-y-2">
+            <li class="flex items-center gap-3 text-slate-700">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              {plan === "standard" ? "20" : "50"} générations par mois
+            </li>
+            <li class="flex items-center gap-3 text-slate-700">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              Bibliothèque de références illimitée
+            </li>
+            <li class="flex items-center gap-3 text-slate-700">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              Export en haute définition
+            </li>
+            <li class="flex items-center gap-3 text-slate-700">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              {plan === "pro" ? "Support prioritaire" : "Support par email"}
+            </li>
+          </ul>
+        </div>
+
+        <!-- Zone de paiement Clerk -->
+        <div class="bg-slate-50 rounded-xl p-6 mb-6">
+          <div class="text-center">
+            <div
+              class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4"
+            >
+              <svg
+                class="w-8 h-8 text-orange-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-slate-800 mb-2">Paiement sécurisé</h3>
+            <p class="text-slate-600 text-sm mb-4">
+              Cliquez sur le bouton ci-dessous pour accéder au paiement sécurisé
+              via Stripe.
+            </p>
+
+            <!-- Bouton d'abonnement - sera géré par Clerk Billing -->
+            <button
+              id="subscribeBtn"
+              data-plan={plan}
+              class="w-full py-4 px-6 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                ></path>
+              </svg>
+              S'abonner pour {plan === "standard" ? "50€" : "100€"}/mois
+            </button>
+
+            <p class="text-xs text-slate-500 mt-4">
+              En vous abonnant, vous acceptez nos <a
+                href="/legal/terms"
+                class="text-orange-600 hover:underline"
+                >conditions d'utilisation</a
+              > et notre <a
+                href="/legal/privacy"
+                class="text-orange-600 hover:underline"
+                >politique de confidentialité</a
+              >.
+            </p>
+          </div>
+        </div>
+
+        <!-- Garantie -->
+        <div class="flex items-center gap-4 p-4 bg-green-50 rounded-xl">
+          <div class="flex-shrink-0">
+            <svg
+              class="w-10 h-10 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+              ></path>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-green-800">Sans engagement</h4>
+            <p class="text-green-700 text-sm">
+              Annulez à tout moment depuis votre profil. Pas de frais cachés.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-6">
+        <a href="/pricing" class="text-slate-600 hover:text-slate-800">
+          ← Retour aux tarifs
+        </a>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>
+
+<script>
+  // Ce script sera remplacé par l'intégration Clerk Billing
+  // Pour l'instant, affiche un message
+  document
+    .getElementById("subscribeBtn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("subscribeBtn") as HTMLButtonElement;
+      const plan = btn.dataset.plan;
+
+      // TODO: Intégrer avec Clerk Billing quand disponible
+      // Pour l'instant, simuler l'abonnement
+      alert(
+        `L'intégration Clerk Billing est en cours de configuration.\n\nPlan sélectionné: ${plan}\n\nVeuillez configurer Clerk Billing dans le Dashboard Clerk pour activer les paiements.`
+      );
+    });
+</script>

@@ -1,0 +1,136 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+import { getUserCredits, getCreditStats, type PlanType } from "../lib/db";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+// Déterminer le plan de l'utilisateur (pour l'instant, on utilise "free" par défaut)
+// TODO: Récupérer le vrai plan depuis Clerk Billing avec has()
+const userPlan: PlanType = "free";
+const stats = getCreditStats(userId, userPlan);
+---
+
+<Layout title="Plus de crédits - PrimaDopu">
+  <SignedOut>
+    <div class="text-center py-20">
+      <p class="text-slate-600">
+        Veuillez vous connecter pour accéder à cette page.
+      </p>
+    </div>
+  </SignedOut>
+  <SignedIn>
+    <div class="max-w-2xl mx-auto text-center">
+      <!-- Icône -->
+      <div
+        class="inline-flex items-center justify-center w-24 h-24 bg-orange-100 rounded-full mb-6"
+      >
+        <svg
+          class="w-12 h-12 text-orange-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          ></path>
+        </svg>
+      </div>
+
+      <h1 class="text-3xl font-bold text-slate-900 mb-4">
+        {
+          userPlan === "free"
+            ? "Vos 3 générations gratuites sont épuisées"
+            : "Vous avez atteint votre limite mensuelle"
+        }
+      </h1>
+
+      <p class="text-xl text-slate-600 mb-8">
+        {
+          userPlan === "free"
+            ? "Passez à un abonnement pour continuer à créer des visuels avant/après illimités."
+            : "Vos crédits seront renouvelés le mois prochain, ou passez à un plan supérieur."
+        }
+      </p>
+
+      <!-- Stats actuelles -->
+      <div class="bg-slate-50 rounded-xl p-6 mb-8">
+        <div class="flex items-center justify-center gap-8">
+          <div>
+            <div class="text-3xl font-bold text-slate-900">{stats.used}</div>
+            <div class="text-sm text-slate-600">Utilisées</div>
+          </div>
+          <div class="w-px h-12 bg-slate-300"></div>
+          <div>
+            <div class="text-3xl font-bold text-slate-900">{stats.limit}</div>
+            <div class="text-sm text-slate-600">Maximum</div>
+          </div>
+          <div class="w-px h-12 bg-slate-300"></div>
+          <div>
+            <div class="text-3xl font-bold text-red-600">{stats.remaining}</div>
+            <div class="text-sm text-slate-600">Restantes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Offres -->
+      <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <!-- Standard -->
+        <div
+          class="bg-white rounded-xl border-2 border-orange-500 p-6 shadow-lg shadow-orange-100"
+        >
+          <div class="text-sm text-orange-600 font-semibold mb-2">
+            Recommandé
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">Standard</h3>
+          <div class="text-3xl font-bold text-slate-900 mb-2">
+            50€<span class="text-lg text-slate-500">/mois</span>
+          </div>
+          <p class="text-slate-600 text-sm mb-4">20 générations par mois</p>
+          <a
+            href="/subscribe?plan=standard"
+            class="block w-full py-3 px-4 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors text-center"
+          >
+            Choisir Standard
+          </a>
+        </div>
+
+        <!-- Pro -->
+        <div class="bg-white rounded-xl border border-slate-200 p-6">
+          <div class="text-sm text-slate-500 font-semibold mb-2">
+            Volume élevé
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">Pro</h3>
+          <div class="text-3xl font-bold text-slate-900 mb-2">
+            100€<span class="text-lg text-slate-500">/mois</span>
+          </div>
+          <p class="text-slate-600 text-sm mb-4">50 générations par mois</p>
+          <a
+            href="/subscribe?plan=pro"
+            class="block w-full py-3 px-4 border-2 border-slate-800 text-slate-800 rounded-lg font-semibold hover:bg-slate-800 hover:text-white transition-colors text-center"
+          >
+            Choisir Pro
+          </a>
+        </div>
+      </div>
+
+      <!-- Liens -->
+      <div class="flex items-center justify-center gap-6 text-sm">
+        <a href="/pricing" class="text-orange-600 hover:underline">
+          Voir tous les détails →
+        </a>
+        <a href="/history" class="text-slate-600 hover:text-slate-800">
+          Voir mon historique
+        </a>
+      </div>
+    </div>
+  </SignedIn>
+</Layout>

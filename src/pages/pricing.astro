@@ -1,0 +1,340 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
+---
+
+<Layout
+  title="Tarifs - PrimaDopu"
+  description="Découvrez nos offres d'abonnement pour créer des visuels avant/après professionnels avec l'IA."
+>
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-slate-900 mb-4">
+        Choisissez votre formule
+      </h1>
+      <p class="text-xl text-slate-600 max-w-2xl mx-auto">
+        Des tarifs simples et transparents pour tous les professionnels
+      </p>
+    </div>
+
+    <!-- Grille des tarifs -->
+    <div class="grid md:grid-cols-3 gap-8 mb-16">
+      <!-- Plan Gratuit -->
+      <div class="bg-white rounded-2xl border-2 border-slate-200 p-8 relative">
+        <div class="mb-6">
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Découverte</h3>
+          <p class="text-slate-600 text-sm">Pour tester la plateforme</p>
+        </div>
+
+        <div class="mb-6">
+          <span class="text-4xl font-bold text-slate-900">0€</span>
+          <span class="text-slate-500">/à vie</span>
+        </div>
+
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700"
+              ><strong>3 générations</strong> au total</span
+            >
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Bibliothèque illimitée</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Qualité HD</span>
+          </li>
+          <li class="flex items-center gap-3 opacity-50">
+            <svg
+              class="w-5 h-5 text-slate-400 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-500">Support prioritaire</span>
+          </li>
+        </ul>
+
+        <SignedOut>
+          <a
+            href="/sign-up"
+            class="block w-full py-3 px-4 text-center border-2 border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors"
+          >
+            Commencer gratuitement
+          </a>
+        </SignedOut>
+        <SignedIn>
+          <span
+            class="block w-full py-3 px-4 text-center bg-slate-100 text-slate-500 rounded-xl font-semibold"
+          >
+            Plan actuel
+          </span>
+        </SignedIn>
+      </div>
+
+      <!-- Plan Standard - Populaire -->
+      <div
+        class="bg-white rounded-2xl border-2 border-orange-500 p-8 relative shadow-xl shadow-orange-100"
+      >
+        <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+          <span
+            class="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold"
+          >
+            Le plus populaire
+          </span>
+        </div>
+
+        <div class="mb-6">
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Standard</h3>
+          <p class="text-slate-600 text-sm">Pour les professionnels actifs</p>
+        </div>
+
+        <div class="mb-6">
+          <span class="text-4xl font-bold text-slate-900">50€</span>
+          <span class="text-slate-500">/mois</span>
+        </div>
+
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700"
+              ><strong>20 générations</strong> / mois</span
+            >
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Bibliothèque illimitée</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Qualité HD</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Support par email</span>
+          </li>
+        </ul>
+
+        <SignedOut>
+          <a
+            href="/sign-up"
+            class="block w-full py-3 px-4 text-center bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Commencer l'essai
+          </a>
+        </SignedOut>
+        <SignedIn>
+          <a
+            href="/subscribe?plan=standard"
+            class="block w-full py-3 px-4 text-center bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Choisir Standard
+          </a>
+        </SignedIn>
+      </div>
+
+      <!-- Plan Pro -->
+      <div
+        class="bg-white rounded-2xl border-2 border-slate-200 p-8 relative bg-gradient-to-br from-slate-50 to-white"
+      >
+        <div class="mb-6">
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Pro</h3>
+          <p class="text-slate-600 text-sm">Pour les gros volumes</p>
+        </div>
+
+        <div class="mb-6">
+          <span class="text-4xl font-bold text-slate-900">100€</span>
+          <span class="text-slate-500">/mois</span>
+        </div>
+
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700"
+              ><strong>50 générations</strong> / mois</span
+            >
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Bibliothèque illimitée</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Qualité HD</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg
+              class="w-5 h-5 text-green-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-slate-700">Support prioritaire</span>
+          </li>
+        </ul>
+
+        <SignedOut>
+          <a
+            href="/sign-up"
+            class="block w-full py-3 px-4 text-center border-2 border-slate-800 text-slate-800 rounded-xl font-semibold hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            Commencer l'essai
+          </a>
+        </SignedOut>
+        <SignedIn>
+          <a
+            href="/subscribe?plan=pro"
+            class="block w-full py-3 px-4 text-center border-2 border-slate-800 text-slate-800 rounded-xl font-semibold hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            Choisir Pro
+          </a>
+        </SignedIn>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="bg-slate-50 rounded-2xl p-8">
+      <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
+        Questions fréquentes
+      </h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-semibold text-slate-900 mb-2">
+            Qu'est-ce qu'une génération ?
+          </h3>
+          <p class="text-slate-600 text-sm">
+            Une génération correspond à la création d'une image avant/après.
+            Chaque transformation compte comme une génération.
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 mb-2">
+            Les crédits sont-ils reportés ?
+          </h3>
+          <p class="text-slate-600 text-sm">
+            Non, les crédits mensuels sont remis à zéro chaque mois. Les 3
+            crédits gratuits sont valables une seule fois.
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 mb-2">
+            Puis-je changer de formule ?
+          </h3>
+          <p class="text-slate-600 text-sm">
+            Oui, vous pouvez passer à une formule supérieure ou inférieure à
+            tout moment depuis votre profil.
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 mb-2">
+            Comment fonctionne la facturation ?
+          </h3>
+          <p class="text-slate-600 text-sm">
+            Les abonnements sont facturés mensuellement. Vous pouvez annuler à
+            tout moment, sans engagement.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
