@@ -14,10 +14,10 @@ const references = getUserReferences(userId);
 const folders = getUserFolders(userId);
 
 // Organiser les références par dossier
-const refsWithoutFolder = references.filter(r => !r.folder_id);
+const refsWithoutFolder = references.filter((r) => !r.folder_id);
 const refsByFolder: Record<string, typeof references> = {};
-folders.forEach(f => {
-  refsByFolder[f.id] = references.filter(r => r.folder_id === f.id);
+folders.forEach((f) => {
+  refsByFolder[f.id] = references.filter((r) => r.folder_id === f.id);
 });
 ---
 
@@ -72,19 +72,45 @@ folders.forEach(f => {
         </p>
 
         <!-- Conseil photo horizontale -->
-        <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-4">
+        <div
+          class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-4"
+        >
           <div class="phone-rotate-animation flex-shrink-0">
             <div class="phone-icon">
-              <svg width="40" height="60" viewBox="0 0 40 60" class="text-amber-600">
-                <rect x="4" y="4" width="32" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
-                <circle cx="20" cy="50" r="3" fill="currentColor"/>
-                <rect x="14" y="8" width="12" height="2" rx="1" fill="currentColor"/>
+              <svg
+                width="40"
+                height="60"
+                viewBox="0 0 40 60"
+                class="text-amber-600"
+              >
+                <rect
+                  x="4"
+                  y="4"
+                  width="32"
+                  height="52"
+                  rx="4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"></rect>
+                <circle cx="20" cy="50" r="3" fill="currentColor"></circle>
+                <rect
+                  x="14"
+                  y="8"
+                  width="12"
+                  height="2"
+                  rx="1"
+                  fill="currentColor"></rect>
               </svg>
             </div>
           </div>
           <div>
-            <p class="font-medium text-amber-800">📱 Conseil : Prenez la photo en mode paysage</p>
-            <p class="text-sm text-amber-700 mt-1">Tournez votre téléphone à l'horizontale pour de meilleurs résultats</p>
+            <p class="font-medium text-amber-800">
+              📱 Conseil : Prenez la photo en mode paysage
+            </p>
+            <p class="text-sm text-amber-700 mt-1">
+              Tournez votre téléphone à l'horizontale pour de meilleurs
+              résultats
+            </p>
           </div>
         </div>
 
@@ -93,8 +119,14 @@ folders.forEach(f => {
             animation: rotatePhone 2s ease-in-out infinite;
           }
           @keyframes rotatePhone {
-            0%, 100% { transform: rotate(0deg); }
-            30%, 70% { transform: rotate(-90deg); }
+            0%,
+            100% {
+              transform: rotate(0deg);
+            }
+            30%,
+            70% {
+              transform: rotate(-90deg);
+            }
           }
           .phone-icon {
             display: flex;
@@ -231,35 +263,72 @@ folders.forEach(f => {
         <div id="generatingState" class="text-center py-12">
           <!-- Loader animé -->
           <div class="relative w-24 h-24 mx-auto mb-6">
-            <div class="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
-            <div class="absolute inset-3 rounded-full border-4 border-purple-400 border-b-transparent animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
-            <div class="absolute inset-0 flex items-center justify-center text-3xl">🎨</div>
+            <div
+              class="absolute inset-0 rounded-full border-4 border-slate-200"
+            >
+            </div>
+            <div
+              class="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"
+            >
+            </div>
+            <div
+              class="absolute inset-3 rounded-full border-4 border-purple-400 border-b-transparent animate-spin"
+              style="animation-direction: reverse; animation-duration: 1.5s;"
+            >
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center text-3xl"
+            >
+              🎨
+            </div>
           </div>
-          
-          <p class="text-lg font-medium text-slate-800 mb-2">Génération en cours...</p>
-          
+
+          <p class="text-lg font-medium text-slate-800 mb-2">
+            Génération en cours...
+          </p>
+
           <!-- Étapes de progression -->
-          <div id="generationSteps" class="max-w-md mx-auto mt-6 text-left space-y-2">
-            <div id="step-upload" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+          <div
+            id="generationSteps"
+            class="max-w-md mx-auto mt-6 text-left space-y-2"
+          >
+            <div
+              id="step-upload"
+              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50"
+            >
               <span class="step-icon text-xl">⏳</span>
               <span class="text-sm text-slate-600">Envoi des images...</span>
             </div>
-            <div id="step-analyze" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+            <div
+              id="step-analyze"
+              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+            >
               <span class="step-icon text-xl">⏳</span>
               <span class="text-sm text-slate-600">Analyse de l'espace...</span>
             </div>
-            <div id="step-plan" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+            <div
+              id="step-plan"
+              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+            >
               <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600">Planification des modifications...</span>
+              <span class="text-sm text-slate-600"
+                >Planification des modifications...</span
+              >
             </div>
-            <div id="step-generate" class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50">
+            <div
+              id="step-generate"
+              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+            >
               <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600">Génération de l'image...</span>
+              <span class="text-sm text-slate-600"
+                >Génération de l'image...</span
+              >
             </div>
           </div>
-          
-          <p class="text-xs text-slate-400 mt-6">Cela peut prendre jusqu'à 2 minutes</p>
+
+          <p class="text-xs text-slate-400 mt-6">
+            Cela peut prendre jusqu'à 2 minutes
+          </p>
         </div>
 
         <div id="resultState" class="hidden">
@@ -449,24 +518,35 @@ folders.forEach(f => {
                           📄 Sans dossier ({refsWithoutFolder.length})
                         </button>
                       )}
-                      {folders.map((folder) => (
-                        refsByFolder[folder.id]?.length > 0 && (
-                          <button
-                            type="button"
-                            class="folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center gap-1"
-                            data-folder={folder.id}
-                          >
-                            <span class="w-2 h-2 rounded-sm" style={`background-color: ${folder.color}`}></span>
-                            {folder.name} ({refsByFolder[folder.id]?.length || 0})
-                          </button>
-                        )
-                      ))}
+                      {folders.map(
+                        (folder) =>
+                          refsByFolder[folder.id]?.length > 0 && (
+                            <button
+                              type="button"
+                              class="folder-tab px-3 py-1.5 text-xs rounded-full whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center gap-1"
+                              data-folder={folder.id}
+                            >
+                              <span
+                                class="w-2 h-2 rounded-sm"
+                                style={`background-color: ${folder.color}`}
+                              />
+                              {folder.name} (
+                              {refsByFolder[folder.id]?.length || 0})
+                            </button>
+                          )
+                      )}
                     </div>
-                    
+
                     {/* Grille toutes les références */}
-                    <div id="refs-all" class="refs-grid grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
+                    <div
+                      id="refs-all"
+                      class="refs-grid grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1"
+                    >
                       {references.map((ref) => (
-                        <label class="cursor-pointer ref-item" data-folder={ref.folder_id || "none"}>
+                        <label
+                          class="cursor-pointer ref-item"
+                          data-folder={ref.folder_id || "none"}
+                        >
                           <input
                             type="radio"
                             name="selectedReference"
@@ -530,7 +610,9 @@ folders.forEach(f => {
                 </div>
               </div>
               <div class="mt-2">
-                <label class="block text-xs text-slate-500 mb-1">Nom et description (aide l'IA à comprendre)</label>
+                <label class="block text-xs text-slate-500 mb-1"
+                  >Nom et description (aide l'IA à comprendre)</label
+                >
                 <input
                   type="text"
                   id="newReferenceName"
@@ -892,9 +974,11 @@ folders.forEach(f => {
         if (folderId === "all") {
           (item as HTMLElement).style.display = "";
         } else if (folderId === "none") {
-          (item as HTMLElement).style.display = itemFolder === "none" ? "" : "none";
+          (item as HTMLElement).style.display =
+            itemFolder === "none" ? "" : "none";
         } else {
-          (item as HTMLElement).style.display = itemFolder === folderId ? "" : "none";
+          (item as HTMLElement).style.display =
+            itemFolder === folderId ? "" : "none";
         }
       });
     });
@@ -997,57 +1081,67 @@ folders.forEach(f => {
   });
 
   // Étape 3 - Génération
-  function updateGenerationStep(stepId: string, status: 'pending' | 'active' | 'done' | 'error') {
+  function updateGenerationStep(
+    stepId: string,
+    status: "pending" | "active" | "done" | "error"
+  ) {
     const step = document.getElementById(stepId);
     if (!step) return;
-    
-    const icon = step.querySelector('.step-icon') as HTMLElement;
-    step.classList.remove('opacity-50', 'bg-green-50', 'bg-indigo-50', 'bg-red-50');
-    
+
+    const icon = step.querySelector(".step-icon") as HTMLElement;
+    step.classList.remove(
+      "opacity-50",
+      "bg-green-50",
+      "bg-indigo-50",
+      "bg-red-50"
+    );
+
     switch (status) {
-      case 'pending':
-        step.classList.add('opacity-50');
-        icon.textContent = '⏳';
+      case "pending":
+        step.classList.add("opacity-50");
+        icon.textContent = "⏳";
         break;
-      case 'active':
-        step.classList.add('bg-indigo-50');
-        icon.textContent = '🔄';
-        icon.classList.add('animate-spin');
+      case "active":
+        step.classList.add("bg-indigo-50");
+        icon.textContent = "🔄";
+        icon.classList.add("animate-spin");
         break;
-      case 'done':
-        step.classList.add('bg-green-50');
-        icon.textContent = '✅';
-        icon.classList.remove('animate-spin');
+      case "done":
+        step.classList.add("bg-green-50");
+        icon.textContent = "✅";
+        icon.classList.remove("animate-spin");
         break;
-      case 'error':
-        step.classList.add('bg-red-50');
-        icon.textContent = '❌';
-        icon.classList.remove('animate-spin');
+      case "error":
+        step.classList.add("bg-red-50");
+        icon.textContent = "❌";
+        icon.classList.remove("animate-spin");
         break;
     }
   }
 
   function resetGenerationSteps() {
-    ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
-      updateGenerationStep(id, 'pending');
-    });
+    ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
+      (id) => {
+        updateGenerationStep(id, "pending");
+      }
+    );
   }
 
   async function simulateProgress() {
     // Simuler la progression pendant l'attente de la réponse
-    updateGenerationStep('step-upload', 'active');
-    await new Promise(r => setTimeout(r, 1500));
-    updateGenerationStep('step-upload', 'done');
-    
-    updateGenerationStep('step-analyze', 'active');
-    await new Promise(r => setTimeout(r, 3000));
-    updateGenerationStep('step-analyze', 'done');
-    
-    updateGenerationStep('step-plan', 'active');
-    await new Promise(r => setTimeout(r, 2000));
-    updateGenerationStep('step-plan', 'done');
-    
-    updateGenerationStep('step-generate', 'active');
+    updateGenerationStep("step-upload", "active");
+    await new Promise((r) => setTimeout(r, 1500));
+    updateGenerationStep("step-upload", "done");
+
+    updateGenerationStep("step-analyze", "active");
+    await new Promise((r) => setTimeout(r, 3000));
+    updateGenerationStep("step-analyze", "done");
+
+    updateGenerationStep("step-plan", "active");
+    await new Promise((r) => setTimeout(r, 2000));
+    updateGenerationStep("step-plan", "done");
+
+    updateGenerationStep("step-generate", "active");
   }
 
   toStep3Btn.addEventListener("click", async () => {
@@ -1094,9 +1188,11 @@ folders.forEach(f => {
       }
 
       // Marquer toutes les étapes comme terminées
-      ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
-        updateGenerationStep(id, 'done');
-      });
+      ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
+        (id) => {
+          updateGenerationStep(id, "done");
+        }
+      );
 
       resultBeforeImg.src = result.originalImage;
 
@@ -1117,12 +1213,14 @@ folders.forEach(f => {
     } catch (error: any) {
       console.error("Erreur:", error);
       // Marquer l'étape en cours comme erreur
-      ['step-upload', 'step-analyze', 'step-plan', 'step-generate'].forEach(id => {
-        const step = document.getElementById(id);
-        if (step && !step.classList.contains('bg-green-50')) {
-          updateGenerationStep(id, 'error');
+      ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
+        (id) => {
+          const step = document.getElementById(id);
+          if (step && !step.classList.contains("bg-green-50")) {
+            updateGenerationStep(id, "error");
+          }
         }
-      });
+      );
       generatingState.classList.add("hidden");
       errorState.classList.remove("hidden");
       errorMessage.textContent = error.message || "Erreur inconnue";

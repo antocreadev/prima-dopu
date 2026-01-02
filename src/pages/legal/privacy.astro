@@ -4,44 +4,76 @@ import Layout from "../../layouts/Layout.astro";
 
 <Layout title="Politique de confidentialité">
   <div class="max-w-4xl mx-auto py-12">
-    <a href="/" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-8">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    <a
+      href="/"
+      class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-8"
+    >
+      <svg
+        class="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 19l-7-7 7-7"></path>
       </svg>
       Retour à l'accueil
     </a>
-    
-    <h1 class="text-4xl font-bold text-slate-900 mb-8">Politique de Confidentialité</h1>
-    
+
+    <h1 class="text-4xl font-bold text-slate-900 mb-8">
+      Politique de Confidentialité
+    </h1>
+
     <div class="prose prose-slate max-w-none">
       <p class="text-slate-600 mb-8">
-        Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+        Dernière mise à jour : {
+          new Date().toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        }
       </p>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">1. Introduction</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          1. Introduction
+        </h2>
         <p class="text-slate-600 mb-4">
-          Bienvenue sur PrimaDopu. Nous accordons une grande importance à la protection de vos données personnelles. 
-          Cette politique de confidentialité explique comment nous collectons, utilisons, stockons et protégeons 
-          vos informations lorsque vous utilisez notre service.
+          Bienvenue sur PrimaDopu. Nous accordons une grande importance à la
+          protection de vos données personnelles. Cette politique de
+          confidentialité explique comment nous collectons, utilisons, stockons
+          et protégeons vos informations lorsque vous utilisez notre service.
         </p>
         <p class="text-slate-600">
-          En utilisant PrimaDopu, vous acceptez les pratiques décrites dans cette politique.
+          En utilisant PrimaDopu, vous acceptez les pratiques décrites dans
+          cette politique.
         </p>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">2. Données collectées</h2>
-        <p class="text-slate-600 mb-4">Nous collectons les types de données suivants :</p>
-        
-        <h3 class="text-xl font-medium text-slate-800 mb-3">2.1 Données d'identification</h3>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          2. Données collectées
+        </h2>
+        <p class="text-slate-600 mb-4">
+          Nous collectons les types de données suivants :
+        </p>
+
+        <h3 class="text-xl font-medium text-slate-800 mb-3">
+          2.1 Données d'identification
+        </h3>
         <ul class="list-disc list-inside text-slate-600 mb-4 space-y-2">
           <li>Adresse email</li>
           <li>Nom et prénom (si fournis)</li>
           <li>Photo de profil (si fournie)</li>
         </ul>
 
-        <h3 class="text-xl font-medium text-slate-800 mb-3">2.2 Données d'utilisation</h3>
+        <h3 class="text-xl font-medium text-slate-800 mb-3">
+          2.2 Données d'utilisation
+        </h3>
         <ul class="list-disc list-inside text-slate-600 mb-4 space-y-2">
           <li>Photos téléchargées pour la génération</li>
           <li>Images de référence de matériaux</li>
@@ -49,7 +81,9 @@ import Layout from "../../layouts/Layout.astro";
           <li>Instructions de modification</li>
         </ul>
 
-        <h3 class="text-xl font-medium text-slate-800 mb-3">2.3 Données techniques</h3>
+        <h3 class="text-xl font-medium text-slate-800 mb-3">
+          2.3 Données techniques
+        </h3>
         <ul class="list-disc list-inside text-slate-600 space-y-2">
           <li>Adresse IP</li>
           <li>Type de navigateur et appareil</li>
@@ -58,89 +92,139 @@ import Layout from "../../layouts/Layout.astro";
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">3. Utilisation des données</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          3. Utilisation des données
+        </h2>
         <p class="text-slate-600 mb-4">Vos données sont utilisées pour :</p>
         <ul class="list-disc list-inside text-slate-600 space-y-2">
           <li>Fournir et améliorer nos services de génération d'images</li>
           <li>Gérer votre compte utilisateur</li>
           <li>Stocker votre bibliothèque de matériaux et votre historique</li>
-          <li>Vous envoyer des notifications importantes relatives au service</li>
+          <li>
+            Vous envoyer des notifications importantes relatives au service
+          </li>
           <li>Améliorer la qualité de notre IA (données anonymisées)</li>
           <li>Assurer la sécurité de notre plateforme</li>
         </ul>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">4. Partage des données</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          4. Partage des données
+        </h2>
         <p class="text-slate-600 mb-4">
-          Nous ne vendons jamais vos données personnelles. Nous pouvons partager vos données avec :
+          Nous ne vendons jamais vos données personnelles. Nous pouvons partager
+          vos données avec :
         </p>
         <ul class="list-disc list-inside text-slate-600 space-y-2">
-          <li><strong>Google (Gemini API)</strong> : Pour le traitement des images par l'IA. Les images sont traitées selon la politique de confidentialité de Google.</li>
-          <li><strong>Clerk</strong> : Pour la gestion de l'authentification.</li>
+          <li>
+            <strong>Google (Gemini API)</strong> : Pour le traitement des images par
+            l'IA. Les images sont traitées selon la politique de confidentialité de
+            Google.
+          </li>
+          <li>
+            <strong>Clerk</strong> : Pour la gestion de l'authentification.
+          </li>
           <li><strong>Autorités légales</strong> : Si requis par la loi.</li>
         </ul>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">5. Stockage et sécurité</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          5. Stockage et sécurité
+        </h2>
         <p class="text-slate-600 mb-4">
-          Vos données sont stockées de manière sécurisée sur nos serveurs. Nous mettons en œuvre des mesures 
-          de sécurité techniques et organisationnelles pour protéger vos informations contre tout accès 
+          Vos données sont stockées de manière sécurisée sur nos serveurs. Nous
+          mettons en œuvre des mesures de sécurité techniques et
+          organisationnelles pour protéger vos informations contre tout accès
           non autorisé, modification, divulgation ou destruction.
         </p>
         <p class="text-slate-600">
-          Les images téléchargées sont stockées de manière privée et ne sont accessibles que par vous.
+          Les images téléchargées sont stockées de manière privée et ne sont
+          accessibles que par vous.
         </p>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">6. Conservation des données</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          6. Conservation des données
+        </h2>
         <p class="text-slate-600">
-          Nous conservons vos données tant que votre compte est actif. Vous pouvez demander la suppression 
-          de vos données à tout moment. Après suppression de votre compte, vos données seront effacées 
-          dans un délai de 30 jours, sauf obligation légale de conservation.
+          Nous conservons vos données tant que votre compte est actif. Vous
+          pouvez demander la suppression de vos données à tout moment. Après
+          suppression de votre compte, vos données seront effacées dans un délai
+          de 30 jours, sauf obligation légale de conservation.
         </p>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">7. Vos droits (RGPD)</h2>
-        <p class="text-slate-600 mb-4">Conformément au RGPD, vous disposez des droits suivants :</p>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          7. Vos droits (RGPD)
+        </h2>
+        <p class="text-slate-600 mb-4">
+          Conformément au RGPD, vous disposez des droits suivants :
+        </p>
         <ul class="list-disc list-inside text-slate-600 space-y-2">
-          <li><strong>Droit d'accès</strong> : Obtenir une copie de vos données personnelles</li>
-          <li><strong>Droit de rectification</strong> : Corriger vos données inexactes</li>
-          <li><strong>Droit à l'effacement</strong> : Demander la suppression de vos données</li>
-          <li><strong>Droit à la portabilité</strong> : Recevoir vos données dans un format structuré</li>
-          <li><strong>Droit d'opposition</strong> : Vous opposer au traitement de vos données</li>
-          <li><strong>Droit de limitation</strong> : Limiter le traitement de vos données</li>
+          <li>
+            <strong>Droit d'accès</strong> : Obtenir une copie de vos données personnelles
+          </li>
+          <li>
+            <strong>Droit de rectification</strong> : Corriger vos données inexactes
+          </li>
+          <li>
+            <strong>Droit à l'effacement</strong> : Demander la suppression de vos
+            données
+          </li>
+          <li>
+            <strong>Droit à la portabilité</strong> : Recevoir vos données dans un
+            format structuré
+          </li>
+          <li>
+            <strong>Droit d'opposition</strong> : Vous opposer au traitement de vos
+            données
+          </li>
+          <li>
+            <strong>Droit de limitation</strong> : Limiter le traitement de vos données
+          </li>
         </ul>
         <p class="text-slate-600 mt-4">
-          Pour exercer ces droits, contactez-nous à : <a href="mailto:privacy@primadopu.com" class="text-indigo-600 hover:underline">privacy@primadopu.com</a>
+          Pour exercer ces droits, contactez-nous à : <a
+            href="mailto:privacy@primadopu.com"
+            class="text-indigo-600 hover:underline">privacy@primadopu.com</a
+          >
         </p>
       </section>
 
       <section class="mb-12">
         <h2 class="text-2xl font-semibold text-slate-900 mb-4">8. Cookies</h2>
         <p class="text-slate-600">
-          Nous utilisons des cookies essentiels pour le fonctionnement du service (authentification, 
-          préférences). Nous n'utilisons pas de cookies publicitaires ou de tracking tiers.
+          Nous utilisons des cookies essentiels pour le fonctionnement du
+          service (authentification, préférences). Nous n'utilisons pas de
+          cookies publicitaires ou de tracking tiers.
         </p>
       </section>
 
       <section class="mb-12">
-        <h2 class="text-2xl font-semibold text-slate-900 mb-4">9. Modifications</h2>
+        <h2 class="text-2xl font-semibold text-slate-900 mb-4">
+          9. Modifications
+        </h2>
         <p class="text-slate-600">
-          Nous pouvons modifier cette politique de confidentialité à tout moment. Les modifications 
-          seront publiées sur cette page avec une nouvelle date de mise à jour. Nous vous encourageons 
-          à consulter régulièrement cette page.
+          Nous pouvons modifier cette politique de confidentialité à tout
+          moment. Les modifications seront publiées sur cette page avec une
+          nouvelle date de mise à jour. Nous vous encourageons à consulter
+          régulièrement cette page.
         </p>
       </section>
 
       <section>
         <h2 class="text-2xl font-semibold text-slate-900 mb-4">10. Contact</h2>
         <p class="text-slate-600">
-          Pour toute question concernant cette politique de confidentialité, contactez-nous :<br />
-          Email : <a href="mailto:privacy@primadopu.com" class="text-indigo-600 hover:underline">privacy@primadopu.com</a>
+          Pour toute question concernant cette politique de confidentialité,
+          contactez-nous :<br />
+          Email : <a
+            href="mailto:privacy@primadopu.com"
+            class="text-indigo-600 hover:underline">privacy@primadopu.com</a
+          >
         </p>
       </section>
     </div>

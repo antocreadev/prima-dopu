@@ -65,7 +65,9 @@ db.exec(`
 
 // Migration: ajouter folder_id si la colonne n'existe pas
 try {
-  db.exec(`ALTER TABLE material_refs ADD COLUMN folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL`);
+  db.exec(
+    `ALTER TABLE material_refs ADD COLUMN folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL`
+  );
 } catch {
   // La colonne existe déjà
 }
@@ -107,12 +109,16 @@ export interface Instruction {
 }
 
 // Fonctions pour les dossiers
-export function createFolder(userId: string, name: string, color?: string): Folder {
+export function createFolder(
+  userId: string,
+  name: string,
+  color?: string
+): Folder {
   const id = crypto.randomUUID();
   const stmt = db.prepare(`
     INSERT INTO folders (id, user_id, name, color) VALUES (?, ?, ?, ?)
   `);
-  stmt.run(id, userId, name, color || '#6366f1');
+  stmt.run(id, userId, name, color || "#6366f1");
   return getFolder(id)!;
 }
 
@@ -128,7 +134,12 @@ export function getUserFolders(userId: string): Folder[] {
   return stmt.all(userId) as Folder[];
 }
 
-export function updateFolder(id: string, userId: string, name: string, color?: string): boolean {
+export function updateFolder(
+  id: string,
+  userId: string,
+  name: string,
+  color?: string
+): boolean {
   const stmt = db.prepare(
     "UPDATE folders SET name = ?, color = COALESCE(?, color) WHERE id = ? AND user_id = ?"
   );
@@ -163,7 +174,10 @@ export function getReference(id: string): Reference | undefined {
   return stmt.get(id) as Reference | undefined;
 }
 
-export function getUserReferences(userId: string, folderId?: string | null): Reference[] {
+export function getUserReferences(
+  userId: string,
+  folderId?: string | null
+): Reference[] {
   if (folderId === undefined) {
     // Toutes les références
     const stmt = db.prepare(
@@ -185,7 +199,11 @@ export function getUserReferences(userId: string, folderId?: string | null): Ref
   }
 }
 
-export function moveReferenceToFolder(id: string, userId: string, folderId: string | null): boolean {
+export function moveReferenceToFolder(
+  id: string,
+  userId: string,
+  folderId: string | null
+): boolean {
   const stmt = db.prepare(
     "UPDATE material_refs SET folder_id = ? WHERE id = ? AND user_id = ?"
   );
