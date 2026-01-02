@@ -14,7 +14,7 @@ const seoKeywords =
 <Layout title={seoTitle} description={seoDescription} keywords={seoKeywords}>
   <SignedOut>
     <!-- Hero Section -->
-    <section class="relative py-20 lg:py-28 overflow-hidden">
+    <section class="relative pb-20 lg:pb-28 overflow-hidden">
       <!-- Subtle background -->
       <div class="absolute inset-0 bg-gradient-to-b from-slate-50 to-white">
       </div>
@@ -551,7 +551,9 @@ const seoKeywords =
         <div class="mt-16 grid md:grid-cols-3 gap-8 text-center">
           <div>
             <div class="text-4xl font-bold text-orange-400 mb-2">100 fois</div>
-            <p class="text-blue-100">plus rapide qu'une modelisation <br> 3D traditionnelle</p>
+            <p class="text-blue-100">
+              plus rapide qu'une modelisation <br /> 3D traditionnelle
+            </p>
           </div>
           <div>
             <div class="text-4xl font-bold text-orange-400 mb-2">+35%</div>
@@ -605,11 +607,14 @@ const seoKeywords =
       <div class="max-w-7xl mx-auto p-4">
         <div class="grid md:grid-cols-4 gap-12">
           <div class="md:col-span-2">
-            <img
-              src="/logo-primadopu-texte.png"
-              alt="PrimaDopu"
-              class="h-10 mb-4"
-            />
+            <div class="flex items-center gap-3 mb-4">
+              <img src="/logo-primadopu.png" alt="PrimaDopu" class="h-16" />
+              <h1 class="text-4xl font-bold">
+                <span class="text-blue-950">Prima</span><span
+                  class="text-orange-600">Dopu</span
+                >
+              </h1>
+            </div>
             <p class="text-slate-600 max-w-sm">
               L'outil de visualisation IA pour les professionnels de
               l'aménagement. Créez des visuels avant/après convaincants en
