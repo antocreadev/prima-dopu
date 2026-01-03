@@ -18,8 +18,10 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react-dom": "^19.2.3",
     "astro": "^5.16.6",
+    "aws4": "^1.13.2",
     "better-sqlite3": "^12.5.0",
     "heic-convert": "^2.1.0",
+    "minio": "^8.0.6",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "sharp": "^0.34.5",
@@ -27,6 +29,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/aws4": "^1.11.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.7",
     "@types/uuid": "^10.0.0"

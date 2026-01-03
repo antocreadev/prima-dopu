@@ -7,7 +7,9 @@ import type { PlanType } from "./db";
 
 // IDs des utilisateurs admin (générations illimitées)
 // Définir dans .env: ADMIN_USER_IDS=user_xxx,user_yyy
-const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "").split(",").filter(Boolean);
+const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "")
+  .split(",")
+  .filter(Boolean);
 
 export function isAdminUser(userId: string): boolean {
   return ADMIN_USER_IDS.includes(userId);

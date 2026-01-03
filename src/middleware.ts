@@ -15,6 +15,6 @@ export const onRequest = clerkMiddleware((auth, context) => {
   if (isPublicRoute(context.request)) {
     return;
   }
-  
+
   // Pour les autres routes, l'authentification est gérée par les pages elles-mêmes
 });

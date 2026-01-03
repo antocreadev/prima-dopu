@@ -20,6 +20,14 @@ if (!userId) {
   return Astro.redirect("/");
 }
 
+// Fonction helper pour construire l'URL d'image
+function getImageUrl(path: string): string {
+  if (!path) return '';
+  let cleanPath = path.replace('/uploads/', '/').replace('/uploads', '');
+  if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+  return `/api/images/${cleanPath}`;
+}
+
 // Récupérer le dossier sélectionné depuis l'URL
 const url = new URL(Astro.request.url);
 const selectedFolderId = url.searchParams.get("folder");
@@ -42,7 +50,7 @@ if (Astro.request.method === "POST") {
     const id = formData.get("id") as string;
     const ref = await import("../lib/db").then((m) => m.getReference(id));
     if (ref && ref.user_id === userId) {
-      deleteImage(ref.image_path);
+      await deleteImage(ref.image_path);
       deleteReference(id, userId);
     }
   } else if (action === "create_folder") {
@@ -272,7 +280,7 @@ const currentFolder = selectedFolderId && selectedFolderId !== "none"
                   data-ref-id={ref.id}
                 >
                   <img
-                    src={`/api/images${ref.image_path.replace("/uploads", "")}`}
+                    src={getImageUrl(ref.image_path)}
                     alt={ref.name || "Référence"}
                     class="w-full aspect-square object-cover"
                     onerror="this.onerror=null; this.src='/placeholder.png'; this.alt='Image non trouvée';"

@@ -351,39 +351,59 @@ folders.forEach((f) => {
           <!-- Étapes de progression -->
           <div
             id="generationSteps"
-            class="max-w-md mx-auto mt-6 text-left space-y-2"
+            class="max-w-lg mx-auto mt-6 text-left space-y-1"
           >
             <div
               id="step-upload"
-              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50"
+              class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-sm transition-all duration-300"
             >
-              <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600">Envoi des images...</span>
+              <div class="step-icon w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <span class="text-sm">⏳</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-sm font-medium text-slate-700">Envoi des images</span>
+                <p class="text-xs text-slate-400">Téléchargement vers le cloud</p>
+              </div>
+              <div class="step-status"></div>
             </div>
             <div
               id="step-analyze"
-              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+              class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-sm opacity-50 transition-all duration-300"
             >
-              <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600">Analyse de l'espace...</span>
+              <div class="step-icon w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <span class="text-sm">⏳</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-sm font-medium text-slate-700">Analyse IA</span>
+                <p class="text-xs text-slate-400">Compréhension de l'espace</p>
+              </div>
+              <div class="step-status"></div>
             </div>
             <div
               id="step-plan"
-              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+              class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-sm opacity-50 transition-all duration-300"
             >
-              <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600"
-                >Planification des modifications...</span
-              >
+              <div class="step-icon w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <span class="text-sm">⏳</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-sm font-medium text-slate-700">Planification</span>
+                <p class="text-xs text-slate-400">Mapping des modifications</p>
+              </div>
+              <div class="step-status"></div>
             </div>
             <div
               id="step-generate"
-              class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 opacity-50"
+              class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-sm opacity-50 transition-all duration-300"
             >
-              <span class="step-icon text-xl">⏳</span>
-              <span class="text-sm text-slate-600"
-                >Génération de l'image...</span
-              >
+              <div class="step-icon w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <span class="text-sm">⏳</span>
+              </div>
+              <div class="flex-1">
+                <span class="text-sm font-medium text-slate-700">Génération</span>
+                <p class="text-xs text-slate-400">Création de l'image finale</p>
+              </div>
+              <div class="step-status"></div>
             </div>
           </div>
 
@@ -618,7 +638,7 @@ folders.forEach((f) => {
                           />
                           <div class="peer-checked:ring-2 peer-checked:ring-indigo-500 rounded-lg overflow-hidden border border-slate-200">
                             <img
-                              src={`/api/images${ref.image_path.replace("/uploads", "")}`}
+                              src={`/api/images/${ref.image_path.replace('/uploads/', '').replace('/uploads', '').replace(/^\//, '')}`}
                               alt={ref.name || "Référence"}
                               class="w-full aspect-square object-cover"
                             />
@@ -842,13 +862,15 @@ folders.forEach((f) => {
 
   // Fonction helper pour convertir les chemins d'images vers l'API
   function getImageUrl(path: string): string {
+    if (!path) return '';
     if (path.startsWith("blob:") || path.startsWith("data:")) {
       return path; // URL blob ou data URL - pas de conversion
     }
-    if (path.startsWith("/uploads/")) {
-      return `/api/images${path.replace("/uploads", "")}`;
-    }
-    return path;
+    // Nettoyer le chemin
+    let cleanPath = path.replace('/uploads/', '/').replace('/uploads', '');
+    // Retirer le / initial pour éviter le double slash
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+    return `/api/images/${cleanPath}`;
   }
 
   // Vérifie si c'est un fichier image (inclut HEIC/HEIF)
@@ -1142,6 +1164,31 @@ folders.forEach((f) => {
   });
 
   // Étape 3 - Génération
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
+  let startTime = 0;
+
+  function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    const timerEl = document.getElementById("logTimer");
+    if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+  }
+
+  function startTimer() {
+    startTime = Date.now();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
   function updateGenerationStep(
     stepId: string,
     status: "pending" | "active" | "done" | "error"
@@ -1149,33 +1196,45 @@ folders.forEach((f) => {
     const step = document.getElementById(stepId);
     if (!step) return;
 
-    const icon = step.querySelector(".step-icon") as HTMLElement;
+    const iconContainer = step.querySelector(".step-icon") as HTMLElement;
+    const iconSpan = iconContainer?.querySelector("span") as HTMLElement;
+    const statusEl = step.querySelector(".step-status") as HTMLElement;
+    
     step.classList.remove(
       "opacity-50",
+      "border-green-300",
+      "border-indigo-300",
+      "border-red-300",
       "bg-green-50",
       "bg-indigo-50",
       "bg-red-50"
     );
+    iconContainer?.classList.remove("bg-green-100", "bg-indigo-100", "bg-red-100", "bg-slate-100");
 
     switch (status) {
       case "pending":
         step.classList.add("opacity-50");
-        icon.textContent = "⏳";
+        iconContainer?.classList.add("bg-slate-100");
+        if (iconSpan) iconSpan.textContent = "⏳";
+        if (statusEl) statusEl.innerHTML = "";
         break;
       case "active":
-        step.classList.add("bg-indigo-50");
-        icon.textContent = "🔄";
-        icon.classList.add("animate-spin");
+        step.classList.add("bg-indigo-50", "border-indigo-300");
+        iconContainer?.classList.add("bg-indigo-100");
+        if (iconSpan) iconSpan.innerHTML = `<svg class="w-4 h-4 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-indigo-600 font-medium">En cours...</span>`;
         break;
       case "done":
-        step.classList.add("bg-green-50");
-        icon.textContent = "✅";
-        icon.classList.remove("animate-spin");
+        step.classList.add("bg-green-50", "border-green-300");
+        iconContainer?.classList.add("bg-green-100");
+        if (iconSpan) iconSpan.textContent = "✓";
+        if (statusEl) statusEl.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
         break;
       case "error":
-        step.classList.add("bg-red-50");
-        icon.textContent = "❌";
-        icon.classList.remove("animate-spin");
+        step.classList.add("bg-red-50", "border-red-300");
+        iconContainer?.classList.add("bg-red-100");
+        if (iconSpan) iconSpan.textContent = "✕";
+        if (statusEl) statusEl.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
         break;
     }
   }
@@ -1186,23 +1245,52 @@ folders.forEach((f) => {
         updateGenerationStep(id, "pending");
       }
     );
+    // Vider les logs et reset timer
+    const logsContent = document.getElementById("logsContent");
+    if (logsContent) logsContent.innerHTML = "";
+    const timerEl = document.getElementById("logTimer");
+    if (timerEl) timerEl.textContent = "00:00";
   }
 
-  async function simulateProgress() {
-    // Simuler la progression pendant l'attente de la réponse
-    updateGenerationStep("step-upload", "active");
-    await new Promise((r) => setTimeout(r, 1500));
-    updateGenerationStep("step-upload", "done");
-
-    updateGenerationStep("step-analyze", "active");
-    await new Promise((r) => setTimeout(r, 3000));
-    updateGenerationStep("step-analyze", "done");
-
-    updateGenerationStep("step-plan", "active");
-    await new Promise((r) => setTimeout(r, 2000));
-    updateGenerationStep("step-plan", "done");
-
-    updateGenerationStep("step-generate", "active");
+  function addLog(icon: string, message: string, type?: string) {
+    const logsContent = document.getElementById("logsContent");
+    if (!logsContent) return;
+    
+    const timestamp = new Date().toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+    
+    const logLine = document.createElement("div");
+    logLine.className = "flex items-start gap-2 font-mono text-xs animate-fadeIn";
+    
+    let textColor = "text-slate-400";
+    let bgColor = "";
+    if (type === "success") {
+      textColor = "text-emerald-400";
+      bgColor = "bg-emerald-500/10 rounded px-1";
+    }
+    if (type === "error") {
+      textColor = "text-red-400";
+      bgColor = "bg-red-500/10 rounded px-1";
+    }
+    if (type === "header") {
+      textColor = "text-cyan-400 font-semibold";
+    }
+    
+    logLine.innerHTML = `
+      <span class="text-slate-600 shrink-0">${timestamp}</span>
+      <span class="shrink-0">${icon}</span>
+      <span class="${textColor} ${bgColor} break-all">${message}</span>
+    `;
+    logsContent.appendChild(logLine);
+    
+    // Auto-scroll vers le bas
+    logsContent.scrollTo({
+      top: logsContent.scrollHeight,
+      behavior: "smooth"
+    });
   }
 
   toStep3Btn.addEventListener("click", async () => {
@@ -1211,9 +1299,7 @@ folders.forEach((f) => {
     resultState.classList.add("hidden");
     errorState.classList.add("hidden");
     resetGenerationSteps();
-
-    // Lancer l'animation de progression
-    const progressPromise = simulateProgress();
+    startTimer();
 
     try {
       const formData = new FormData();
@@ -1237,47 +1323,85 @@ folders.forEach((f) => {
         }
       });
 
-      const response = await fetch("/api/generate", {
+      // Utiliser fetch avec streaming pour le SSE
+      const response = await fetch("/api/generate-stream", {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        // Si plus de crédits, rediriger vers la page appropriée
-        if (result.noCredits) {
-          window.location.href = "/no-credits";
-          return;
-        }
-        throw new Error(result.error || "Erreur lors de la génération");
+        throw new Error("Erreur de connexion au serveur");
       }
 
-      // Marquer toutes les étapes comme terminées
-      ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
-        (id) => {
-          updateGenerationStep(id, "done");
-        }
-      );
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      resultBeforeImg.src = result.originalImage;
-
-      // Afficher l'image générée si disponible
-      if (result.generatedImage) {
-        resultAfterImg.src = result.generatedImage;
-        resultAfterImg.classList.remove("hidden");
-        resultDescription.classList.add("hidden");
-      } else if (result.description) {
-        // Fallback sur la description si pas d'image
-        resultDescription.innerHTML = `<p class="whitespace-pre-wrap">${result.description}</p>`;
-        resultDescription.classList.remove("hidden");
-        resultAfterImg.classList.add("hidden");
+      if (!reader) {
+        throw new Error("Le streaming n'est pas supporté");
       }
 
-      generatingState.classList.add("hidden");
-      resultState.classList.remove("hidden");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        let currentEvent = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.substring(7);
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.substring(6));
+              
+              if (currentEvent === "log") {
+                addLog(data.icon || "📝", data.message, data.type);
+              } else if (currentEvent === "step") {
+                updateGenerationStep(`step-${data.step}`, data.status);
+              } else if (currentEvent === "error") {
+                if (data.noCredits) {
+                  window.location.href = "/no-credits";
+                  return;
+                }
+                throw new Error(data.message);
+              } else if (currentEvent === "complete") {
+                stopTimer();
+                // Marquer toutes les étapes comme terminées
+                ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
+                  (id) => updateGenerationStep(id, "done")
+                );
+
+                // Nettoyer les chemins (enlever le / initial si présent)
+                const cleanPath = (path: string) => path.startsWith('/') ? path.slice(1) : path;
+                
+                resultBeforeImg.src = `/api/images/${cleanPath(data.originalImage)}`;
+                
+                if (data.generatedImage) {
+                  resultAfterImg.src = `/api/images/${cleanPath(data.generatedImage)}`;
+                  resultAfterImg.classList.remove("hidden");
+                  resultDescription.classList.add("hidden");
+                } else if (data.description) {
+                  resultDescription.innerHTML = `<p class="whitespace-pre-wrap">${data.description}</p>`;
+                  resultDescription.classList.remove("hidden");
+                  resultAfterImg.classList.add("hidden");
+                }
+
+                generatingState.classList.add("hidden");
+                resultState.classList.remove("hidden");
+              }
+            } catch (e) {
+              // Ignorer les erreurs de parsing JSON
+            }
+          }
+        }
+      }
     } catch (error: any) {
       console.error("Erreur:", error);
+      stopTimer();
+      addLog("❌", error.message || "Erreur inconnue", "error");
       // Marquer l'étape en cours comme erreur
       ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
         (id) => {

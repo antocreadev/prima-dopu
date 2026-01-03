@@ -1,8 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
 import heicConvert from "heic-convert";
 import sharp from "sharp";
+import { getImageBuffer, saveBuffer } from "./storage";
 
 // ============================================================================
 // SYSTÈME AGENTIQUE STATE-OF-THE-ART POUR RÉNOVATION AVANT/APRÈS
@@ -136,6 +135,7 @@ async function sleep(ms: number): Promise<void> {
 
 /**
  * Prépare une image pour l'API Gemini
+ * - Lit l'image depuis S3
  * - Convertit les formats Apple (HEIC, HEIF) en JPEG via heic-convert
  * - Optimise les images trop volumineuses (>4MB) via sharp
  */
@@ -143,7 +143,7 @@ async function prepareImageForAPI(
   imagePath: string
 ): Promise<{ base64: string; mimeType: string }> {
   const ext = imagePath.toLowerCase().split(".").pop() || "";
-  let buffer: Buffer = Buffer.from(readFileSync(imagePath));
+  let buffer: Buffer = await getImageBuffer(imagePath);
   let mimeType = getMimeType(imagePath);
 
   // Conversion des formats Apple (HEIC, HEIF) avec heic-convert
@@ -750,24 +750,21 @@ async function generateWithNanoBanana(
       const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
 
       const fileName = `generated_${generationId}.${extension}`;
-      const fullOutputDir = join(process.cwd(), "public", outputDir);
-      mkdirSync(fullOutputDir, { recursive: true });
-      const fullPath = join(fullOutputDir, fileName);
-
       const imageBuffer = Buffer.from(imageData as string, "base64");
-      writeFileSync(fullPath, imageBuffer);
+
+      // Sauvegarder sur S3
+      generatedImagePath = await saveBuffer(imageBuffer, fileName, "generated");
 
       console.log(
-        `   💾 Sauvegardé: ${fileName} (${(imageBuffer.length / 1024).toFixed(
-          0
-        )} KB)`
+        `   💾 Sauvegardé sur S3: ${fileName} (${(
+          imageBuffer.length / 1024
+        ).toFixed(0)} KB)`
       );
       if (thoughtCount > 0) {
         console.log(
           `   🧠 Mode Thinking: ${thoughtCount} image(s) intermédiaire(s) générée(s)`
         );
       }
-      generatedImagePath = `/api/images/generated/${fileName}`;
     } else if (part.text) {
       description = part.text;
     }
@@ -816,21 +813,7 @@ export async function generateBeforeAfter(
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // VALIDATION DES ENTRÉES
-  // ═══════════════════════════════════════════════════════════════════════
-
-  if (!existsSync(originalImagePath)) {
-    throw new Error(`Image originale non trouvée: ${originalImagePath}`);
-  }
-
-  for (const instr of instructions) {
-    if (!existsSync(instr.referenceImagePath)) {
-      throw new Error(`Référence non trouvée: ${instr.referenceImagePath}`);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // CHARGEMENT DES IMAGES
+  // CHARGEMENT DES IMAGES (les erreurs S3 seront gérées lors du chargement)
   // ═══════════════════════════════════════════════════════════════════════
 
   console.log("\n📸 Chargement des images...");
@@ -932,6 +915,166 @@ export async function generateBeforeAfter(
     }
   }
 
+  throw new Error(
+    `Échec après ${CONFIG.maxRetries} tentatives. ${lastError?.message}`
+  );
+}
+
+// ============================================================================
+// FONCTION AVEC PROGRESS CALLBACK POUR STREAMING SSE
+// ============================================================================
+
+export type ProgressCallback = (event: {
+  type: 'log' | 'step' | 'error';
+  icon?: string;
+  message?: string;
+  step?: string;
+  status?: 'pending' | 'loading' | 'done' | 'error';
+}) => void;
+
+export async function generateBeforeAfterWithProgress(
+  originalImagePath: string,
+  instructions: GenerationInstruction[],
+  outputDir: string,
+  generationId: string,
+  onProgress: ProgressCallback,
+  options: GenerationOptions = {}
+): Promise<GenerationResult> {
+  const startTime = Date.now();
+
+  const log = (icon: string, message: string) => {
+    console.log(`${icon} ${message}`);
+    onProgress({ type: 'log', icon, message });
+  };
+
+  const setStep = (step: string, status: 'pending' | 'loading' | 'done' | 'error') => {
+    onProgress({ type: 'step', step, status });
+  };
+
+  log("🤖", "SYSTÈME AGENTIQUE DE GÉNÉRATION AVANT/APRÈS");
+  log("📋", `${instructions.length} instruction(s) de l'utilisateur`);
+  log("🆔", `ID: ${generationId}`);
+
+  for (let i = 0; i < instructions.length; i++) {
+    const instr = instructions[i];
+    log("📌", `Instruction ${i + 1}: "${instr.location}" - ${instr.referenceName || "(sans nom)"}`);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CHARGEMENT DES IMAGES
+  // ═══════════════════════════════════════════════════════════════════════
+
+  setStep('upload', 'loading');
+  log("📸", "Chargement des images depuis S3...");
+  
+  const originalImage = await prepareImageForAPI(originalImagePath);
+  log("✓", `Original: ${(originalImage.base64.length / 1024).toFixed(0)} KB`);
+
+  const referenceImages: { base64: string; mimeType: string }[] = [];
+  for (let i = 0; i < instructions.length; i++) {
+    const refImage = await prepareImageForAPI(instructions[i].referenceImagePath);
+    referenceImages.push(refImage);
+    log("✓", `Référence ${i + 1}: ${(refImage.base64.length / 1024).toFixed(0)} KB`);
+  }
+  
+  setStep('upload', 'done');
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PHASE 1: ANALYSE AGENTIQUE
+  // ═══════════════════════════════════════════════════════════════════════
+
+  setStep('analyze', 'loading');
+  log("🔬", "PHASE 1: Analyse intelligente de l'image");
+  log("🧠", "Identification des éléments de la pièce...");
+
+  const analysis = await analyzeImageWithAgent(originalImage);
+  
+  log("✓", `Analyse terminée: ${(analysis.description || 'Analyse complète').substring(0, 100)}...`);
+  setStep('analyze', 'done');
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PHASE 2: PLANIFICATION DES MODIFICATIONS
+  // ═══════════════════════════════════════════════════════════════════════
+
+  setStep('plan', 'loading');
+  log("📊", "PHASE 2: Planification et mapping des zones");
+  log("🗺️", "Création du plan de modification...");
+
+  const plan = await planModificationsWithAgent(
+    analysis,
+    instructions,
+    referenceImages
+  );
+
+  log("✓", `Plan créé: ${plan.tasks?.length || 0} tâche(s) de modification`);
+  if (plan.tasks && plan.tasks.length > 0) {
+    for (const task of plan.tasks) {
+      log("📍", `Zone: ${task.zoneName || 'Zone'} - ${(task.actionDescription || 'Modification').substring(0, 60)}`);
+    }
+  }
+  setStep('plan', 'done');
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // PHASE 3: GÉNÉRATION AVEC RETRY
+  // ═══════════════════════════════════════════════════════════════════════
+
+  setStep('generate', 'loading');
+  log("🎨", "PHASE 3: Génération de l'image avec Gemini");
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+    log("🔄", `Tentative ${attempt}/${CONFIG.maxRetries}`);
+
+    try {
+      const prompt =
+        attempt === 1
+          ? plan.globalPrompt
+          : buildSimplifiedRetryPrompt(instructions, plan.tasks, attempt);
+
+      log("📝", `Envoi du prompt (${prompt.length} caractères)...`);
+
+      const result = await generateWithNanoBanana(
+        originalImage,
+        referenceImages,
+        prompt,
+        outputDir,
+        generationId
+      );
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      setStep('generate', 'done');
+      log("✅", `GÉNÉRATION RÉUSSIE en ${duration}s!`);
+      log("📁", `Image sauvegardée: ${result.imagePath}`);
+
+      return {
+        imagePath: result.imagePath,
+        description: result.description,
+        attempts: attempt,
+        analysisDetails: analysis,
+      };
+    } catch (error) {
+      lastError = error as Error;
+      log("❌", `Échec: ${(lastError?.message || 'Erreur inconnue').substring(0, 150)}`);
+
+      if (attempt < CONFIG.maxRetries) {
+        const delay = Math.min(
+          CONFIG.initialDelayMs * Math.pow(CONFIG.backoffMultiplier, attempt - 1),
+          CONFIG.maxDelayMs
+        );
+        log("⏳", `Nouveau essai dans ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+
+  setStep('generate', 'error');
+  onProgress({ 
+    type: 'error', 
+    message: `Échec après ${CONFIG.maxRetries} tentatives: ${lastError?.message}` 
+  });
+  
   throw new Error(
     `Échec après ${CONFIG.maxRetries} tentatives. ${lastError?.message}`
   );

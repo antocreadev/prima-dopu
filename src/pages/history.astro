@@ -11,6 +11,16 @@ if (!userId) {
   return Astro.redirect("/");
 }
 
+// Fonction helper pour construire l'URL d'image
+function getImageUrl(path: string): string {
+  if (!path) return '';
+  // Retirer /uploads/ si présent (ancien format)
+  let cleanPath = path.replace('/uploads/', '/').replace('/uploads', '');
+  // Retirer le / initial pour éviter le double slash
+  if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+  return `/api/images/${cleanPath}`;
+}
+
 // Gestion de la suppression
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -20,9 +30,9 @@ if (Astro.request.method === "POST") {
     const id = formData.get("id") as string;
     const gen = await import("../lib/db").then(m => m.getGeneration(id));
     if (gen && gen.user_id === userId) {
-      deleteImage(gen.original_image_path);
+      await deleteImage(gen.original_image_path);
       if (gen.generated_image_path) {
-        deleteImage(gen.generated_image_path);
+        await deleteImage(gen.generated_image_path);
       }
       deleteGeneration(id, userId);
     }
@@ -120,7 +130,7 @@ const generationsWithInstructions = generations.map(gen => ({
                   <div>
                     <h4 class="font-medium text-slate-700 mb-2">Image originale</h4>
                     <img 
-                      src={`/api/images${gen.original_image_path.replace('/uploads', '')}`} 
+                      src={getImageUrl(gen.original_image_path)} 
                       alt="Original" 
                       class="w-full rounded-lg border border-slate-200"
                     />
@@ -131,9 +141,7 @@ const generationsWithInstructions = generations.map(gen => ({
                     <h4 class="font-medium text-slate-700 mb-2">Résultat IA</h4>
                     {gen.generated_image_path && gen.generated_image_path.startsWith('/') ? (
                       <img 
-                        src={gen.generated_image_path.startsWith('/api/') 
-                          ? gen.generated_image_path 
-                          : `/api/images${gen.generated_image_path.replace('/uploads', '')}`} 
+                        src={getImageUrl(gen.generated_image_path)} 
                         alt="Image générée" 
                         class="w-full rounded-lg border border-slate-200"
                       />
@@ -159,7 +167,7 @@ const generationsWithInstructions = generations.map(gen => ({
                       {gen.instructions.map((instr) => (
                         <div class="flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg">
                           <img 
-                            src={`/api/images${instr.reference.image_path.replace('/uploads', '')}`} 
+                            src={getImageUrl(instr.reference.image_path)} 
                             alt={instr.reference.name || "Référence"} 
                             class="w-8 h-8 rounded object-cover"
                           />

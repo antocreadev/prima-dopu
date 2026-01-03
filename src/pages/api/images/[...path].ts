@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { getImageBuffer } from "../../../lib/storage";
 
 export const GET: APIRoute = async ({ params }) => {
   const imagePath = params.path;
@@ -14,14 +13,11 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response("Chemin invalide", { status: 400 });
   }
 
-  const fullPath = join(process.cwd(), "public", "uploads", imagePath);
-
-  if (!existsSync(fullPath)) {
-    return new Response("Image non trouvée", { status: 404 });
-  }
-
+  // Servir l'image depuis S3 via proxy (bucket privé)
   try {
-    const imageBuffer = readFileSync(fullPath);
+    // S'assurer que le chemin commence par /
+    const s3Path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    const imageBuffer = await getImageBuffer(s3Path);
 
     // Déterminer le type MIME
     const ext = imagePath.toLowerCase().split(".").pop();
@@ -34,7 +30,7 @@ export const GET: APIRoute = async ({ params }) => {
     };
     const contentType = mimeTypes[ext || ""] || "application/octet-stream";
 
-    return new Response(imageBuffer, {
+    return new Response(new Uint8Array(imageBuffer), {
       status: 200,
       headers: {
         "Content-Type": contentType,
@@ -42,7 +38,7 @@ export const GET: APIRoute = async ({ params }) => {
       },
     });
   } catch (error) {
-    console.error("Erreur lecture image:", error);
-    return new Response("Erreur serveur", { status: 500 });
+    console.error("Erreur lecture image S3:", error);
+    return new Response("Image non trouvée", { status: 404 });
   }
 };

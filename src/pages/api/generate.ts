@@ -9,7 +9,7 @@ import {
   incrementUserCredits,
   type PlanType,
 } from "../../lib/db";
-import { saveImage, getAbsolutePath } from "../../lib/storage";
+import { saveImage } from "../../lib/storage";
 import {
   generateBeforeAfter,
   type GenerationInstruction,
@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Vérifier le plan de l'utilisateur et ses crédits
     const authObj = locals.auth();
     const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
-    
+
     // Les admins ont des générations illimitées
     const isAdmin = userPlanInfo.isAdmin === true;
     const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
@@ -146,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const instruction: GenerationInstruction = {
           location: instr.location,
-          referenceImagePath: getAbsolutePath(referencePath),
+          referenceImagePath: referencePath, // Chemin S3 directement
           referenceName: referenceName,
         };
 
@@ -181,9 +181,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       const result = await generateBeforeAfter(
-        getAbsolutePath(originalImagePath),
+        originalImagePath, // Chemin S3 directement
         geminiInstructions,
-        "uploads/generated",
+        "generated", // Type de stockage S3
         generation.id
       );
 

@@ -74,7 +74,10 @@ export const POST: APIRoute = async ({ request }) => {
     console.error("Erreur conversion image:", error);
     return new Response(
       JSON.stringify({ error: "Erreur lors de la conversion de l'image" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
     );
   }
 };
