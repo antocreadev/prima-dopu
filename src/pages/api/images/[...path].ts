@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ params }) => {
   // Servir l'image depuis S3 via proxy (bucket privé)
   try {
     // S'assurer que le chemin commence par /
-    const s3Path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    const s3Path = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
     const imageBuffer = await getImageBuffer(s3Path);
 
     // Déterminer le type MIME

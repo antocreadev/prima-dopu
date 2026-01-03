@@ -6,9 +6,12 @@ import sharp from "sharp";
 // Configuration S3 Hetzner depuis les variables d'environnement
 // Astro utilise import.meta.env, avec fallback sur process.env pour compatibilité
 const S3_REGION = import.meta.env.S3_REGION || process.env.S3_REGION || "hel1";
-const S3_ACCESS_KEY = import.meta.env.S3_ACCESS_KEY || process.env.S3_ACCESS_KEY || "";
-const S3_SECRET_KEY = import.meta.env.S3_SECRET_KEY || process.env.S3_SECRET_KEY || "";
-const S3_BUCKET = import.meta.env.S3_BUCKET || process.env.S3_BUCKET || "primadopu";
+const S3_ACCESS_KEY =
+  import.meta.env.S3_ACCESS_KEY || process.env.S3_ACCESS_KEY || "";
+const S3_SECRET_KEY =
+  import.meta.env.S3_SECRET_KEY || process.env.S3_SECRET_KEY || "";
+const S3_BUCKET =
+  import.meta.env.S3_BUCKET || process.env.S3_BUCKET || "primadopu";
 
 // Hetzner utilise le style virtual-hosted: bucket.region.your-objectstorage.com
 const S3_HOST = `${S3_BUCKET}.${S3_REGION}.your-objectstorage.com`;
@@ -312,7 +315,11 @@ export async function deleteImage(s3Path: string): Promise<boolean> {
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {
-          if (res.statusCode && (res.statusCode >= 200 && res.statusCode < 300 || res.statusCode === 404)) {
+          if (
+            res.statusCode &&
+            ((res.statusCode >= 200 && res.statusCode < 300) ||
+              res.statusCode === 404)
+          ) {
             console.log(`   🗑️ Supprimé de S3: ${s3Key}`);
             resolve(true);
           } else {

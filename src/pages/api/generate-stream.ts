@@ -42,14 +42,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return;
       }
 
-      await sendEvent("log", { 
-        icon: "📥", 
+      await sendEvent("log", {
+        icon: "📥",
         message: "Nouvelle requête de génération",
-        type: "header"
+        type: "header",
       });
-      await sendEvent("log", { 
-        icon: "👤", 
-        message: `Utilisateur: ${userId.substring(0, 10)}...` 
+      await sendEvent("log", {
+        icon: "👤",
+        message: `Utilisateur: ${userId.substring(0, 10)}...`,
       });
 
       // Vérifier le plan de l'utilisateur et ses crédits
@@ -58,17 +58,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const isAdmin = userPlanInfo.isAdmin === true;
       const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
 
-      await sendEvent("log", { 
-        icon: "📊", 
-        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${creditCheck.limit}` 
+      await sendEvent("log", {
+        icon: "📊",
+        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${creditCheck.limit}`,
       });
 
       if (!isAdmin && !creditCheck.canGenerate) {
-        await sendEvent("error", { 
+        await sendEvent("error", {
           message: creditCheck.reason,
           noCredits: true,
           used: creditCheck.used,
-          limit: creditCheck.limit
+          limit: creditCheck.limit,
         });
         await writer.close();
         return;
@@ -85,25 +85,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       await sendEvent("step", { step: "upload", status: "active" });
-      await sendEvent("log", { 
-        icon: "📷", 
-        message: `Image: ${image.name} (${(image.size / 1024).toFixed(0)} KB)` 
+      await sendEvent("log", {
+        icon: "📷",
+        message: `Image: ${image.name} (${(image.size / 1024).toFixed(0)} KB)`,
       });
 
       // Sauvegarder l'image originale
       const originalImagePath = await saveImage(image, userId, "originals");
-      await sendEvent("log", { 
-        icon: "💾", 
-        message: `Sauvegardée sur S3` 
+      await sendEvent("log", {
+        icon: "💾",
+        message: `Sauvegardée sur S3`,
       });
       await sendEvent("step", { step: "upload", status: "done" });
 
       // Créer la génération
       const generation = createGeneration(userId, originalImagePath);
       updateGeneration(generation.id, { status: "processing" });
-      await sendEvent("log", { 
-        icon: "🆔", 
-        message: `ID: ${generation.id.substring(0, 8)}...` 
+      await sendEvent("log", {
+        icon: "🆔",
+        message: `ID: ${generation.id.substring(0, 8)}...`,
       });
 
       // Parser les instructions
@@ -115,9 +115,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         isNew?: boolean;
       }>;
 
-      await sendEvent("log", { 
-        icon: "📋", 
-        message: `${parsedInstructions.length} instruction(s) reçue(s)` 
+      await sendEvent("log", {
+        icon: "📋",
+        message: `${parsedInstructions.length} instruction(s) reçue(s)`,
       });
 
       const geminiInstructions: GenerationInstruction[] = [];
@@ -136,11 +136,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
               (instr.referenceName && instr.referenceName.trim()) ||
               newRefFile.name.replace(/\.[^.]+$/, "") ||
               `Référence ${i + 1}`;
-            await sendEvent("log", { 
-              icon: "📤", 
-              message: `Nouvelle réf: ${referenceName}` 
+            await sendEvent("log", {
+              icon: "📤",
+              message: `Nouvelle réf: ${referenceName}`,
             });
-            const newRefPath = await saveImage(newRefFile, userId, "references");
+            const newRefPath = await saveImage(
+              newRefFile,
+              userId,
+              "references"
+            );
             const newRef = createReference(userId, newRefPath, referenceName);
             referenceId = newRef.id;
             referencePath = newRefPath;
@@ -153,9 +157,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               (instr.referenceName && instr.referenceName.trim()) ||
               (ref.name && ref.name.trim()) ||
               `Référence ${i + 1}`;
-            await sendEvent("log", { 
-              icon: "📎", 
-              message: `Réf existante: ${referenceName}` 
+            await sendEvent("log", {
+              icon: "📎",
+              message: `Réf existante: ${referenceName}`,
             });
           }
         }
@@ -174,10 +178,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
 
           geminiInstructions.push(instruction);
-          await sendEvent("log", { 
-            icon: "✓", 
+          await sendEvent("log", {
+            icon: "✓",
             message: `[${i + 1}] "${instr.location}" → ${referenceName}`,
-            type: "success"
+            type: "success",
           });
         }
       }
@@ -189,25 +193,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return;
       }
 
-      await sendEvent("log", { 
-        icon: "🚀", 
+      await sendEvent("log", {
+        icon: "🚀",
         message: `Lancement avec ${geminiInstructions.length} instruction(s)...`,
-        type: "header"
+        type: "header",
       });
 
       // Callback de progression pour Gemini
       const onProgress = (event: {
-        type: 'log' | 'step' | 'error';
+        type: "log" | "step" | "error";
         icon?: string;
         message?: string;
         step?: string;
-        status?: 'pending' | 'loading' | 'done' | 'error';
+        status?: "pending" | "loading" | "done" | "error";
       }) => {
-        if (event.type === 'step') {
-          sendEvent("step", { step: event.step, status: event.status === 'loading' ? 'active' : event.status });
-        } else if (event.type === 'log') {
+        if (event.type === "step") {
+          sendEvent("step", {
+            step: event.step,
+            status: event.status === "loading" ? "active" : event.status,
+          });
+        } else if (event.type === "log") {
           sendEvent("log", { icon: event.icon, message: event.message });
-        } else if (event.type === 'error') {
+        } else if (event.type === "error") {
           sendEvent("error", { message: event.message });
         }
       };
@@ -228,12 +235,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         incrementUserCredits(userId);
-        
+
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        await sendEvent("log", { 
-          icon: "✅", 
+        await sendEvent("log", {
+          icon: "✅",
           message: `Terminé en ${duration}s`,
-          type: "success"
+          type: "success",
         });
 
         await sendEvent("complete", {
@@ -248,10 +255,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } catch (geminiError: any) {
         updateGeneration(generation.id, { status: "failed" });
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        await sendEvent("log", { 
-          icon: "❌", 
+        await sendEvent("log", {
+          icon: "❌",
           message: `Échec après ${duration}s: ${geminiError.message}`,
-          type: "error"
+          type: "error",
         });
         await sendEvent("error", { message: geminiError.message });
       }
@@ -267,7 +274,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
     },
   });
 };
