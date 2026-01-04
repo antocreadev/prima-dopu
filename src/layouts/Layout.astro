@@ -17,7 +17,7 @@ const {
   disableStickyHeader = false,
 } = Astro.props;
 const currentPath = Astro.url.pathname;
-const siteUrl = Astro.site || "https://primadopu.com";
+const siteUrl = Astro.site || "https://primadopu.fr";
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 const ogImageURL = new URL("/og-image.png", siteUrl).toString();
 const logoURL = new URL("/logo-primadopu-texte.png", siteUrl).toString();
