@@ -42,10 +42,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Les admins ont des générations illimitées
     const isAdmin = userPlanInfo.isAdmin === true;
-    const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
+    const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
 
     console.log(
-      `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${creditCheck.used}/${creditCheck.limit}`
+      `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${creditCheck.used}/${isAdmin ? '∞' : creditCheck.limit}`
     );
 
     if (!isAdmin && !creditCheck.canGenerate) {

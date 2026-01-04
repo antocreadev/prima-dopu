@@ -415,16 +415,29 @@ export function checkAndResetMonthlyCredits(userId: string): UserCredits {
 // Vérifier si un utilisateur peut générer (selon son plan)
 export function canUserGenerate(
   userId: string,
-  planType: PlanType
+  planType: PlanType,
+  isAdmin: boolean = false
 ): {
   canGenerate: boolean;
   reason?: string;
   credits: UserCredits;
   limit: number;
   used: number;
+  isUnlimited: boolean;
 } {
   const credits = checkAndResetMonthlyCredits(userId);
   const limits = PLAN_LIMITS[planType];
+
+  // Les admins ont des générations illimitées
+  if (isAdmin) {
+    return {
+      canGenerate: true,
+      credits,
+      limit: Infinity,
+      used: credits.total_generations,
+      isUnlimited: true,
+    };
+  }
 
   if (planType === "free") {
     // Plan gratuit: vérifie le total (3 max au total)
@@ -437,6 +450,7 @@ export function canUserGenerate(
       credits,
       limit: limits.total || 0,
       used: credits.total_generations,
+      isUnlimited: false,
     };
   } else {
     // Plans payants: vérifie le mensuel
@@ -450,6 +464,7 @@ export function canUserGenerate(
       credits,
       limit: monthlyLimit,
       used: credits.monthly_generations,
+      isUnlimited: false,
     };
   }
 }
@@ -471,7 +486,8 @@ export function incrementUserCredits(userId: string): void {
 // Obtenir les statistiques de crédit pour l'affichage
 export function getCreditStats(
   userId: string,
-  planType: PlanType
+  planType: PlanType,
+  isAdmin: boolean = false
 ): {
   used: number;
   limit: number;
@@ -488,6 +504,18 @@ export function getCreditStats(
     standard: "Standard",
     pro: "Pro",
   };
+
+  // Les admins ont des générations illimitées
+  if (isAdmin) {
+    return {
+      used: credits.total_generations,
+      limit: Infinity,
+      remaining: Infinity,
+      percentage: 0,
+      isUnlimited: true,
+      planName: "Admin",
+    };
+  }
 
   if (planType === "free") {
     const limit = limits.total || 3;

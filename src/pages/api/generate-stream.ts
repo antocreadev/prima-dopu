@@ -56,11 +56,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const authObj = locals.auth();
       const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
       const isAdmin = userPlanInfo.isAdmin === true;
-      const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
+      const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${creditCheck.limit}`,
+        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${isAdmin ? '∞' : creditCheck.limit}${isAdmin ? ' (Admin)' : ''}`,
       });
 
       if (!isAdmin && !creditCheck.canGenerate) {

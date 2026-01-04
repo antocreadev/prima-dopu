@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
 import { getUserCredits, getCreditStats, type PlanType } from "../lib/db";
+import { getUserPlanFromAuth } from "../lib/plans";
 
 const auth = Astro.locals.auth();
 const userId = auth.userId;
@@ -10,10 +11,17 @@ if (!userId) {
   return Astro.redirect("/sign-in");
 }
 
-// Déterminer le plan de l'utilisateur (pour l'instant, on utilise "free" par défaut)
-// TODO: Récupérer le vrai plan depuis Clerk Billing avec has()
-const userPlan: PlanType = "free";
-const stats = getCreditStats(userId, userPlan);
+// Déterminer le plan de l'utilisateur
+const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
+const isAdmin = userPlanInfo.isAdmin === true;
+
+// Les admins ne devraient jamais voir cette page
+if (isAdmin) {
+  return Astro.redirect("/generate");
+}
+
+const userPlan = userPlanInfo.planType;
+const stats = getCreditStats(userId, userPlan, false);
 ---
 
 <Layout title="Plus de crédits - PrimaDopu">

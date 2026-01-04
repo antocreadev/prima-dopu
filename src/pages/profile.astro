@@ -16,7 +16,8 @@ const user = await Astro.locals.currentUser();
 
 // Déterminer le plan de l'utilisateur
 const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
-const creditStats = getCreditStats(userId, userPlanInfo.planType);
+const isAdmin = userPlanInfo.isAdmin === true;
+const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin);
 const credits = getUserCredits(userId);
 ---
 
@@ -55,6 +56,17 @@ const credits = getUserCredits(userId);
         </div>
 
         <div class="space-y-4">
+          <!-- Badge Admin -->
+          {userPlanInfo.isAdmin && (
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl p-4 flex items-center gap-3">
+              <span class="text-2xl">👑</span>
+              <div>
+                <span class="font-semibold">Compte Administrateur</span>
+                <p class="text-sm text-purple-200">Générations illimitées</p>
+              </div>
+            </div>
+          )}
+
           <!-- Section Abonnement -->
           <div class="border-t border-slate-200 pt-4">
             <h3 class="font-medium text-slate-800 mb-4">💳 Mon abonnement</h3>
@@ -72,14 +84,16 @@ const credits = getUserCredits(userId);
                   <span
                     class:list={[
                       "inline-block px-3 py-1 rounded-full text-sm font-semibold",
-                      userPlanInfo.planType === "pro"
-                        ? "bg-slate-800 text-white"
-                        : userPlanInfo.planType === "standard"
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-200 text-slate-700",
+                      userPlanInfo.isAdmin
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                        : userPlanInfo.planType === "pro"
+                          ? "bg-slate-800 text-white"
+                          : userPlanInfo.planType === "standard"
+                            ? "bg-orange-500 text-white"
+                            : "bg-slate-200 text-slate-700",
                     ]}
                   >
-                    {creditStats.planName}
+                    {userPlanInfo.isAdmin ? "👑 Admin" : creditStats.planName}
                   </span>
                 </div>
                 <a
@@ -95,6 +109,17 @@ const credits = getUserCredits(userId);
               </div>
 
               <!-- Barre de progression des crédits -->
+              {userPlanInfo.isAdmin ? (
+                <div class="mb-2">
+                  <div class="flex justify-between text-sm mb-1">
+                    <span class="text-slate-600">Crédits</span>
+                    <span class="font-semibold text-purple-600">∞ Illimité</span>
+                  </div>
+                  <div class="w-full bg-gradient-to-r from-purple-200 to-indigo-200 rounded-full h-3 overflow-hidden">
+                    <div class="h-full w-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              ) : (
               <div class="mb-2">
                 <div class="flex justify-between text-sm mb-1">
                   <span class="text-slate-600">Crédits utilisés</span>
@@ -119,7 +144,16 @@ const credits = getUserCredits(userId);
                   </div>
                 </div>
               </div>
+              )}
 
+              {userPlanInfo.isAdmin ? (
+                <div class="flex items-center justify-between text-sm">
+                  <span class="font-medium text-purple-600">
+                    ∞ Générations illimitées
+                  </span>
+                  <span class="text-slate-500">Admin</span>
+                </div>
+              ) : (
               <div class="flex items-center justify-between text-sm">
                 <span
                   class:list={[
@@ -139,6 +173,7 @@ const credits = getUserCredits(userId);
                   {userPlanInfo.planType === "free" ? "au total" : "ce mois-ci"}
                 </span>
               </div>
+              )}
             </div>
 
             <!-- Stats totales -->

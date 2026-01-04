@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getImageBuffer } from "../../../lib/storage";
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
   const imagePath = params.path;
 
   if (!imagePath) {
@@ -11,6 +11,37 @@ export const GET: APIRoute = async ({ params }) => {
   // Sécurité : empêcher les path traversal
   if (imagePath.includes("..")) {
     return new Response("Chemin invalide", { status: 400 });
+  }
+
+  // Déterminer le type d'image depuis le chemin
+  // Format: {type}/{userId}-{timestamp}-{uuid}.{ext}
+  const pathParts = imagePath.split("/");
+  const imageType = pathParts[0]; // "generated", "originals", ou "references"
+
+  // Les images générées sont publiques (pour le partage social)
+  const isPublicImage = imageType === "generated";
+
+  if (!isPublicImage) {
+    // Pour les images privées (originals, references), vérifier l'authentification
+    const auth = locals.auth();
+    const userId = auth.userId;
+
+    if (!userId) {
+      return new Response("Non authentifié", { status: 401 });
+    }
+
+    // Vérifier que l'utilisateur a accès à cette image
+    if (pathParts.length >= 2) {
+      const filename = pathParts[pathParts.length - 1];
+      const fileUserIdMatch = filename.match(/^(user_[^-]+)/);
+      if (fileUserIdMatch) {
+        const fileUserId = fileUserIdMatch[1];
+        if (fileUserId !== userId) {
+          console.warn(`🚫 Accès refusé: ${userId} tente d'accéder à l'image de ${fileUserId}`);
+          return new Response("Accès non autorisé", { status: 403 });
+        }
+      }
+    }
   }
 
   // Servir l'image depuis S3 via proxy (bucket privé)

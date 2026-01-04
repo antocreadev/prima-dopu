@@ -20,11 +20,12 @@ if (!userId) {
 
 // Déterminer le plan de l'utilisateur
 const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
-const creditStats = getCreditStats(userId, userPlanInfo.planType);
-const creditCheck = canUserGenerate(userId, userPlanInfo.planType);
+const isAdmin = userPlanInfo.isAdmin === true;
+const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin);
+const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
 
-// Rediriger si plus de crédits
-if (!creditCheck.canGenerate) {
+// Rediriger si plus de crédits (sauf admin)
+if (!isAdmin && !creditCheck.canGenerate) {
   return Astro.redirect("/no-credits");
 }
 
@@ -61,6 +62,19 @@ folders.forEach((f) => {
         </div>
 
         <!-- Badge des crédits -->
+        {isAdmin ? (
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl border bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-purple-600">∞</div>
+              <div class="text-xs text-purple-500">illimité</div>
+            </div>
+            <div class="w-px h-8 bg-purple-200"></div>
+            <div class="text-sm">
+              <div class="font-medium text-purple-800">👑 Admin</div>
+              <span class="text-purple-600 text-xs">Générations illimitées</span>
+            </div>
+          </div>
+        ) : (
         <div
           class:list={[
             "flex items-center gap-3 px-4 py-3 rounded-xl border",
@@ -96,6 +110,7 @@ folders.forEach((f) => {
             </a>
           </div>
         </div>
+        )}
       </div>
 
       <!-- Indicateur d'étapes -->

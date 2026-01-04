@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/pricing",
   "/legal/(.*)",
   "/api/convert-image", // Conversion d'image pour aperçu
+  "/api/images/generated/(.*)", // Images générées publiques pour le partage social
 ]);
 
 export const onRequest = clerkMiddleware((auth, context) => {
