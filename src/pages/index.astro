@@ -4,11 +4,11 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
 
 // SEO metadata
 const seoTitle =
-  "PrimaDopu - Visualisation Avant/Après par IA pour Professionnels";
+  "PrimaDopu - Visualisation Avant/Après par IA | Rénovation, Déco, Mobilier, Paysagisme";
 const seoDescription =
-  "Créez des visuels avant/après professionnels en moins de 3 minutes. L'outil IA pour architectes, décorateurs, agences immobilières et artisans. Essai gratuit.";
+  "Créez des visuels avant/après photoréalistes en moins de 3 minutes. Rénovation, décoration, mobilier, paysagisme, home staging. L'outil IA pour tous les métiers de l'aménagement. Essai gratuit.";
 const seoKeywords =
-  "visualisation avant après, IA aménagement, home staging virtuel, outil architecte, décoration intérieur, simulation rénovation";
+  "visualisation avant après, IA aménagement, home staging virtuel, simulation rénovation, changement mobilier, décoration intérieur, paysagisme, remplacement meuble, carrelage, peinture, jardin";
 ---
 
 <Layout title={seoTitle} description={seoDescription} keywords={seoKeywords}>
@@ -50,8 +50,9 @@ const seoKeywords =
               class="text-lg sm:text-xl text-slate-600 mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed"
             >
               Créez des visuels avant/après professionnels en moins de 3
-              minutes. Décoration, mobilier, aménagement... Impressionnez vos
-              clients.
+              minutes. Rénovation, mobilier, décoration, paysagisme,
+              matériaux... Transformez n'importe quel espace et impressionnez
+              vos clients.
             </p>
 
             <div
@@ -198,29 +199,254 @@ const seoKeywords =
         >
           Ils nous font confiance
         </p>
-        <div
-          class="flex flex-wrap justify-center items-center gap-x-12 gap-y-6"
-        >
+        <div class="flex flex-wrap justify-center items-center gap-x-8 gap-y-4">
           <span
-            class="text-xl font-bold text-slate-300 hover:text-primary transition-colors"
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
             >Architectes</span
           >
           <span
-            class="text-xl font-bold text-slate-300 hover:text-primary transition-colors"
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
             >Décorateurs</span
           >
           <span
-            class="text-xl font-bold text-slate-300 hover:text-primary transition-colors"
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
+            >Cuisinistes</span
+          >
+          <span
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
+            >Paysagistes</span
+          >
+          <span
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
             >Agences Immo</span
           >
           <span
-            class="text-xl font-bold text-slate-300 hover:text-primary transition-colors"
-            >Artisans</span
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
+            >Artisans BTP</span
           >
           <span
-            class="text-xl font-bold text-slate-300 hover:text-primary transition-colors"
-            >Home Stagers</span
+            class="text-lg font-bold text-slate-300 hover:text-primary transition-colors"
+            >Vendeurs Mobilier</span
           >
+        </div>
+      </div>
+    </section>
+
+    <!-- Types de transformations -->
+    <section class="py-20 lg:py-28 bg-gradient-to-b from-slate-50 to-white">
+      <div class="max-w-7xl mx-auto p-4">
+        <div class="text-center mb-16">
+          <span
+            class="text-sm font-semibold text-orange-500 uppercase tracking-wider"
+            >Polyvalent</span
+          >
+          <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mt-3 mb-4">
+            Tous types de transformations
+          </h2>
+          <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+            L'IA comprend automatiquement si vous voulez changer un matériau,
+            remplacer un meuble ou ajouter un élément
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Matériaux -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                🧱
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Matériaux & Revêtements
+                </h3>
+                <p class="text-sm text-slate-500">Application de textures</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Carrelage, parquet, moquette
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Peinture, papier peint
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Crépi, enduit, bardage
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Plans de travail, crédences
+              </li>
+            </ul>
+          </div>
+
+          <!-- Mobilier -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                🛋️
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Mobilier & Meubles
+                </h3>
+                <p class="text-sm text-slate-500">Remplacement d'objets</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Tables, chaises, bureaux
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Canapés, fauteuils, lits
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Armoires, commodes, étagères
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Meubles de cuisine, SDB
+              </li>
+            </ul>
+          </div>
+
+          <!-- Décoration -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                🖼️
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Décoration & Textiles
+                </h3>
+                <p class="text-sm text-slate-500">Ajout d'éléments déco</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Rideaux, stores, voilages
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Tableaux, miroirs, horloges
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Tapis, coussins, plaids
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Vases, sculptures, objets
+              </li>
+            </ul>
+          </div>
+
+          <!-- Luminaires -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                💡
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Luminaires & Éclairage
+                </h3>
+                <p class="text-sm text-slate-500">Changement d'ambiance</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Lustres, suspensions
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Lampadaires, lampes de table
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Appliques murales
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Spots, bandeaux LED
+              </li>
+            </ul>
+          </div>
+
+          <!-- Extérieur -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                🌿
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Extérieur & Jardin
+                </h3>
+                <p class="text-sm text-slate-500">Paysagisme & terrasses</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Plantes, arbres, haies
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Terrasses, dalles, gazon
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Clôtures, pergolas
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Mobilier de jardin
+              </li>
+            </ul>
+          </div>
+
+          <!-- Équipements -->
+          <div
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div
+                class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-2xl"
+              >
+                ⚡
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-slate-900">
+                  Équipements & Sanitaires
+                </h3>
+                <p class="text-sm text-slate-500">Installations techniques</p>
+              </div>
+            </div>
+            <ul class="space-y-2 text-slate-600 text-sm">
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Électroménager
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Lavabos, baignoires, douches
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Radiateurs, climatiseurs
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-orange-500">✓</span> Robinetterie, accessoires
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -333,8 +559,9 @@ const seoKeywords =
               Choisissez vos références
             </h3>
             <p class="text-slate-600">
-              Sélectionnez dans votre bibliothèque : matériaux, mobilier, déco,
-              plantes... Décrivez les changements souhaités.
+              Matériaux (carrelage, parquet, peinture), mobilier (tables,
+              canapés), luminaires, plantes, rideaux... L'IA comprend tout type
+              de référence.
             </p>
           </div>
 
@@ -407,11 +634,11 @@ const seoKeywords =
               📚
             </div>
             <h3 class="font-semibold text-lg text-slate-900 mb-2">
-              Bibliothèque de références
+              Bibliothèque polyvalente
             </h3>
             <p class="text-slate-600 text-sm">
-              Centralisez vos matériaux, meubles, déco. Réutilisez-les sur tous
-              vos projets.
+              Matériaux, meubles, luminaires, plantes, textiles... Centralisez
+              toutes vos références.
             </p>
           </div>
 
@@ -443,8 +670,8 @@ const seoKeywords =
               Instructions précises
             </h3>
             <p class="text-slate-600 text-sm">
-              Guidez l'IA : ajout de fenêtres, changement de sol, nouveau
-              mobilier...
+              Changez le sol, remplacez une table, ajoutez des rideaux, modifiez
+              le jardin... L'IA comprend vos intentions.
             </p>
           </div>
 
@@ -493,11 +720,11 @@ const seoKeywords =
             >Pour qui ?</span
           >
           <h2 class="text-3xl sm:text-4xl font-bold mt-3 mb-4">
-            Conçu pour les professionnels
+            Un outil pour tous les métiers de l'aménagement
           </h2>
           <p class="text-lg text-blue-100 max-w-2xl mx-auto">
-            Quel que soit votre métier dans l'aménagement, PrimaDopu vous aide à
-            convaincre
+            Rénovation, décoration, mobilier, paysagisme... PrimaDopu s'adapte à
+            votre métier
           </p>
         </div>
 
@@ -505,11 +732,22 @@ const seoKeywords =
           <div
             class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
           >
-            <div class="text-4xl mb-4">📐</div>
-            <h3 class="font-bold text-lg mb-2">Architectes</h3>
+            <div class="text-4xl mb-4">🏗️</div>
+            <h3 class="font-bold text-lg mb-2">Artisans BTP</h3>
             <p class="text-blue-100 text-sm">
-              Présentez des variantes d'aménagement sans passer par la 3D
-              complexe.
+              Carrelage, peinture, parquet, façades... Montrez le résultat final
+              avant les travaux.
+            </p>
+          </div>
+
+          <div
+            class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
+          >
+            <div class="text-4xl mb-4">🛋️</div>
+            <h3 class="font-bold text-lg mb-2">Vendeurs Mobilier</h3>
+            <p class="text-blue-100 text-sm">
+              Remplacez virtuellement tables, canapés, lits... Aidez vos clients
+              à visualiser chez eux.
             </p>
           </div>
 
@@ -519,8 +757,41 @@ const seoKeywords =
             <div class="text-4xl mb-4">🎨</div>
             <h3 class="font-bold text-lg mb-2">Décorateurs</h3>
             <p class="text-blue-100 text-sm">
-              Montrez l'impact de vos choix : mobilier, couleurs, textures en un
-              clic.
+              Rideaux, luminaires, tableaux, tapis... Proposez des ambiances en
+              un clic.
+            </p>
+          </div>
+
+          <div
+            class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
+          >
+            <div class="text-4xl mb-4">🌿</div>
+            <h3 class="font-bold text-lg mb-2">Paysagistes</h3>
+            <p class="text-blue-100 text-sm">
+              Plantes, arbres, terrasses, clôtures... Transformez les extérieurs
+              en quelques clics.
+            </p>
+          </div>
+
+          <div
+            class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
+          >
+            <div class="text-4xl mb-4">🍳</div>
+            <h3 class="font-bold text-lg mb-2">Cuisinistes</h3>
+            <p class="text-blue-100 text-sm">
+              Plans de travail, crédences, électroménager... Visualisez la
+              cuisine idéale.
+            </p>
+          </div>
+
+          <div
+            class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
+          >
+            <div class="text-4xl mb-4">📐</div>
+            <h3 class="font-bold text-lg mb-2">Architectes</h3>
+            <p class="text-blue-100 text-sm">
+              Présentez des variantes d'aménagement rapidement, sans 3D
+              complexe.
             </p>
           </div>
 
@@ -528,21 +799,21 @@ const seoKeywords =
             class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
           >
             <div class="text-4xl mb-4">🏢</div>
-            <h3 class="font-bold text-lg mb-2">Agences immo</h3>
+            <h3 class="font-bold text-lg mb-2">Agences Immo</h3>
             <p class="text-blue-100 text-sm">
-              Home staging virtuel pour valoriser vos biens et aider les clients
-              à se projeter.
+              Home staging virtuel pour valoriser vos biens et accélérer les
+              ventes.
             </p>
           </div>
 
           <div
             class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/15 transition-colors"
           >
-            <div class="text-4xl mb-4">🔧</div>
-            <h3 class="font-bold text-lg mb-2">Artisans</h3>
+            <div class="text-4xl mb-4">💡</div>
+            <h3 class="font-bold text-lg mb-2">Électriciens</h3>
             <p class="text-blue-100 text-sm">
-              Montrez le résultat final avant de commencer. Augmentez vos
-              signatures.
+              Lustres, appliques, spots... Montrez l'effet des luminaires avant
+              installation.
             </p>
           </div>
         </div>
@@ -573,11 +844,11 @@ const seoKeywords =
         <h2
           class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6"
         >
-          Prêt à transformer votre façon de travailler ?
+          Prêt à révolutionner vos présentations clients ?
         </h2>
         <p class="text-lg text-slate-600 mb-10 max-w-2xl mx-auto">
-          Rejoignez les professionnels qui gagnent du temps et convainquent plus
-          de clients grâce aux visuels avant/après.
+          Rénovation, décoration, mobilier, paysagisme... Quel que soit votre
+          métier, créez des visuels avant/après qui font la différence.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/sign-up" class="btn-primary text-lg">
@@ -620,9 +891,9 @@ const seoKeywords =
               </h1>
             </div>
             <p class="text-slate-600 max-w-sm">
-              L'outil de visualisation IA pour les professionnels de
-              l'aménagement. Créez des visuels avant/après convaincants en
-              quelques minutes.
+              L'outil de visualisation IA polyvalent pour tous les métiers de
+              l'aménagement : rénovation, décoration, mobilier, paysagisme.
+              Créez des visuels avant/après convaincants en quelques minutes.
             </p>
           </div>
 

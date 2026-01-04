@@ -49,23 +49,23 @@ const CONFIG = {
 // ============================================================================
 
 // Type d'élément dans l'image
-export type ElementCategory = 
-  | "surface"      // Murs, sols, plafonds, façades
-  | "furniture"    // Meubles (tables, chaises, canapés, lits, armoires)
-  | "lighting"     // Luminaires (lustres, lampes, spots, appliques)
-  | "decoration"   // Déco (tableaux, miroirs, vases, rideaux, tapis)
-  | "equipment"    // Équipements (prises, interrupteurs, radiateurs)
-  | "outdoor"      // Extérieur (plantes, pergolas, clôtures, terrasses)
-  | "fixture"      // Éléments fixes (éviers, baignoires, sanitaires)
-  | "appliance";   // Électroménager (cuisine, buanderie)
+export type ElementCategory =
+  | "surface" // Murs, sols, plafonds, façades
+  | "furniture" // Meubles (tables, chaises, canapés, lits, armoires)
+  | "lighting" // Luminaires (lustres, lampes, spots, appliques)
+  | "decoration" // Déco (tableaux, miroirs, vases, rideaux, tapis)
+  | "equipment" // Équipements (prises, interrupteurs, radiateurs)
+  | "outdoor" // Extérieur (plantes, pergolas, clôtures, terrasses)
+  | "fixture" // Éléments fixes (éviers, baignoires, sanitaires)
+  | "appliance"; // Électroménager (cuisine, buanderie)
 
 // Type de modification à effectuer
 export type ModificationAction =
-  | "replace_material"   // Changer le matériau d'une surface (peinture, carrelage)
-  | "replace_object"     // Remplacer un objet entier par un autre
-  | "add_element"        // Ajouter un nouvel élément
-  | "remove_element"     // Retirer un élément
-  | "modify_style";      // Modifier le style (couleur, finition)
+  | "replace_material" // Changer le matériau d'une surface (peinture, carrelage)
+  | "replace_object" // Remplacer un objet entier par un autre
+  | "add_element" // Ajouter un nouvel élément
+  | "remove_element" // Retirer un élément
+  | "modify_style"; // Modifier le style (couleur, finition)
 
 export type ModificationType =
   | "floor"
@@ -128,7 +128,7 @@ interface ZoneInfo {
   boundaries: string;
   currentMaterial: string;
   // Nouvelles propriétés pour distinguer surfaces et objets
-  elementType?: "surface" | "object";  // surface = mur/sol, object = meuble/déco
+  elementType?: "surface" | "object"; // surface = mur/sol, object = meuble/déco
   objectCategory?: string; // table, chaise, lampe, plante, tableau, etc.
 }
 
@@ -369,7 +369,9 @@ RÈGLES D'IDENTIFICATION:
         );
       }
       if (analysis.visibleObjects && analysis.visibleObjects.length > 0) {
-        console.log(`   ✓ ${analysis.visibleObjects.length} objets identifiés:`);
+        console.log(
+          `   ✓ ${analysis.visibleObjects.length} objets identifiés:`
+        );
         for (const obj of analysis.visibleObjects) {
           console.log(
             `      - ${obj.name} (${obj.category}): ${obj.style} ${obj.material}`
@@ -496,13 +498,15 @@ Sois PRÉCIS dans ta classification, c'est CRUCIAL pour la génération.`;
 
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
+
     if (jsonMatch) {
       const analysis = JSON.parse(jsonMatch[0]) as ReferenceAnalysis;
       console.log(`   ✓ Type de référence: ${analysis.type.toUpperCase()}`);
       console.log(`   ✓ Catégorie: ${analysis.category}`);
       console.log(`   ✓ Action: ${analysis.action}`);
-      console.log(`   ✓ Style: ${analysis.style}, Matière: ${analysis.material}`);
+      console.log(
+        `   ✓ Style: ${analysis.style}, Matière: ${analysis.material}`
+      );
       return analysis;
     }
   } catch (error) {
@@ -531,13 +535,17 @@ async function planModificationsWithAgent(
   instructions: GenerationInstruction[],
   referenceImages: { base64: string; mimeType: string }[]
 ): Promise<ModificationPlan> {
-  console.log("   📋 Agent Planificateur: Analyse intelligente des modifications...");
+  console.log(
+    "   📋 Agent Planificateur: Analyse intelligente des modifications..."
+  );
 
   // 1. Analyser chaque image de référence
   console.log("\n   🔍 Étape 1: Analyse des images de référence...");
   const referenceAnalyses: ReferenceAnalysis[] = [];
   for (let i = 0; i < referenceImages.length; i++) {
-    console.log(`   📷 Analyse référence ${i + 1}/${referenceImages.length}...`);
+    console.log(
+      `   📷 Analyse référence ${i + 1}/${referenceImages.length}...`
+    );
     const refAnalysis = await analyzeReferenceImage(referenceImages[i]);
     referenceAnalyses.push(refAnalysis);
   }
@@ -546,7 +554,9 @@ async function planModificationsWithAgent(
   const zonesContext = analysis.visibleZones
     .map(
       (z) =>
-        `- SURFACE | ID: "${z.id}" | Nom: "${z.name}" | Type: ${z.elementType || "surface"} | Matériau: ${z.currentMaterial}`
+        `- SURFACE | ID: "${z.id}" | Nom: "${z.name}" | Type: ${
+          z.elementType || "surface"
+        } | Matériau: ${z.currentMaterial}`
     )
     .join("\n");
 
@@ -564,7 +574,9 @@ async function planModificationsWithAgent(
       const refAnalysis = referenceAnalyses[i];
       return `${i + 1}. Instruction: "${instr.location}"
      → Référence: ${instr.referenceName || "image " + (i + 1)}
-     → Type détecté: ${refAnalysis?.type?.toUpperCase() || "INCONNU"} (${refAnalysis?.category || "non analysé"})
+     → Type détecté: ${refAnalysis?.type?.toUpperCase() || "INCONNU"} (${
+        refAnalysis?.category || "non analysé"
+      })
      → Action: ${refAnalysis?.action || "apply_texture"}`;
     })
     .join("\n");
@@ -639,12 +651,17 @@ Réponds avec ce JSON (sans markdown):
         for (const targetId of m.targetIds || []) {
           if (m.targetType === "object" || actionType === "replace_object") {
             // C'est un remplacement d'objet
-            const targetObj = (analysis.visibleObjects || []).find((o) => o.id === targetId);
+            const targetObj = (analysis.visibleObjects || []).find(
+              (o) => o.id === targetId
+            );
             if (targetObj) {
               tasks.push({
                 priority: m.instructionIndex,
                 targetObject: targetObj,
-                targetMaterial: instruction.referenceName || refAnalysis?.category || "objet de référence",
+                targetMaterial:
+                  instruction.referenceName ||
+                  refAnalysis?.category ||
+                  "objet de référence",
                 referenceIndex: m.instructionIndex,
                 specificInstructions: m.interpretation || instruction.location,
                 actionType: "replace_object",
@@ -658,7 +675,10 @@ Réponds avec ce JSON (sans markdown):
               tasks.push({
                 priority: m.instructionIndex,
                 zone: zone,
-                targetMaterial: instruction.referenceName || refAnalysis?.category || "matériau de référence",
+                targetMaterial:
+                  instruction.referenceName ||
+                  refAnalysis?.category ||
+                  "matériau de référence",
                 referenceIndex: m.instructionIndex,
                 specificInstructions: m.interpretation || instruction.location,
                 actionType: "apply_texture",
@@ -688,10 +708,17 @@ Réponds avec ce JSON (sans markdown):
       for (const task of tasks) {
         const targetName = task.zone?.name || task.targetObject?.name || "?";
         const emoji = task.actionType === "replace_object" ? "🔄" : "🎨";
-        console.log(`      ${emoji} ${task.actionType}: ${targetName} → ${task.targetMaterial}`);
+        console.log(
+          `      ${emoji} ${task.actionType}: ${targetName} → ${task.targetMaterial}`
+        );
       }
 
-      const globalPrompt = buildOptimizedPrompt(analysis, tasks, instructions, referenceAnalyses);
+      const globalPrompt = buildOptimizedPrompt(
+        analysis,
+        tasks,
+        instructions,
+        referenceAnalyses
+      );
       return { originalAnalysis: analysis, tasks, globalPrompt };
     }
   } catch (error) {
@@ -715,14 +742,28 @@ Réponds avec ce JSON (sans markdown):
       for (const obj of analysis.visibleObjects) {
         const objLower = obj.name.toLowerCase();
         const catLower = obj.category.toLowerCase();
-        
+
         // Matcher par catégorie ou nom
-        if (location.includes("table") && (catLower.includes("table") || objLower.includes("table"))) {
+        if (
+          location.includes("table") &&
+          (catLower.includes("table") || objLower.includes("table"))
+        ) {
           matchedObjects.push(obj);
-        } else if (location.includes("chaise") && (catLower.includes("chaise") || catLower.includes("chair"))) {
+        } else if (
+          location.includes("chaise") &&
+          (catLower.includes("chaise") || catLower.includes("chair"))
+        ) {
           matchedObjects.push(obj);
-        } else if (location.includes("lampe") || location.includes("luminaire") || location.includes("lustre")) {
-          if (catLower.includes("lum") || catLower.includes("lamp") || catLower.includes("light")) {
+        } else if (
+          location.includes("lampe") ||
+          location.includes("luminaire") ||
+          location.includes("lustre")
+        ) {
+          if (
+            catLower.includes("lum") ||
+            catLower.includes("lamp") ||
+            catLower.includes("light")
+          ) {
             matchedObjects.push(obj);
           }
         } else if (location.includes("plante")) {
@@ -730,7 +771,11 @@ Réponds avec ce JSON (sans markdown):
             matchedObjects.push(obj);
           }
         } else if (location.includes("canapé") || location.includes("sofa")) {
-          if (catLower.includes("canap") || catLower.includes("sofa") || catLower.includes("fauteuil")) {
+          if (
+            catLower.includes("canap") ||
+            catLower.includes("sofa") ||
+            catLower.includes("fauteuil")
+          ) {
             matchedObjects.push(obj);
           }
         }
@@ -740,7 +785,8 @@ Réponds avec ce JSON (sans markdown):
         tasks.push({
           priority: i,
           targetObject: obj,
-          targetMaterial: instr.referenceName || refAnalysis?.category || "référence",
+          targetMaterial:
+            instr.referenceName || refAnalysis?.category || "référence",
           referenceIndex: i,
           specificInstructions: instr.location,
           actionType: "replace_object",
@@ -755,17 +801,35 @@ Réponds avec ce JSON (sans markdown):
         const zoneLower = zone.name.toLowerCase();
         const zoneIdLower = zone.id.toLowerCase();
 
-        if (location.includes("gauche") && (zoneLower.includes("gauche") || zoneIdLower.includes("left"))) {
+        if (
+          location.includes("gauche") &&
+          (zoneLower.includes("gauche") || zoneIdLower.includes("left"))
+        ) {
           matchedZones.push(zone);
-        } else if (location.includes("droit") && (zoneLower.includes("droit") || zoneIdLower.includes("right"))) {
+        } else if (
+          location.includes("droit") &&
+          (zoneLower.includes("droit") || zoneIdLower.includes("right"))
+        ) {
           matchedZones.push(zone);
-        } else if ((location.includes("fond") || location.includes("face")) && (zoneLower.includes("fond") || zoneIdLower.includes("back"))) {
+        } else if (
+          (location.includes("fond") || location.includes("face")) &&
+          (zoneLower.includes("fond") || zoneIdLower.includes("back"))
+        ) {
           matchedZones.push(zone);
-        } else if (location.includes("sol") && (zoneLower.includes("sol") || zoneIdLower.includes("floor"))) {
+        } else if (
+          location.includes("sol") &&
+          (zoneLower.includes("sol") || zoneIdLower.includes("floor"))
+        ) {
           matchedZones.push(zone);
-        } else if (location.includes("plafond") && (zoneLower.includes("plafond") || zoneIdLower.includes("ceiling"))) {
+        } else if (
+          location.includes("plafond") &&
+          (zoneLower.includes("plafond") || zoneIdLower.includes("ceiling"))
+        ) {
           matchedZones.push(zone);
-        } else if (location.includes("tous les murs") && zoneIdLower.includes("wall")) {
+        } else if (
+          location.includes("tous les murs") &&
+          zoneIdLower.includes("wall")
+        ) {
           matchedZones.push(zone);
         } else if (location.includes("mur") && zoneIdLower.includes("wall")) {
           matchedZones.push(zone);
@@ -774,9 +838,10 @@ Réponds avec ce JSON (sans markdown):
 
       // Si aucune correspondance, utiliser la première zone
       if (matchedZones.length === 0) {
-        const defaultZone = analysis.visibleZones.find(
-          (z) => z.id.includes("wall") || z.id.includes("floor")
-        ) || analysis.visibleZones[0];
+        const defaultZone =
+          analysis.visibleZones.find(
+            (z) => z.id.includes("wall") || z.id.includes("floor")
+          ) || analysis.visibleZones[0];
         if (defaultZone) matchedZones.push(defaultZone);
       }
 
@@ -784,7 +849,8 @@ Réponds avec ce JSON (sans markdown):
         tasks.push({
           priority: i,
           zone: zone,
-          targetMaterial: instr.referenceName || refAnalysis?.category || "référence",
+          targetMaterial:
+            instr.referenceName || refAnalysis?.category || "référence",
           referenceIndex: i,
           specificInstructions: instr.location,
           actionType: "apply_texture",
@@ -799,7 +865,12 @@ Réponds avec ce JSON (sans markdown):
   return {
     originalAnalysis: analysis,
     tasks,
-    globalPrompt: buildOptimizedPrompt(analysis, tasks, instructions, referenceAnalyses),
+    globalPrompt: buildOptimizedPrompt(
+      analysis,
+      tasks,
+      instructions,
+      referenceAnalyses
+    ),
   };
 }
 
@@ -814,7 +885,9 @@ function buildOptimizedPrompt(
   referenceAnalyses?: ReferenceAnalysis[]
 ): string {
   // Séparer les tâches par type d'action
-  const materialTasks = tasks.filter((t) => t.actionType === "apply_texture" || !t.actionType);
+  const materialTasks = tasks.filter(
+    (t) => t.actionType === "apply_texture" || !t.actionType
+  );
   const objectTasks = tasks.filter((t) => t.actionType === "replace_object");
   const addTasks = tasks.filter((t) => t.actionType === "add_element");
 
@@ -837,7 +910,10 @@ function buildOptimizedPrompt(
     groupedMaterials.forEach((zoneTasks, refIndex) => {
       const instruction = instructions[refIndex];
       const refAnalysis = referenceAnalyses?.[refIndex];
-      const materialName = instruction.referenceName || refAnalysis?.category || "matériau de référence";
+      const materialName =
+        instruction.referenceName ||
+        refAnalysis?.category ||
+        "matériau de référence";
 
       const zoneDescriptions = zoneTasks
         .map((t) => {
@@ -854,13 +930,17 @@ function buildOptimizedPrompt(
       modificationBlocks.push(`
 ### SURFACE ${refIndex + 1}: Appliquer "${materialName}"
 **Image de référence**: IMAGE ${refIndex + 2}
-**Style**: ${refAnalysis?.style || "non spécifié"} | **Couleur**: ${refAnalysis?.mainColor || "non spécifiée"}
+**Style**: ${refAnalysis?.style || "non spécifié"} | **Couleur**: ${
+        refAnalysis?.mainColor || "non spécifiée"
+      }
 
 **Zones ciblées**:
 ${zoneDescriptions}
 
 **Instructions**:
-1. Examiner l'IMAGE ${refIndex + 2} pour comprendre: texture, couleur, motifs, reflets
+1. Examiner l'IMAGE ${
+        refIndex + 2
+      } pour comprendre: texture, couleur, motifs, reflets
 2. APPLIQUER ce matériau sur 100% de chaque surface listée
 3. Aucune trace de l'ancien matériau ne doit rester
 4. Adapter les ombres et reflets à l'éclairage ambiant`);
@@ -875,14 +955,19 @@ ${zoneDescriptions}
     for (const task of objectTasks) {
       const instruction = instructions[task.referenceIndex];
       const refAnalysis = task.referenceAnalysis;
-      const objectName = instruction.referenceName || refAnalysis?.category || "objet de référence";
+      const objectName =
+        instruction.referenceName ||
+        refAnalysis?.category ||
+        "objet de référence";
       const targetObj = task.targetObject;
 
       modificationBlocks.push(`
 ### OBJET: Remplacer "${targetObj?.name || "objet"}" par "${objectName}"
 **Image de référence**: IMAGE ${task.referenceIndex + 2}
 **Type d'objet**: ${refAnalysis?.category || "meuble/décoration"}
-**Style**: ${refAnalysis?.style || "non spécifié"} | **Matière**: ${refAnalysis?.material || "non spécifiée"} | **Couleur**: ${refAnalysis?.mainColor || "non spécifiée"}
+**Style**: ${refAnalysis?.style || "non spécifié"} | **Matière**: ${
+        refAnalysis?.material || "non spécifiée"
+      } | **Couleur**: ${refAnalysis?.mainColor || "non spécifiée"}
 
 **Objet à remplacer**:
    • **${targetObj?.name || "Objet cible"}**
@@ -892,7 +977,9 @@ ${zoneDescriptions}
 
 **Instructions CRITIQUES**:
 1. SUPPRIMER COMPLÈTEMENT l'objet actuel (${targetObj?.name})
-2. INSÉRER l'objet visible dans l'IMAGE ${task.referenceIndex + 2} À LA MÊME POSITION
+2. INSÉRER l'objet visible dans l'IMAGE ${
+        task.referenceIndex + 2
+      } À LA MÊME POSITION
 3. Conserver les MÊMES DIMENSIONS approximatives (adapter à l'espace)
 4. Adapter l'éclairage et les ombres pour intégration réaliste
 5. L'objet de remplacement doit respecter la perspective de la scène`);
@@ -907,7 +994,8 @@ ${zoneDescriptions}
     for (const task of addTasks) {
       const instruction = instructions[task.referenceIndex];
       const refAnalysis = task.referenceAnalysis;
-      const elementName = instruction.referenceName || refAnalysis?.category || "élément";
+      const elementName =
+        instruction.referenceName || refAnalysis?.category || "élément";
 
       modificationBlocks.push(`
 ### AJOUT: Insérer "${elementName}"
@@ -972,7 +1060,7 @@ ${modificationBlocks.join("\n")}
 - Les équipements techniques (prises, interrupteurs) sauf si demandé
 
 ## ACTION FINALE
-Génère UNE image photoréaliste montrant l'espace APRÈS toutes les transformations demandées.`
+Génère UNE image photoréaliste montrant l'espace APRÈS toutes les transformations demandées.`;
 }
 
 // ============================================================================
@@ -1311,7 +1399,9 @@ export async function generateBeforeAfterWithProgress(
 
   log(
     "✓",
-    `Analyse terminée: ${analysis.roomType} - ${analysis.visibleZones.length} surfaces, ${(analysis.visibleObjects || []).length} objets`
+    `Analyse terminée: ${analysis.roomType} - ${
+      analysis.visibleZones.length
+    } surfaces, ${(analysis.visibleObjects || []).length} objets`
   );
   setStep("analyze", "done");
 
@@ -1336,7 +1426,9 @@ export async function generateBeforeAfterWithProgress(
       const actionEmoji = task.actionType === "replace_object" ? "🔄" : "🎨";
       log(
         "📍",
-        `${actionEmoji} ${task.actionType}: ${targetName} → ${task.targetMaterial.substring(0, 40)}`
+        `${actionEmoji} ${
+          task.actionType
+        }: ${targetName} → ${task.targetMaterial.substring(0, 40)}`
       );
     }
   }
@@ -1424,9 +1516,10 @@ function buildSimplifiedRetryPrompt(
       const zones = relevantTasks
         .map((t) => t.zone?.name || t.targetObject?.name || "cible")
         .join(", ");
-      const action = relevantTasks[0]?.actionType === "replace_object" 
-        ? "Remplacer par l'objet de" 
-        : "Appliquer le matériau de";
+      const action =
+        relevantTasks[0]?.actionType === "replace_object"
+          ? "Remplacer par l'objet de"
+          : "Appliquer le matériau de";
       return `${i + 1}. Cibles: ${zones || instr.location}
    ${action} l'IMAGE ${i + 2}${
         instr.referenceName ? ` (${instr.referenceName})` : ""
