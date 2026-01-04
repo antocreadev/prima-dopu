@@ -24,10 +24,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
 
-  // Fonction helper pour envoyer un événement SSE
+  // Fonction helper pour envoyer un événement SSE (avec gestion d'erreur)
   const sendEvent = async (event: string, data: any) => {
-    const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-    await writer.write(encoder.encode(message));
+    try {
+      const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+      await writer.write(encoder.encode(message));
+    } catch (e) {
+      // Client déconnecté, ignorer silencieusement
+      console.log("[SSE] Client déconnecté, impossible d'envoyer:", event);
+    }
+  };
+
+  // Fonction pour fermer le writer en toute sécurité
+  const safeClose = async () => {
+    try {
+      await writer.close();
+    } catch (e) {
+      // Déjà fermé ou erreur, ignorer
+    }
   };
 
   // Lancer le traitement en arrière-plan
@@ -38,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (!userId) {
         await sendEvent("error", { message: "Non authentifié" });
-        await writer.close();
+        await safeClose();
         return;
       }
 
@@ -70,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           used: creditCheck.used,
           limit: creditCheck.limit,
         });
-        await writer.close();
+        await safeClose();
         return;
       }
 
@@ -80,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (!image || !instructionsJson) {
         await sendEvent("error", { message: "Image et instructions requises" });
-        await writer.close();
+        await safeClose();
         return;
       }
 
@@ -189,7 +203,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (geminiInstructions.length === 0) {
         updateGeneration(generation.id, { status: "failed" });
         await sendEvent("error", { message: "Aucune instruction valide" });
-        await writer.close();
+        await safeClose();
         return;
       }
 
@@ -263,18 +277,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await sendEvent("error", { message: geminiError.message });
       }
 
-      await writer.close();
+      await safeClose();
     } catch (error: any) {
-      await sendEvent("error", { message: error.message || "Erreur serveur" });
-      await writer.close();
+      console.error("[SSE] Erreur dans le stream:", error);
+      await sendEvent("error", { message: error?.message || "Erreur serveur" });
+      await safeClose();
     }
-  })();
+  })().catch((err) => {
+    // Capture toute erreur non gérée (ex: client déconnecté pendant l'écriture)
+    console.error("[SSE] Erreur fatale non gérée:", err);
+    safeClose().catch(() => {});
+  });
 
   return new Response(readable, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",  // Indique à Nginx de ne pas bufferiser
     },
   });
 };

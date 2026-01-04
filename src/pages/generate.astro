@@ -62,55 +62,62 @@ folders.forEach((f) => {
         </div>
 
         <!-- Badge des crédits -->
-        {isAdmin ? (
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl border bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-            <div class="text-center">
-              <div class="text-2xl font-bold text-purple-600">∞</div>
-              <div class="text-xs text-purple-500">illimité</div>
+        {
+          isAdmin ? (
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl border bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+              <div class="text-center">
+                <div class="text-2xl font-bold text-purple-600">∞</div>
+                <div class="text-xs text-purple-500">illimité</div>
+              </div>
+              <div class="w-px h-8 bg-purple-200" />
+              <div class="text-sm">
+                <div class="font-medium text-purple-800">👑 Admin</div>
+                <span class="text-purple-600 text-xs">
+                  Générations illimitées
+                </span>
+              </div>
             </div>
-            <div class="w-px h-8 bg-purple-200"></div>
-            <div class="text-sm">
-              <div class="font-medium text-purple-800">👑 Admin</div>
-              <span class="text-purple-600 text-xs">Générations illimitées</span>
-            </div>
-          </div>
-        ) : (
-        <div
-          class:list={[
-            "flex items-center gap-3 px-4 py-3 rounded-xl border",
-            creditStats.remaining <= 2
-              ? "bg-orange-50 border-orange-200"
-              : "bg-slate-50 border-slate-200",
-          ]}
-        >
-          <div class="text-center">
+          ) : (
             <div
               class:list={[
-                "text-2xl font-bold",
-                creditStats.remaining === 0
-                  ? "text-red-600"
-                  : creditStats.remaining <= 2
-                    ? "text-orange-600"
-                    : "text-slate-900",
+                "flex items-center gap-3 px-4 py-3 rounded-xl border",
+                creditStats.remaining <= 2
+                  ? "bg-orange-50 border-orange-200"
+                  : "bg-slate-50 border-slate-200",
               ]}
             >
-              {creditStats.remaining}
+              <div class="text-center">
+                <div
+                  class:list={[
+                    "text-2xl font-bold",
+                    creditStats.remaining === 0
+                      ? "text-red-600"
+                      : creditStats.remaining <= 2
+                        ? "text-orange-600"
+                        : "text-slate-900",
+                  ]}
+                >
+                  {creditStats.remaining}
+                </div>
+                <div class="text-xs text-slate-500">
+                  restant{creditStats.remaining > 1 ? "s" : ""}
+                </div>
+              </div>
+              <div class="w-px h-8 bg-slate-300" />
+              <div class="text-sm">
+                <div class="font-medium text-slate-800">
+                  Plan {creditStats.planName}
+                </div>
+                <a
+                  href="/pricing"
+                  class="text-orange-600 hover:underline text-xs"
+                >
+                  {userPlanInfo.isPaid ? "Gérer" : "Upgrader"}
+                </a>
+              </div>
             </div>
-            <div class="text-xs text-slate-500">
-              restant{creditStats.remaining > 1 ? "s" : ""}
-            </div>
-          </div>
-          <div class="w-px h-8 bg-slate-300"></div>
-          <div class="text-sm">
-            <div class="font-medium text-slate-800">
-              Plan {creditStats.planName}
-            </div>
-            <a href="/pricing" class="text-orange-600 hover:underline text-xs">
-              {userPlanInfo.isPaid ? "Gérer" : "Upgrader"}
-            </a>
-          </div>
-        </div>
-        )}
+          )
+        }
       </div>
 
       <!-- Indicateur d'étapes -->
@@ -442,7 +449,7 @@ folders.forEach((f) => {
           </div>
 
           <p class="text-xs text-slate-400 mt-6">
-            Cela peut prendre jusqu'à 2 minutes
+            Cela peut prendre jusqu'à 3 minutes
           </p>
         </div>
 
