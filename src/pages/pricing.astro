@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { PricingTable } from "@clerk/astro/components";
+import { SignedIn, SignedOut } from "@clerk/astro/components";
 ---
 
 <Layout
@@ -8,20 +8,68 @@ import { PricingTable } from "@clerk/astro/components";
   description="Découvrez nos offres d'abonnement pour créer des visuels avant/après professionnels avec l'IA."
   disableStickyHeader={true}
 >
-  <div class="max-w-5xl mx-auto">
+  <div class="max-w-6xl mx-auto px-4">
     <div class="text-center mb-12">
       <h1 class="text-4xl font-bold text-slate-900 mb-4">
         Choisissez votre formule
       </h1>
       <p class="text-xl text-slate-600 max-w-2xl mx-auto">
-        Des tarifs simples et transparents pour tous les professionnels
+        Des tarifs simples et transparents en euros
       </p>
     </div>
 
-    <!-- Tableau des tarifs Clerk -->
-    <div class="mb-16">
-      <PricingTable />
+    <!-- Indicateur de chargement -->
+    <div id="loading-products" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      <p class="mt-4 text-slate-600">Chargement des offres...</p>
     </div>
+
+    <!-- Conteneur des abonnements -->
+    <div id="subscriptions-container" class="hidden mb-16">
+      <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
+        📦 Abonnements mensuels
+      </h2>
+      <div id="subscriptions-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Les cartes seront générées dynamiquement -->
+      </div>
+    </div>
+
+    <!-- Conteneur des crédits unitaires -->
+    <div id="credits-container" class="hidden mb-16">
+      <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
+        🎯 Crédits à l'unité
+      </h2>
+      <p class="text-center text-slate-600 mb-6">
+        Besoin de plus de générations ? Achetez des crédits supplémentaires.
+      </p>
+      <div id="credits-grid" class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <!-- Les cartes seront générées dynamiquement -->
+      </div>
+    </div>
+
+    <!-- Erreur -->
+    <div id="error-container" class="hidden text-center py-12">
+      <p class="text-red-600">Erreur lors du chargement des offres. Veuillez réessayer.</p>
+      <button onclick="loadProducts()" class="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+        Réessayer
+      </button>
+    </div>
+
+    <!-- Plan actuel (pour utilisateurs connectés) -->
+    <SignedIn>
+      <div id="current-plan" class="hidden mb-8 p-4 bg-blue-50 rounded-xl text-center">
+        <p class="text-blue-800">
+          Votre plan actuel : <strong id="current-plan-name">-</strong>
+          <span id="credits-balance" class="ml-2"></span>
+        </p>
+        <button
+          id="manage-subscription-btn"
+          class="hidden mt-2 text-sm text-blue-600 underline hover:text-blue-800"
+        >
+          Gérer mon abonnement
+        </button>
+      </div>
+    </SignedIn>
 
     <!-- FAQ -->
     <div class="bg-slate-50 rounded-2xl p-8">
@@ -43,8 +91,7 @@ import { PricingTable } from "@clerk/astro/components";
             Les crédits sont-ils reportés ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Non, les crédits mensuels sont remis à zéro chaque mois. Les 3
-            crédits gratuits sont valables une seule fois.
+            Les crédits mensuels sont remis à zéro chaque mois. Les crédits achetés à l'unité sont valables sans limite de temps.
           </p>
         </div>
         <div>
@@ -61,7 +108,7 @@ import { PricingTable } from "@clerk/astro/components";
             Comment fonctionne la facturation ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Les abonnements sont facturés mensuellement. Vous pouvez annuler à
+            Les abonnements sont facturés mensuellement ou annuellement. Vous pouvez annuler à
             tout moment, sans engagement.
           </p>
         </div>
@@ -69,3 +116,297 @@ import { PricingTable } from "@clerk/astro/components";
     </div>
   </div>
 </Layout>
+
+<script>
+  interface Price {
+    id: string;
+    amount: number;
+    amountFormatted: string;
+    currency: string;
+    interval: 'month' | 'year' | null;
+  }
+
+  interface Product {
+    id: string;
+    name: string;
+    description: string | null;
+    type: string;
+    prices: Price[];
+  }
+
+  interface ProductsResponse {
+    subscriptions: Product[];
+    credits: Product[];
+    currentPlan: {
+      planType: string;
+      status: string;
+      creditsBalance: number;
+      cancelAtPeriodEnd: boolean;
+    } | null;
+  }
+
+  async function loadProducts() {
+    const loadingEl = document.getElementById('loading-products');
+    const subsContainer = document.getElementById('subscriptions-container');
+    const creditsContainer = document.getElementById('credits-container');
+    const errorContainer = document.getElementById('error-container');
+    const currentPlanEl = document.getElementById('current-plan');
+
+    try {
+      loadingEl?.classList.remove('hidden');
+      subsContainer?.classList.add('hidden');
+      creditsContainer?.classList.add('hidden');
+      errorContainer?.classList.add('hidden');
+
+      const response = await fetch('/api/stripe/products');
+      if (!response.ok) throw new Error('Erreur API');
+
+      const data: ProductsResponse = await response.json();
+
+      // Afficher le plan actuel
+      if (data.currentPlan && currentPlanEl) {
+        currentPlanEl.classList.remove('hidden');
+        const planNames: Record<string, string> = {
+          free: 'Gratuit',
+          standard: 'Standard',
+          pro: 'Pro'
+        };
+        document.getElementById('current-plan-name')!.textContent = 
+          planNames[data.currentPlan.planType] || data.currentPlan.planType;
+        
+        if (data.currentPlan.creditsBalance > 0) {
+          document.getElementById('credits-balance')!.textContent = 
+            `(${data.currentPlan.creditsBalance} crédit(s) bonus)`;
+        }
+
+        if (data.currentPlan.planType !== 'free') {
+          document.getElementById('manage-subscription-btn')?.classList.remove('hidden');
+        }
+      }
+
+      // Afficher les abonnements
+      if (data.subscriptions.length > 0) {
+        renderSubscriptions(data.subscriptions);
+        subsContainer?.classList.remove('hidden');
+      }
+
+      // Afficher les crédits
+      if (data.credits.length > 0) {
+        renderCredits(data.credits);
+        creditsContainer?.classList.remove('hidden');
+      }
+
+      loadingEl?.classList.add('hidden');
+    } catch (error) {
+      console.error('Erreur chargement produits:', error);
+      loadingEl?.classList.add('hidden');
+      errorContainer?.classList.remove('hidden');
+    }
+  }
+
+  function renderSubscriptions(products: Product[]) {
+    const grid = document.getElementById('subscriptions-grid')!;
+    
+    // Ajouter d'abord le plan gratuit
+    grid.innerHTML = `
+      <div class="rounded-2xl p-6 border-2 border-slate-200 bg-white">
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Gratuit</h3>
+        <div class="mb-4">
+          <span class="text-3xl font-bold text-slate-900">0€</span>
+        </div>
+        <ul class="space-y-2 mb-6 text-sm text-slate-600">
+          <li class="flex items-center gap-2">
+            <span class="text-green-500">✓</span> 3 générations au total
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-green-500">✓</span> Toutes les fonctionnalités
+          </li>
+        </ul>
+        <a href="/sign-up" class="block w-full py-2 px-4 bg-slate-200 text-slate-700 rounded-lg font-semibold text-center hover:bg-slate-300 transition-colors">
+          Commencer
+        </a>
+      </div>
+    `;
+
+    // Ajouter les abonnements payants
+    products.forEach((product, index) => {
+      const monthlyPrice = product.prices.find(p => p.interval === 'month');
+      const yearlyPrice = product.prices.find(p => p.interval === 'year');
+      const isPopular = index === 1 || product.name.includes('50');
+
+      const card = document.createElement('div');
+      card.className = `rounded-2xl p-6 border-2 transition-all ${
+        isPopular 
+          ? 'border-orange-500 bg-orange-50 shadow-xl scale-105' 
+          : 'border-slate-200 bg-white hover:border-orange-300'
+      }`;
+
+      card.innerHTML = `
+        ${isPopular ? '<div class="text-center mb-3"><span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">Populaire</span></div>' : ''}
+        <h3 class="text-xl font-bold text-slate-900 mb-2">${product.name}</h3>
+        ${product.description ? `<p class="text-sm text-slate-600 mb-3">${product.description}</p>` : ''}
+        
+        <div class="mb-4">
+          ${monthlyPrice ? `
+            <div class="mb-2">
+              <span class="text-3xl font-bold text-slate-900">${monthlyPrice.amountFormatted}</span>
+              <span class="text-slate-500">/mois</span>
+            </div>
+          ` : ''}
+          ${yearlyPrice ? `
+            <div class="text-sm text-green-600">
+              ou ${yearlyPrice.amountFormatted}/an (économisez 2 mois)
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="space-y-2 mb-6">
+          ${monthlyPrice ? `
+            <button 
+              onclick="checkout('${monthlyPrice.id}')"
+              class="w-full py-2 px-4 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+            >
+              Mensuel
+            </button>
+          ` : ''}
+          ${yearlyPrice ? `
+            <button 
+              onclick="checkout('${yearlyPrice.id}')"
+              class="w-full py-2 px-4 border-2 border-orange-500 text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
+            >
+              Annuel
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCredits(products: Product[]) {
+    const grid = document.getElementById('credits-grid')!;
+    grid.innerHTML = '';
+
+    products.forEach(product => {
+      const price = product.prices[0];
+      if (!price) return;
+
+      const isWithSub = product.type === 'credit_with_sub';
+
+      const card = document.createElement('div');
+      card.className = 'rounded-xl p-6 border-2 border-slate-200 bg-white hover:border-orange-300 transition-all';
+
+      card.innerHTML = `
+        <h3 class="text-lg font-bold text-slate-900 mb-2">${product.name}</h3>
+        ${product.description ? `<p class="text-sm text-slate-600 mb-3">${product.description}</p>` : ''}
+        <div class="mb-4">
+          <span class="text-2xl font-bold text-slate-900">${price.amountFormatted}</span>
+          <span class="text-slate-500">/crédit</span>
+        </div>
+        ${isWithSub ? '<p class="text-xs text-green-600 mb-3">💎 Tarif réservé aux abonnés</p>' : ''}
+        
+        <div class="flex items-center gap-2 mb-4">
+          <label class="text-sm text-slate-600">Quantité:</label>
+          <input 
+            type="number" 
+            min="1" 
+            max="100" 
+            value="1" 
+            class="credit-quantity w-20 px-2 py-1 border rounded text-center"
+            data-price-id="${price.id}"
+            data-unit-price="${price.amount}"
+          />
+          <span class="text-sm text-slate-600">= <strong class="credit-total">${price.amountFormatted}</strong></span>
+        </div>
+        
+        <button 
+          onclick="checkoutCredits('${price.id}', this)"
+          class="w-full py-2 px-4 bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900 transition-colors"
+        >
+          Acheter
+        </button>
+      `;
+
+      // Mettre à jour le total quand la quantité change
+      const input = card.querySelector('.credit-quantity') as HTMLInputElement;
+      const totalEl = card.querySelector('.credit-total') as HTMLElement;
+      input?.addEventListener('input', () => {
+        const qty = parseInt(input.value) || 1;
+        const total = (price.amount * qty) / 100;
+        totalEl.textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total);
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  async function checkout(priceId: string) {
+    try {
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Erreur lors de la création du paiement');
+      }
+    } catch (error) {
+      console.error('Erreur checkout:', error);
+      alert('Erreur lors de la création du paiement');
+    }
+  }
+
+  async function checkoutCredits(priceId: string, button: HTMLButtonElement) {
+    const card = button.closest('.rounded-xl');
+    const input = card?.querySelector('.credit-quantity') as HTMLInputElement;
+    const quantity = parseInt(input?.value) || 1;
+
+    try {
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId, quantity }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Erreur lors de la création du paiement');
+      }
+    } catch (error) {
+      console.error('Erreur checkout:', error);
+      alert('Erreur lors de la création du paiement');
+    }
+  }
+
+  // Gestion du bouton "Gérer mon abonnement"
+  document.getElementById('manage-subscription-btn')?.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/stripe/create-portal', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Erreur portail:', error);
+    }
+  });
+
+  // Exposer les fonctions au scope global
+  (window as any).checkout = checkout;
+  (window as any).checkoutCredits = checkoutCredits;
+  (window as any).loadProducts = loadProducts;
+
+  // Charger les produits au démarrage
+  document.addEventListener('DOMContentLoaded', loadProducts);
+</script>

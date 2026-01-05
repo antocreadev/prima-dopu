@@ -14,7 +14,12 @@ import {
   type GenerationInstruction,
   type ModificationType,
 } from "../../lib/gemini";
-import { getUserPlanFromAuth } from "../../lib/plans";
+import { getUserPlanFromAuth, isAdminUser } from "../../lib/plans";
+import {
+  getUserPlanInfo,
+  getCreditsBalance,
+  useCredit,
+} from "../../lib/subscriptions";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -66,32 +71,58 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Utilisateur: ${userId.substring(0, 10)}...`,
       });
 
-      // Vérifier le plan de l'utilisateur et ses crédits
+      // Vérifier le plan de l'utilisateur (hybride Clerk + Stripe)
+      const isAdmin = isAdminUser(userId);
+      
+      // D'abord vérifier avec le nouveau système Stripe
+      const stripePlanInfo = getUserPlanInfo(userId, isAdmin);
+      const stripeCreditsBalance = getCreditsBalance(userId);
+      
+      // Ensuite vérifier avec l'ancien système Clerk (pour transition)
       const authObj = locals.auth();
-      const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
-      const isAdmin = userPlanInfo.isAdmin === true;
-      const creditCheck = canUserGenerate(
-        userId,
-        userPlanInfo.planType,
-        isAdmin
-      );
+      const clerkPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
+      
+      // Utiliser le plan le plus avantageux entre Clerk et Stripe
+      const effectivePlanType = stripePlanInfo.isPaid ? stripePlanInfo.planType : clerkPlanInfo.planType;
+      const effectivePlanName = stripePlanInfo.isPaid ? stripePlanInfo.planName : clerkPlanInfo.planName;
+      
+      const creditCheck = canUserGenerate(userId, effectivePlanType, isAdmin);
+
+      // Afficher les crédits bonus Stripe s'il y en a
+      const creditsInfo = stripeCreditsBalance > 0 
+        ? ` + ${stripeCreditsBalance} bonus`
+        : "";
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${userPlanInfo.planName} | Crédits: ${
+        message: `Plan: ${effectivePlanName} | Crédits: ${
           creditCheck.used
-        }/${isAdmin ? "∞" : creditCheck.limit}${isAdmin ? " (Admin)" : ""}`,
+        }/${isAdmin ? "∞" : creditCheck.limit}${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
       });
 
+      // Vérifier si l'utilisateur peut générer
+      // Priorité: 1) Admin 2) Crédits bonus Stripe 3) Crédits de l'abonnement
+      let canGenerate = isAdmin || creditCheck.canGenerate || stripeCreditsBalance > 0;
+      let usedBonusCredit = false;
+
       if (!isAdmin && !creditCheck.canGenerate) {
-        await sendEvent("error", {
-          message: creditCheck.reason,
-          noCredits: true,
-          used: creditCheck.used,
-          limit: creditCheck.limit,
-        });
-        await safeClose();
-        return;
+        if (stripeCreditsBalance > 0) {
+          // Utiliser un crédit bonus
+          usedBonusCredit = true;
+          await sendEvent("log", {
+            icon: "💎",
+            message: `Utilisation d'un crédit bonus (reste: ${stripeCreditsBalance - 1})`,
+          });
+        } else {
+          await sendEvent("error", {
+            message: creditCheck.reason,
+            noCredits: true,
+            used: creditCheck.used,
+            limit: creditCheck.limit,
+          });
+          await safeClose();
+          return;
+        }
       }
 
       const formData = await request.formData();
@@ -264,7 +295,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           generated_image_path: result.imagePath,
         });
 
-        incrementUserCredits(userId);
+        // Décrémenter les crédits
+        if (usedBonusCredit) {
+          // Utiliser un crédit bonus Stripe
+          useCredit(userId);
+        } else if (!isAdmin) {
+          // Utiliser un crédit de l'abonnement
+          incrementUserCredits(userId);
+        }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         await sendEvent("log", {
