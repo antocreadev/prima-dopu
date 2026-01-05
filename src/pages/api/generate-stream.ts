@@ -8,7 +8,7 @@ import {
   canUserGenerate,
   incrementUserCredits,
 } from "../../lib/db";
-import { saveImage } from "../../lib/storage";
+import { saveImage, checkImageExists } from "../../lib/storage";
 import {
   generateBeforeAfterWithProgress,
   type GenerationInstruction,
@@ -172,6 +172,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else if (referenceId) {
           const ref = getReference(referenceId);
           if (ref) {
+            // Vérifier que l'image existe sur S3
+            const imageExists = await checkImageExists(ref.image_path);
+            if (!imageExists) {
+              await sendEvent("log", {
+                icon: "⚠️",
+                message: `Réf "${ref.name || referenceId}" introuvable sur S3, ignorée`,
+                type: "warning",
+              });
+              continue; // Passer à l'instruction suivante
+            }
             referencePath = ref.image_path;
             referenceName =
               (instr.referenceName && instr.referenceName.trim()) ||

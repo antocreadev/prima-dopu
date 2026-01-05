@@ -191,7 +191,13 @@ async function prepareImageForAPI(
   imagePath: string
 ): Promise<{ base64: string; mimeType: string }> {
   const ext = imagePath.toLowerCase().split(".").pop() || "";
-  let buffer: Buffer = await getImageBuffer(imagePath);
+  let buffer: Buffer;
+  try {
+    buffer = await getImageBuffer(imagePath);
+  } catch (error: any) {
+    console.error(`Erreur lecture image S3: ${imagePath}`, error);
+    throw new Error(`Image introuvable sur S3: ${imagePath}. ${error?.message || ''}`);
+  }
   let mimeType = getMimeType(imagePath);
 
   // Conversion des formats Apple (HEIC, HEIF) avec heic-convert

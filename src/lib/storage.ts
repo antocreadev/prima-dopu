@@ -279,6 +279,41 @@ export async function getImageBuffer(s3Path: string): Promise<Buffer> {
 }
 
 /**
+ * Vérifie si une image existe sur S3 (HEAD request)
+ * @param s3Path Le chemin S3 (ex: /references/xxx.jpg)
+ * @returns true si l'image existe, false sinon
+ */
+export async function checkImageExists(s3Path: string): Promise<boolean> {
+  let s3Key = s3Path.startsWith("/") ? s3Path.slice(1) : s3Path;
+  if (s3Key.startsWith("uploads/")) {
+    s3Key = s3Key.replace("uploads/", "");
+  }
+  const path = `/${s3Key}`;
+
+  const { headers } = signRequest("HEAD", path);
+
+  return new Promise((resolve) => {
+    const req = https.request(
+      {
+        hostname: S3_HOST,
+        port: 443,
+        path: path,
+        method: "HEAD",
+        headers: headers,
+      },
+      (res) => {
+        resolve(res.statusCode === 200);
+      }
+    );
+
+    req.on("error", () => {
+      resolve(false);
+    });
+    req.end();
+  });
+}
+
+/**
  * Construit l'URL publique S3 pour une image
  * @param s3Path Le chemin S3 (ex: /references/xxx.jpg)
  */
