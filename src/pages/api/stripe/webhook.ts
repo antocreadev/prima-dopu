@@ -52,6 +52,13 @@ export const POST: APIRoute = async ({ request }) => {
       // ==========================================
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        
+        // Debug: log toutes les metadata
+        console.log("🔍 Session metadata:", JSON.stringify(session.metadata));
+        console.log("🔍 Session customer:", session.customer);
+        console.log("🔍 Session mode:", session.mode);
+        console.log("🔍 Session subscription:", session.subscription);
+        
         const userId = session.metadata?.userId;
         const productType = session.metadata?.productType as
           | ProductType

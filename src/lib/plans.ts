@@ -1,8 +1,9 @@
 import type { PlanType } from "./db";
+import { getSubscription, type Subscription } from "./subscriptions";
 
 /**
  * Utilitaire pour déterminer le plan d'un utilisateur
- * basé sur les features/plans Clerk Billing
+ * basé sur les abonnements Stripe OU les features/plans Clerk Billing
  */
 
 // IDs des utilisateurs admin (générations illimitées)
@@ -85,18 +86,78 @@ export const PLAN_BY_TYPE: Record<PlanType, UserPlanInfo> = {
 type HasFunction = (params: Record<string, unknown>) => boolean;
 
 /**
- * Détermine le plan d'un utilisateur en utilisant la fonction has() de Clerk
- * Cette fonction doit être appelée côté serveur avec l'objet auth
+ * Mapping du plan_type Stripe vers notre système
+ */
+function getStripeSubscriptionPlan(subscription: Subscription): UserPlanInfo | null {
+  // Vérifier si l'abonnement est actif
+  if (subscription.status !== "active") {
+    return null;
+  }
+
+  // Vérifier si dans la période de validité
+  if (subscription.current_period_end) {
+    const endDate = new Date(subscription.current_period_end);
+    if (endDate < new Date()) {
+      return null; // Période expirée
+    }
+  }
+
+  // Mapper le plan_type vers notre système
+  switch (subscription.plan_type) {
+    case "pro":
+      return {
+        planType: "pro",
+        planName: "Pro (50 projets/mois)",
+        planKey: "stripe_pro",
+        monthlyLimit: 50,
+        totalLimit: null,
+        isPaid: true,
+      };
+    case "standard":
+      return {
+        planType: "standard",
+        planName: "Standard (25 projets/mois)",
+        planKey: "stripe_standard",
+        monthlyLimit: 25,
+        totalLimit: null,
+        isPaid: true,
+      };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Détermine le plan d'un utilisateur en vérifiant:
+ * 1. Si admin (illimité)
+ * 2. Abonnement Stripe actif (prioritaire)
+ * 3. Plan Clerk (fallback/legacy)
  */
 export function getUserPlanFromAuth(
   has: HasFunction | undefined,
   userId?: string | null
 ): UserPlanInfo {
-  // Vérifier si l'utilisateur est admin
+  // 1. Vérifier si l'utilisateur est admin
   if (userId && isAdminUser(userId)) {
     return ADMIN_PLAN;
   }
 
+  // 2. Vérifier l'abonnement Stripe (prioritaire)
+  if (userId) {
+    try {
+      const stripeSubscription = getSubscription(userId);
+      if (stripeSubscription) {
+        const stripePlan = getStripeSubscriptionPlan(stripeSubscription);
+        if (stripePlan) {
+          return stripePlan;
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification abonnement Stripe:", error);
+    }
+  }
+
+  // 3. Fallback vers Clerk (legacy)
   if (!has) {
     return CLERK_PLAN_MAPPING.free_user;
   }
