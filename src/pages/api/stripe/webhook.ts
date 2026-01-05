@@ -205,35 +205,42 @@ export const POST: APIRoute = async ({ request }) => {
         
         // Création initiale d'un abonnement
         if (invoice.billing_reason === "subscription_create" && userId && subscriptionId) {
-          // Récupérer les détails de la subscription
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          
-          // Déterminer le type de plan depuis le produit
-          const priceId = subscription.items.data[0]?.price.id;
-          const productId = subscription.items.data[0]?.price.product as string;
-          const product = await stripe.products.retrieve(productId);
-          const productType = product.metadata?.type as ProductType | undefined;
-          const planType = productType ? getPlanFromProductType(productType) : "standard";
-          
-          console.log(`🔍 Product type: ${productType}, planType: ${planType}`);
-          
-          const subData = subscription as unknown as {
-            current_period_start: number;
-            current_period_end: number;
-            cancel_at_period_end: boolean;
-          };
-          
-          upsertSubscription(userId, {
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            plan_type: planType,
-            status: "active",
-            current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: subData.cancel_at_period_end ? 1 : 0,
-          });
-          
-          console.log(`✅ Abonnement ${planType} créé via invoice pour ${userId}`);
+          try {
+            // Récupérer les détails de la subscription
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            
+            console.log(`🔍 Subscription retrieved:`, JSON.stringify(subscription, null, 2).substring(0, 500));
+            
+            // Déterminer le type de plan depuis le produit
+            const productId = subscription.items.data[0]?.price.product as string;
+            const product = await stripe.products.retrieve(productId);
+            const productType = product.metadata?.type as ProductType | undefined;
+            const planType = productType ? getPlanFromProductType(productType) : "standard";
+            
+            console.log(`🔍 Product type: ${productType}, planType: ${planType}`);
+            
+            // Accéder directement aux propriétés de la subscription
+            const periodStart = (subscription as any).current_period_start;
+            const periodEnd = (subscription as any).current_period_end;
+            const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+            
+            console.log(`🔍 Period: ${periodStart} -> ${periodEnd}, cancel: ${cancelAtPeriodEnd}`);
+            
+            upsertSubscription(userId, {
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+              plan_type: planType,
+              status: "active",
+              current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+              current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+              cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
+            });
+            
+            console.log(`✅ Abonnement ${planType} créé via invoice pour ${userId}`);
+          } catch (subError: any) {
+            console.error(`❌ Erreur lors de la création de l'abonnement:`, subError.message);
+            throw subError;
+          }
         }
         // Renouvellement d'abonnement
         else if (invoice.billing_reason === "subscription_cycle") {
