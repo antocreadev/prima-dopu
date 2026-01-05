@@ -7,13 +7,16 @@ import type { PlanType } from "./db";
 
 // IDs des utilisateurs admin (générations illimitées)
 // Définir dans .env: ADMIN_USER_IDS=user_xxx,user_yyy
-const ADMIN_USER_IDS_RAW = typeof process !== "undefined" && process.env?.ADMIN_USER_IDS 
-  ? process.env.ADMIN_USER_IDS 
-  : (typeof import.meta !== "undefined" && import.meta.env?.ADMIN_USER_IDS) 
-    ? import.meta.env.ADMIN_USER_IDS 
+const ADMIN_USER_IDS_RAW =
+  typeof process !== "undefined" && process.env?.ADMIN_USER_IDS
+    ? process.env.ADMIN_USER_IDS
+    : typeof import.meta !== "undefined" && import.meta.env?.ADMIN_USER_IDS
+    ? import.meta.env.ADMIN_USER_IDS
     : "";
 
-const ADMIN_USER_IDS = ADMIN_USER_IDS_RAW.split(",").map((id: string) => id.trim()).filter(Boolean);
+const ADMIN_USER_IDS = ADMIN_USER_IDS_RAW.split(",")
+  .map((id: string) => id.trim())
+  .filter(Boolean);
 
 export function isAdminUser(userId: string): boolean {
   return ADMIN_USER_IDS.includes(userId);

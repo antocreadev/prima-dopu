@@ -37,7 +37,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
       if (fileUserIdMatch) {
         const fileUserId = fileUserIdMatch[1];
         if (fileUserId !== userId) {
-          console.warn(`🚫 Accès refusé: ${userId} tente d'accéder à l'image de ${fileUserId}`);
+          console.warn(
+            `🚫 Accès refusé: ${userId} tente d'accéder à l'image de ${fileUserId}`
+          );
           return new Response("Accès non autorisé", { status: 403 });
         }
       }

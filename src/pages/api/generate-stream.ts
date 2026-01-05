@@ -70,11 +70,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const authObj = locals.auth();
       const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
       const isAdmin = userPlanInfo.isAdmin === true;
-      const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
+      const creditCheck = canUserGenerate(
+        userId,
+        userPlanInfo.planType,
+        isAdmin
+      );
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${isAdmin ? '∞' : creditCheck.limit}${isAdmin ? ' (Admin)' : ''}`,
+        message: `Plan: ${userPlanInfo.planName} | Crédits: ${
+          creditCheck.used
+        }/${isAdmin ? "∞" : creditCheck.limit}${isAdmin ? " (Admin)" : ""}`,
       });
 
       if (!isAdmin && !creditCheck.canGenerate) {
@@ -293,8 +299,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no",  // Indique à Nginx de ne pas bufferiser
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no", // Indique à Nginx de ne pas bufferiser
     },
   });
 };

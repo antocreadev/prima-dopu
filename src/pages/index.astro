@@ -1,6 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
+import BeforeAfterDemo from "../components/BeforeAfterDemo.astro";
+import InstructionsShowcase from "../components/InstructionsShowcase.astro";
 
 // SEO metadata
 const seoTitle =
@@ -108,83 +110,11 @@ const seoKeywords =
             </div>
           </div>
 
-          <!-- Right: Visual -->
+          <!-- Right: Visual - Demo Interactive -->
           <div class="relative">
-            <div
-              class="relative bg-white rounded-2xl shadow-2xl shadow-slate-200/50 p-3 border border-slate-100"
-            >
-              <div class="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
-                <!-- Before -->
-                <div
-                  class="relative aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden"
-                >
-                  <div
-                    class="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div class="text-center">
-                      <div class="text-5xl mb-2 grayscale opacity-60">🏠</div>
-                      <span
-                        class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                        >Avant</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    class="absolute top-3 left-3 px-2 py-1 bg-slate-900/70 text-white text-xs font-medium rounded"
-                  >
-                    Photo originale
-                  </div>
-                </div>
-                <!-- After -->
-                <div
-                  class="relative aspect-[4/3] bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg overflow-hidden"
-                >
-                  <div
-                    class="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div class="text-center">
-                      <div class="text-5xl mb-2">✨</div>
-                      <span
-                        class="text-xs font-semibold text-orange-600 uppercase tracking-wider"
-                        >Après</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    class="absolute top-3 left-3 px-2 py-1 bg-orange-500 text-white text-xs font-medium rounded"
-                  >
-                    Généré par IA
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Floating elements -->
-            <div
-              class="absolute -top-14 -right-2 bg-white rounded-xl shadow-lg p-4 border border-slate-100"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"
-                >
-                  <svg
-                    class="w-5 h-5 text-green-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clip-rule="evenodd"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">
-                    Rendu réaliste
-                  </p>
-                  <p class="text-xs text-slate-500">En moins de 3 min</p>
-                </div>
-              </div>
+            <BeforeAfterDemo />
+            <div class="mt-6">
+              <InstructionsShowcase />
             </div>
           </div>
         </div>

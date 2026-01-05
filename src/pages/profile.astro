@@ -57,15 +57,17 @@ const credits = getUserCredits(userId);
 
         <div class="space-y-4">
           <!-- Badge Admin -->
-          {userPlanInfo.isAdmin && (
-            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl p-4 flex items-center gap-3">
-              <span class="text-2xl">👑</span>
-              <div>
-                <span class="font-semibold">Compte Administrateur</span>
-                <p class="text-sm text-purple-200">Générations illimitées</p>
+          {
+            userPlanInfo.isAdmin && (
+              <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl p-4 flex items-center gap-3">
+                <span class="text-2xl">👑</span>
+                <div>
+                  <span class="font-semibold">Compte Administrateur</span>
+                  <p class="text-sm text-purple-200">Générations illimitées</p>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           <!-- Section Abonnement -->
           <div class="border-t border-slate-200 pt-4">
@@ -109,71 +111,76 @@ const credits = getUserCredits(userId);
               </div>
 
               <!-- Barre de progression des crédits -->
-              {userPlanInfo.isAdmin ? (
-                <div class="mb-2">
-                  <div class="flex justify-between text-sm mb-1">
-                    <span class="text-slate-600">Crédits</span>
-                    <span class="font-semibold text-purple-600">∞ Illimité</span>
+              {
+                userPlanInfo.isAdmin ? (
+                  <div class="mb-2">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span class="text-slate-600">Crédits</span>
+                      <span class="font-semibold text-purple-600">
+                        ∞ Illimité
+                      </span>
+                    </div>
+                    <div class="w-full bg-gradient-to-r from-purple-200 to-indigo-200 rounded-full h-3 overflow-hidden">
+                      <div class="h-full w-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse" />
+                    </div>
                   </div>
-                  <div class="w-full bg-gradient-to-r from-purple-200 to-indigo-200 rounded-full h-3 overflow-hidden">
-                    <div class="h-full w-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full animate-pulse"></div>
+                ) : (
+                  <div class="mb-2">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span class="text-slate-600">Crédits utilisés</span>
+                      <span class="font-semibold text-slate-800">
+                        {creditStats.used} / {creditStats.limit}
+                      </span>
+                    </div>
+                    <div class="w-full bg-white/70 rounded-full h-3 overflow-hidden">
+                      <div
+                        class:list={[
+                          "h-full rounded-full transition-all",
+                          creditStats.percentage >= 100
+                            ? "bg-red-500"
+                            : creditStats.percentage >= 80
+                              ? "bg-orange-500"
+                              : "bg-green-500",
+                        ]}
+                        style={`width: ${creditStats.percentage}%`}
+                      ></div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-              <div class="mb-2">
-                <div class="flex justify-between text-sm mb-1">
-                  <span class="text-slate-600">Crédits utilisés</span>
-                  <span class="font-semibold text-slate-800"
-                    >{creditStats.used} / {creditStats.limit}</span
-                  >
-                </div>
-                <div
-                  class="w-full bg-white/70 rounded-full h-3 overflow-hidden"
-                >
-                  <div
-                    class:list={[
-                      "h-full rounded-full transition-all",
-                      creditStats.percentage >= 100
-                        ? "bg-red-500"
-                        : creditStats.percentage >= 80
-                          ? "bg-orange-500"
-                          : "bg-green-500",
-                    ]}
-                    style={`width: ${creditStats.percentage}%`}
-                  >
-                  </div>
-                </div>
-              </div>
-              )}
+                )
+              }
 
-              {userPlanInfo.isAdmin ? (
-                <div class="flex items-center justify-between text-sm">
-                  <span class="font-medium text-purple-600">
-                    ∞ Générations illimitées
-                  </span>
-                  <span class="text-slate-500">Admin</span>
-                </div>
-              ) : (
-              <div class="flex items-center justify-between text-sm">
-                <span
-                  class:list={[
-                    "font-medium",
-                    creditStats.remaining === 0
-                      ? "text-red-600"
-                      : creditStats.remaining <= 2
-                        ? "text-orange-600"
-                        : "text-green-600",
-                  ]}
-                >
-                  {creditStats.remaining} génération{
-                    creditStats.remaining > 1 ? "s" : ""
-                  } restante{creditStats.remaining > 1 ? "s" : ""}
-                </span>
-                <span class="text-slate-500">
-                  {userPlanInfo.planType === "free" ? "au total" : "ce mois-ci"}
-                </span>
-              </div>
-              )}
+              {
+                userPlanInfo.isAdmin ? (
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="font-medium text-purple-600">
+                      ∞ Générations illimitées
+                    </span>
+                    <span class="text-slate-500">Admin</span>
+                  </div>
+                ) : (
+                  <div class="flex items-center justify-between text-sm">
+                    <span
+                      class:list={[
+                        "font-medium",
+                        creditStats.remaining === 0
+                          ? "text-red-600"
+                          : creditStats.remaining <= 2
+                            ? "text-orange-600"
+                            : "text-green-600",
+                      ]}
+                    >
+                      {creditStats.remaining} génération
+                      {creditStats.remaining > 1 ? "s" : ""} restante
+                      {creditStats.remaining > 1 ? "s" : ""}
+                    </span>
+                    <span class="text-slate-500">
+                      {userPlanInfo.planType === "free"
+                        ? "au total"
+                        : "ce mois-ci"}
+                    </span>
+                  </div>
+                )
+              }
             </div>
 
             <!-- Stats totales -->

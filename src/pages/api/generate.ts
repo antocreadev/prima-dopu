@@ -45,7 +45,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
 
     console.log(
-      `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${creditCheck.used}/${isAdmin ? '∞' : creditCheck.limit}`
+      `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${
+        creditCheck.used
+      }/${isAdmin ? "∞" : creditCheck.limit}`
     );
 
     if (!isAdmin && !creditCheck.canGenerate) {

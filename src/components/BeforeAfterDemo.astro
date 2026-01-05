@@ -1,0 +1,341 @@
+---
+import { Image } from "astro:assets";
+
+import defaultBefore from "../img/before.png";
+import defaultAfter from "../img/after.png";
+
+interface Props {
+  beforeImage?: ImageMetadata;
+  afterImage?: ImageMetadata;
+  beforeLabel?: string;
+  afterLabel?: string;
+}
+
+const {
+  beforeImage = defaultBefore,
+  afterImage = defaultAfter,
+  beforeLabel = "Avant",
+  afterLabel = "Après",
+} = Astro.props;
+---
+
+<div class="demo-wrapper" data-demo>
+  <div class="slider" data-slider>
+    <div class="slider-frame">
+      <div class="slider-img slider-after">
+        <Image
+          src={afterImage}
+          alt={afterLabel}
+          class="img"
+          loading="eager"
+          draggable="false"
+        />
+      </div>
+      <div class="slider-img slider-before" data-before>
+        <Image
+          src={beforeImage}
+          alt={beforeLabel}
+          class="img"
+          loading="eager"
+          draggable="false"
+        />
+      </div>
+    </div>
+
+    <div class="slider-handle" data-handle>
+      <div class="handle-line"></div>
+      <div class="handle-btn">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9,6 4,12 9,18"></polyline>
+          <polyline points="15,6 20,12 15,18"></polyline>
+        </svg>
+      </div>
+    </div>
+
+    <span class="badge badge-before">{beforeLabel}</span>
+    <span class="badge badge-after">{afterLabel}</span>
+  </div>
+</div>
+
+<style>
+  .demo-wrapper {
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .slider {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    cursor: grab;
+    touch-action: pan-y pinch-zoom;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .slider:active {
+    cursor: grabbing;
+  }
+
+  .slider-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+
+  .slider-img {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .slider-img .img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  .slider-after {
+    z-index: 1;
+  }
+  .slider-before {
+    z-index: 2;
+    clip-path: inset(0 65% 0 0);
+  }
+
+  .slider-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 35%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .handle-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: white;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+  }
+
+  .handle-btn {
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    color: #1e3a5f;
+    transition: transform 0.2s var(--ease-out-expo);
+  }
+
+  .slider:hover .handle-btn {
+    transform: scale(1.08);
+  }
+  .handle-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .badge {
+    position: absolute;
+    top: 14px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    z-index: 5;
+  }
+
+  .badge-before {
+    left: 14px;
+    background: rgba(239, 68, 68, 0.92);
+    color: white;
+  }
+
+  .badge-after {
+    right: 14px;
+    background: rgba(34, 197, 94, 0.92);
+    color: white;
+  }
+
+  @keyframes slideReveal {
+    0% { clip-path: inset(0 50% 0 0); }
+    30% { clip-path: inset(0 70% 0 0); }
+    60% { clip-path: inset(0 30% 0 0); }
+    100% { clip-path: inset(0 65% 0 0); }
+  }
+
+  @keyframes handleReveal {
+    0% { left: 50%; }
+    30% { left: 30%; }
+    60% { left: 70%; }
+    100% { left: 35%; }
+  }
+
+  .slider-before.is-animating {
+    animation: slideReveal 2.5s var(--ease-out-expo);
+  }
+
+  .slider-handle.is-animating {
+    animation: handleReveal 2.5s var(--ease-out-expo);
+  }
+
+  @media (max-width: 640px) {
+    .slider {
+      border-radius: 12px;
+    }
+
+    .handle-btn {
+      width: 38px;
+      height: 38px;
+    }
+
+    .handle-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .badge {
+      padding: 5px 10px;
+      font-size: 11px;
+      top: 10px;
+    }
+
+    .badge-before {
+      left: 10px;
+    }
+    .badge-after {
+      right: 10px;
+    }
+  }
+</style>
+
+<script>
+  function initDemo() {
+    document.querySelectorAll<HTMLElement>("[data-demo]").forEach((demo) => {
+      const slider = demo.querySelector<HTMLElement>("[data-slider]");
+      const before = demo.querySelector<HTMLElement>("[data-before]");
+      const handle = demo.querySelector<HTMLElement>("[data-handle]");
+
+      if (!slider || !before || !handle) return;
+
+      let isDragging = false;
+      let hasAnimated = false;
+
+      const setPosition = (pct: number) => {
+        const p = Math.max(0, Math.min(100, pct));
+        before.style.clipPath = `inset(0 ${100 - p}% 0 0)`;
+        handle.style.left = `${p}%`;
+      };
+
+      const getPct = (clientX: number) => {
+        const rect = slider.getBoundingClientRect();
+        return ((clientX - rect.left) / rect.width) * 100;
+      };
+
+      const stopAnim = () => {
+        before.classList.remove("is-animating");
+        handle.classList.remove("is-animating");
+      };
+
+      slider.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        isDragging = true;
+        stopAnim();
+        setPosition(getPct(e.clientX));
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (isDragging)
+          requestAnimationFrame(() => setPosition(getPct(e.clientX)));
+      });
+
+      window.addEventListener("mouseup", () => {
+        isDragging = false;
+      });
+
+      slider.addEventListener(
+        "touchstart",
+        (e) => {
+          isDragging = true;
+          stopAnim();
+          setPosition(getPct(e.touches[0].clientX));
+        },
+        { passive: true }
+      );
+
+      slider.addEventListener(
+        "touchmove",
+        (e) => {
+          if (isDragging)
+            requestAnimationFrame(() =>
+              setPosition(getPct(e.touches[0].clientX))
+            );
+        },
+        { passive: true }
+      );
+
+      slider.addEventListener("touchend", () => {
+        isDragging = false;
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !hasAnimated) {
+              hasAnimated = true;
+              setTimeout(() => {
+                if (!isDragging) {
+                  before.classList.add("is-animating");
+                  handle.classList.add("is-animating");
+                  before.addEventListener(
+                    "animationend",
+                    () => {
+                      stopAnim();
+                      setPosition(35);
+                    },
+                    { once: true }
+                  );
+                }
+              }, 400);
+            }
+          });
+        },
+        { threshold: 0.25 }
+      );
+
+      observer.observe(demo);
+    });
+  }
+
+  document.readyState === "loading"
+    ? document.addEventListener("DOMContentLoaded", initDemo)
+    : initDemo();
+  document.addEventListener("astro:after-swap", initDemo);
+</script>
