@@ -188,18 +188,62 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // ==========================================
-      // PAIEMENT RÉUSSI (renouvellement)
+      // PAIEMENT RÉUSSI (création ou renouvellement)
       // ==========================================
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
-        const sub = getSubscriptionByCustomerId(customerId);
-
-        if (sub && invoice.billing_reason === "subscription_cycle") {
-          upsertSubscription(sub.user_id, {
+        
+        console.log(`🔍 Invoice billing_reason: ${invoice.billing_reason}`);
+        
+        // Récupérer le userId depuis les metadata de la subscription
+        const subscriptionDetails = (invoice as any).parent?.subscription_details;
+        const userId = subscriptionDetails?.metadata?.userId;
+        const subscriptionId = subscriptionDetails?.subscription;
+        
+        console.log(`🔍 Invoice userId: ${userId}, subscriptionId: ${subscriptionId}`);
+        
+        // Création initiale d'un abonnement
+        if (invoice.billing_reason === "subscription_create" && userId && subscriptionId) {
+          // Récupérer les détails de la subscription
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          // Déterminer le type de plan depuis le produit
+          const priceId = subscription.items.data[0]?.price.id;
+          const productId = subscription.items.data[0]?.price.product as string;
+          const product = await stripe.products.retrieve(productId);
+          const productType = product.metadata?.type as ProductType | undefined;
+          const planType = productType ? getPlanFromProductType(productType) : "standard";
+          
+          console.log(`🔍 Product type: ${productType}, planType: ${planType}`);
+          
+          const subData = subscription as unknown as {
+            current_period_start: number;
+            current_period_end: number;
+            cancel_at_period_end: boolean;
+          };
+          
+          upsertSubscription(userId, {
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            plan_type: planType,
             status: "active",
+            current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subData.cancel_at_period_end ? 1 : 0,
           });
-          console.log(`✅ Renouvellement réussi pour ${sub.user_id}`);
+          
+          console.log(`✅ Abonnement ${planType} créé via invoice pour ${userId}`);
+        }
+        // Renouvellement d'abonnement
+        else if (invoice.billing_reason === "subscription_cycle") {
+          const sub = getSubscriptionByCustomerId(customerId);
+          if (sub) {
+            upsertSubscription(sub.user_id, {
+              status: "active",
+            });
+            console.log(`✅ Renouvellement réussi pour ${sub.user_id}`);
+          }
         }
         break;
       }
