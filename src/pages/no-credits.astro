@@ -23,11 +23,13 @@ if (isAdmin) {
 
 const userPlan = userPlanInfo.planType;
 const isPaid = userPlanInfo.isPaid;
-const stats = getCreditStats(userId, userPlan, false);
 
 // Récupérer les infos Stripe
 const subscription = getSubscription(userId);
 const bonusCredits = getCreditsBalance(userId);
+
+// Passer les crédits bonus aux stats
+const stats = getCreditStats(userId, userPlan, false, bonusCredits);
 
 // Déterminer les suggestions selon le plan actuel
 // Free → Proposer abonnement

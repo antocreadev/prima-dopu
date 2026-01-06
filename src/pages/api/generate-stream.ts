@@ -6,7 +6,7 @@ import {
   updateGeneration,
   getReference,
   canUserGenerate,
-  incrementUserCredits,
+  consumeCredit,
 } from "../../lib/db";
 import { saveImage, checkImageExists } from "../../lib/storage";
 import {
@@ -90,7 +90,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ? stripePlanInfo.planName
         : clerkPlanInfo.planName;
 
-      const creditCheck = canUserGenerate(userId, effectivePlanType, isAdmin);
+      // Passer les crédits bonus à canUserGenerate pour le compteur total
+      const creditCheck = canUserGenerate(userId, effectivePlanType, isAdmin, stripeCreditsBalance);
 
       // Afficher les crédits bonus Stripe s'il y en a
       const creditsInfo =
@@ -99,36 +100,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await sendEvent("log", {
         icon: "📊",
         message: `Plan: ${effectivePlanName} | Crédits: ${creditCheck.used}/${
-          isAdmin ? "∞" : creditCheck.limit
+          isAdmin ? "∞" : creditCheck.totalAvailable
         }${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
       });
 
-      // Vérifier si l'utilisateur peut générer
-      // Priorité: 1) Admin 2) Crédits bonus Stripe 3) Crédits de l'abonnement
-      let canGenerate =
-        isAdmin || creditCheck.canGenerate || stripeCreditsBalance > 0;
-      let usedBonusCredit = false;
-
+      // Vérifier si l'utilisateur peut générer (avec les crédits bonus inclus)
       if (!isAdmin && !creditCheck.canGenerate) {
-        if (stripeCreditsBalance > 0) {
-          // Utiliser un crédit bonus
-          usedBonusCredit = true;
-          await sendEvent("log", {
-            icon: "💎",
-            message: `Utilisation d'un crédit bonus (reste: ${
-              stripeCreditsBalance - 1
-            })`,
-          });
-        } else {
-          await sendEvent("error", {
-            message: creditCheck.reason,
-            noCredits: true,
-            used: creditCheck.used,
-            limit: creditCheck.limit,
-          });
-          await safeClose();
-          return;
-        }
+        await sendEvent("error", {
+          message: creditCheck.reason,
+          noCredits: true,
+          used: creditCheck.used,
+          limit: creditCheck.limit,
+        });
+        await safeClose();
+        return;
       }
 
       const formData = await request.formData();
@@ -303,13 +288,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
           generated_image_path: result.imagePath,
         });
 
-        // Décrémenter les crédits
-        if (usedBonusCredit) {
-          // Utiliser un crédit bonus Stripe
-          useCredit(userId);
-        } else if (!isAdmin) {
-          // Utiliser un crédit de l'abonnement
-          incrementUserCredits(userId);
+        // Consommer un crédit (mensuel d'abord, puis bonus si nécessaire)
+        if (!isAdmin) {
+          const creditResult = consumeCredit(
+            userId,
+            effectivePlanType,
+            stripeCreditsBalance,
+            () => useCredit(userId)
+          );
+          
+          if (creditResult.usedBonus) {
+            await sendEvent("log", {
+              icon: "💎",
+              message: `Crédit bonus utilisé`,
+            });
+          }
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);

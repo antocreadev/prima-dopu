@@ -6,7 +6,7 @@ import {
   updateGeneration,
   getReference,
   canUserGenerate,
-  incrementUserCredits,
+  consumeCredit,
   type PlanType,
 } from "../../lib/db";
 import { saveImage } from "../../lib/storage";
@@ -15,7 +15,8 @@ import {
   type GenerationInstruction,
   type ModificationType,
 } from "../../lib/gemini";
-import { getUserPlanFromAuth } from "../../lib/plans";
+import { getUserPlanFromAuth, isAdminUser } from "../../lib/plans";
+import { getCreditsBalance, useCredit } from "../../lib/subscriptions";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -41,13 +42,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
 
     // Les admins ont des générations illimitées
-    const isAdmin = userPlanInfo.isAdmin === true;
-    const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin);
+    const isAdmin = isAdminUser(userId);
+    
+    // Récupérer les crédits bonus
+    const bonusCredits = getCreditsBalance(userId);
+    
+    // Passer les crédits bonus à canUserGenerate pour le compteur total
+    const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin, bonusCredits);
 
     console.log(
       `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${
         creditCheck.used
-      }/${isAdmin ? "∞" : creditCheck.limit}`
+      }/${isAdmin ? "∞" : creditCheck.totalAvailable}${bonusCredits > 0 ? ` (+${bonusCredits} bonus)` : ""}`
     );
 
     if (!isAdmin && !creditCheck.canGenerate) {
@@ -194,9 +200,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         generated_image_path: result.imagePath,
       });
 
-      // Incrémenter les crédits utilisés après une génération réussie
-      incrementUserCredits(userId);
-      console.log(`💳 Crédit consommé pour ${userId}`);
+      // Consommer un crédit (mensuel d'abord, puis bonus si nécessaire)
+      if (!isAdmin) {
+        const creditResult = consumeCredit(
+          userId,
+          userPlanInfo.planType,
+          bonusCredits,
+          () => useCredit(userId)
+        );
+        console.log(`💳 Crédit consommé pour ${userId} (bonus: ${creditResult.usedBonus})`);
+      }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`\n✅ GÉNÉRATION TERMINÉE en ${duration}s`);

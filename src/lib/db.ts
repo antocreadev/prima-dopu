@@ -413,10 +413,12 @@ export function checkAndResetMonthlyCredits(userId: string): UserCredits {
 }
 
 // Vérifier si un utilisateur peut générer (selon son plan)
+// INCLUT les crédits bonus (supplémentaires achetés)
 export function canUserGenerate(
   userId: string,
   planType: PlanType,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
+  bonusCredits: number = 0
 ): {
   canGenerate: boolean;
   reason?: string;
@@ -424,6 +426,8 @@ export function canUserGenerate(
   limit: number;
   used: number;
   isUnlimited: boolean;
+  bonusCredits: number;
+  totalAvailable: number;
 } {
   const credits = checkAndResetMonthlyCredits(userId);
   const limits = PLAN_LIMITS[planType];
@@ -436,40 +440,51 @@ export function canUserGenerate(
       limit: Infinity,
       used: credits.total_generations,
       isUnlimited: true,
+      bonusCredits,
+      totalAvailable: Infinity,
     };
   }
 
   if (planType === "free") {
-    // Plan gratuit: vérifie le total (3 max au total)
-    const canGenerate = credits.total_generations < (limits.total || 0);
+    // Plan gratuit: vérifie le total (3 max au total) + bonus
+    const baseLimit = limits.total || 0;
+    const totalAvailable = baseLimit + bonusCredits - credits.total_generations;
+    const canGenerate = totalAvailable > 0;
     return {
       canGenerate,
       reason: canGenerate
         ? undefined
-        : "Vous avez utilisé vos 3 générations gratuites. Passez à un abonnement pour continuer.",
+        : "Vous avez utilisé tous vos crédits. Passez à un abonnement ou achetez des crédits pour continuer.",
       credits,
-      limit: limits.total || 0,
+      limit: baseLimit,
       used: credits.total_generations,
       isUnlimited: false,
+      bonusCredits,
+      totalAvailable: Math.max(0, totalAvailable),
     };
   } else {
-    // Plans payants: vérifie le mensuel
+    // Plans payants: vérifie le mensuel + bonus
     const monthlyLimit = limits.monthly || 0;
-    const canGenerate = credits.monthly_generations < monthlyLimit;
+    const monthlyRemaining = Math.max(0, monthlyLimit - credits.monthly_generations);
+    const totalAvailable = monthlyRemaining + bonusCredits;
+    const canGenerate = totalAvailable > 0;
     return {
       canGenerate,
       reason: canGenerate
         ? undefined
-        : `Vous avez atteint votre limite de ${monthlyLimit} générations ce mois-ci.`,
+        : `Vous avez utilisé tous vos crédits ce mois-ci. Achetez des crédits supplémentaires pour continuer.`,
       credits,
       limit: monthlyLimit,
       used: credits.monthly_generations,
       isUnlimited: false,
+      bonusCredits,
+      totalAvailable,
     };
   }
 }
 
 // Incrémenter les crédits après une génération réussie
+// Cette fonction incrémente TOUJOURS les compteurs (pour les stats)
 export function incrementUserCredits(userId: string): void {
   const credits = checkAndResetMonthlyCredits(userId);
 
@@ -483,11 +498,80 @@ export function incrementUserCredits(userId: string): void {
   ).run(userId);
 }
 
+/**
+ * Consomme un crédit pour une génération
+ * Logique: utilise d'abord les crédits mensuels de l'abonnement,
+ * puis les crédits bonus si le quota mensuel est épuisé
+ * 
+ * @param userId - ID de l'utilisateur
+ * @param planType - Type de plan (free, standard, pro)
+ * @param bonusCredits - Nombre de crédits bonus disponibles
+ * @param useBonusCredit - Fonction pour décrémenter les crédits bonus
+ * @returns { success: boolean, usedBonus: boolean, reason?: string }
+ */
+export function consumeCredit(
+  userId: string,
+  planType: PlanType,
+  bonusCredits: number,
+  useBonusCredit: () => boolean
+): { success: boolean; usedBonus: boolean; reason?: string } {
+  const credits = checkAndResetMonthlyCredits(userId);
+  const limits = PLAN_LIMITS[planType];
+
+  if (planType === "free") {
+    // Plan gratuit: vérifier si on a des crédits de base ou bonus
+    const baseLimit = limits.total || 3;
+    const baseRemaining = baseLimit - credits.total_generations;
+
+    if (baseRemaining > 0) {
+      // Utiliser un crédit de base (gratuit)
+      incrementUserCredits(userId);
+      return { success: true, usedBonus: false };
+    } else if (bonusCredits > 0) {
+      // Utiliser un crédit bonus
+      const used = useBonusCredit();
+      if (used) {
+        incrementUserCredits(userId); // Incrémenter les compteurs pour les stats
+        return { success: true, usedBonus: true };
+      }
+    }
+    return { 
+      success: false, 
+      usedBonus: false, 
+      reason: "Plus de crédits disponibles" 
+    };
+  } else {
+    // Plans payants: vérifier le quota mensuel d'abord
+    const monthlyLimit = limits.monthly || 0;
+    const monthlyRemaining = monthlyLimit - credits.monthly_generations;
+
+    if (monthlyRemaining > 0) {
+      // Utiliser un crédit mensuel de l'abonnement
+      incrementUserCredits(userId);
+      return { success: true, usedBonus: false };
+    } else if (bonusCredits > 0) {
+      // Le quota mensuel est épuisé, utiliser un crédit bonus
+      const used = useBonusCredit();
+      if (used) {
+        incrementUserCredits(userId); // Incrémenter les compteurs pour les stats
+        return { success: true, usedBonus: true };
+      }
+    }
+    return { 
+      success: false, 
+      usedBonus: false, 
+      reason: "Quota mensuel épuisé et pas de crédits bonus" 
+    };
+  }
+}
+
 // Obtenir les statistiques de crédit pour l'affichage
+// INCLUT les crédits bonus dans le calcul
 export function getCreditStats(
   userId: string,
   planType: PlanType,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
+  bonusCredits: number = 0
 ): {
   used: number;
   limit: number;
@@ -495,6 +579,9 @@ export function getCreditStats(
   percentage: number;
   isUnlimited: boolean;
   planName: string;
+  bonusCredits: number;
+  monthlyRemaining: number;
+  totalRemaining: number;
 } {
   const credits = checkAndResetMonthlyCredits(userId);
   const limits = PLAN_LIMITS[planType];
@@ -514,30 +601,43 @@ export function getCreditStats(
       percentage: 0,
       isUnlimited: true,
       planName: "Admin",
+      bonusCredits,
+      monthlyRemaining: Infinity,
+      totalRemaining: Infinity,
     };
   }
 
   if (planType === "free") {
     const limit = limits.total || 3;
     const used = credits.total_generations;
+    const baseRemaining = Math.max(0, limit - used);
+    const totalRemaining = baseRemaining + bonusCredits;
     return {
       used,
       limit,
-      remaining: Math.max(0, limit - used),
+      remaining: totalRemaining,
       percentage: Math.min(100, (used / limit) * 100),
       isUnlimited: false,
       planName: planNames[planType],
+      bonusCredits,
+      monthlyRemaining: baseRemaining,
+      totalRemaining,
     };
   } else {
     const limit = limits.monthly || 0;
     const used = credits.monthly_generations;
+    const monthlyRemaining = Math.max(0, limit - used);
+    const totalRemaining = monthlyRemaining + bonusCredits;
     return {
       used,
       limit,
-      remaining: Math.max(0, limit - used),
+      remaining: totalRemaining,
       percentage: Math.min(100, (used / limit) * 100),
       isUnlimited: false,
       planName: planNames[planType],
+      bonusCredits,
+      monthlyRemaining,
+      totalRemaining,
     };
   }
 }
