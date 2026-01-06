@@ -3,9 +3,11 @@
 ## 🔍 AUDIT DE LA CODEBASE ACTUELLE
 
 ### Architecture Système
+
 **Fichier principal** : `/src/lib/gemini.ts` (1624 lignes)
 
 **Stack technique** :
+
 - **Frontend** : Astro + TypeScript
 - **IA** : Google Gemini (multi-modèles)
   - `gemini-2.5-flash` : Analyse & Planification
@@ -44,6 +46,7 @@
 ### Types de Modifications Supportés
 
 **Actuellement implémentés** :
+
 - ✅ `apply_texture` : Application de matériaux sur surfaces
 - ✅ `replace_object` : Remplacement d'objets (meubles, déco)
 - ✅ `add_element` : Ajout de nouveaux éléments
@@ -51,16 +54,17 @@
 - ✅ Support objets : meubles, luminaires, décoration, plantes
 
 **Catégories d'éléments** :
+
 ```typescript
 type ElementCategory =
-  | "surface"      // Murs, sols, plafonds, façades
-  | "furniture"    // Meubles (tables, chaises, canapés, lits)
-  | "lighting"     // Luminaires (lustres, lampes, spots)
-  | "decoration"   // Déco (tableaux, miroirs, vases, rideaux)
-  | "equipment"    // Équipements (prises, interrupteurs, radiateurs)
-  | "outdoor"      // Extérieur (plantes, pergolas, clôtures, terrasses)
-  | "fixture"      // Éléments fixes (éviers, baignoires, sanitaires)
-  | "appliance";   // Électroménager (cuisine, buanderie)
+  | "surface" // Murs, sols, plafonds, façades
+  | "furniture" // Meubles (tables, chaises, canapés, lits)
+  | "lighting" // Luminaires (lustres, lampes, spots)
+  | "decoration" // Déco (tableaux, miroirs, vases, rideaux)
+  | "equipment" // Équipements (prises, interrupteurs, radiateurs)
+  | "outdoor" // Extérieur (plantes, pergolas, clôtures, terrasses)
+  | "fixture" // Éléments fixes (éviers, baignoires, sanitaires)
+  | "appliance"; // Électroménager (cuisine, buanderie)
 ```
 
 ---
@@ -68,34 +72,41 @@ type ElementCategory =
 ## ⚠️ PROBLÈMES IDENTIFIÉS
 
 ### 1. **Absence de Sélection de Zones**
+
 ❌ L'utilisateur ne peut pas définir précisément où appliquer chaque référence
 ❌ Pas de système de masque/délimitation de zones
 ❌ L'IA devine la zone basée uniquement sur le texte descriptif
 
 ### 2. **Support Extérieur Limité**
+
 ⚠️ Catégorie "outdoor" existe mais pas optimisée
 ⚠️ Pas de prompts spécifiques pour :
-  - Panneaux solaires
-  - Façades
-  - Revêtements extérieurs (terrasse, allée)
-  - Pergolas, vérandas
-  - Paysagisme complexe
+
+- Panneaux solaires
+- Façades
+- Revêtements extérieurs (terrasse, allée)
+- Pergolas, vérandas
+- Paysagisme complexe
 
 ### 3. **Adaptation Images 3D/Catalogue**
+
 ❌ Pas de détection de type d'image (photo réelle vs render 3D vs catalogue)
 ❌ Pas d'adaptation automatique du style
 
 ### 4. **Gestion des Angles de Référence**
+
 ❌ Pas de correction d'angle/perspective des références
 ❌ Si la référence est de face et l'image cible de côté → risque de mauvais rendu
 
 ### 5. **Métiers BTP Non Optimisés**
+
 ⚠️ Prompts génériques ne couvrent pas tous les cas :
-  - Électricité (tableaux électriques, câblages)
-  - Plomberie (tuyauterie visible)
-  - Isolation (extérieure, intérieure)
-  - Menuiserie (fenêtres, portes, volets)
-  - Toiture (tuiles, ardoises, zinc)
+
+- Électricité (tableaux électriques, câblages)
+- Plomberie (tuyauterie visible)
+- Isolation (extérieure, intérieure)
+- Menuiserie (fenêtres, portes, volets)
+- Toiture (tuiles, ardoises, zinc)
 
 ---
 
@@ -145,6 +156,7 @@ interface ZoneMaskEditorProps {
 ```
 
 **Fonctionnalités** :
+
 - 🎨 Dessin de zones en superposition sur l'image
 - 🖱️ Outils : pinceau, rectangle, polygone, gomme
 - 🎨 Couleur par instruction (rouge, bleu, vert, etc.)
@@ -160,7 +172,7 @@ interface ZoneMaskEditorProps {
   <!-- Existant -->
   <input id="instructionLocation" />
   <div id="librarySelection">...</div>
-  
+
   <!-- NOUVEAU -->
   <div id="zoneMaskSection" class="mt-4">
     <label>Délimiter la zone (optionnel mais recommandé)</label>
@@ -173,7 +185,7 @@ interface ZoneMaskEditorProps {
 
 <!-- Modal plein écran pour l'éditeur de masque -->
 <div id="maskEditorModal" class="hidden">
-  <ZoneMaskEditor 
+  <ZoneMaskEditor
     imageUrl={step2PreviewImg.src}
     onMaskComplete={handleMaskComplete}
   />
@@ -191,10 +203,10 @@ export interface GenerationInstruction {
   referenceImagePath: string;
   referenceName?: string;
   modificationType?: ModificationType;
-  
+
   // NOUVEAU
   maskImagePath?: string; // Chemin S3 du masque PNG
-  maskBase64?: string;    // Alternative : base64 direct
+  maskBase64?: string; // Alternative : base64 direct
 }
 ```
 
@@ -218,42 +230,44 @@ async function generateWithMasks(
   outputDir: string,
   generationId: string
 ): Promise<{ imagePath: string; description: string }> {
-  
   // Construction du payload selon l'exemple fourni
   const contents: any[] = [
     { text: prompt },
-    { inlineData: { 
-        mimeType: originalImage.mimeType, 
-        data: originalImage.base64 
-      } 
-    }
+    {
+      inlineData: {
+        mimeType: originalImage.mimeType,
+        data: originalImage.base64,
+      },
+    },
   ];
-  
+
   // Ajouter les références avec leurs masques
   for (let i = 0; i < referenceImages.length; i++) {
     contents.push({
-      inlineData: { 
-        mimeType: referenceImages[i].mimeType, 
-        data: referenceImages[i].base64 
-      }
+      inlineData: {
+        mimeType: referenceImages[i].mimeType,
+        data: referenceImages[i].base64,
+      },
     });
-    
+
     // Ajouter le masque associé
     if (masks[i]) {
       contents.push({
         inlineData: {
           mimeType: "image/png",
-          data: masks[i].base64
-        }
+          data: masks[i].base64,
+        },
       });
     }
   }
-  
+
   // Modifier le prompt pour indiquer l'utilisation des masques
   const maskedPrompt = `${prompt}
 
 IMPORTANT : Des masques de zone sont fournis.
-- Masque ${i+1} (IMAGE ${contents.length}): zone blanche = appliquer référence ${i+1}, zone noire = ne pas toucher
+- Masque ${i + 1} (IMAGE ${
+    contents.length
+  }): zone blanche = appliquer référence ${i + 1}, zone noire = ne pas toucher
 - Respecte STRICTEMENT les limites des masques
 - N'applique les modifications QUE dans les zones blanches des masques`;
 
@@ -269,7 +283,7 @@ IMPORTANT : Des masques de zone sont fournis.
       },
     },
   });
-  
+
   // ... traitement de la réponse
 }
 ```
@@ -284,32 +298,32 @@ IMPORTANT : Des masques de zone sont fournis.
 // src/lib/gemini.ts
 
 interface ProjectContext {
-  projectType: 
-    | "interior_residential"    // Intérieur résidentiel
-    | "exterior_residential"    // Extérieur résidentiel
-    | "commercial"              // Commercial (bureau, magasin)
-    | "industrial"              // Industriel
-    | "landscape"               // Paysagisme
-    | "renovation"              // Rénovation lourde
-    | "energy"                  // Énergétique (panneaux solaires, isolation)
-  
-  trades: ( // Métiers détectés
-    | "flooring"        // Revêtement sols
-    | "painting"        // Peinture
-    | "tiling"          // Carrelage
-    | "carpentry"       // Menuiserie
-    | "roofing"         // Toiture
-    | "facade"          // Façade
-    | "electricity"     // Électricité
-    | "plumbing"        // Plomberie
-    | "hvac"            // Chauffage/Clim
-    | "solar"           // Solaire
-    | "landscaping"     // Paysagisme
-    | "furniture"       // Ameublement
-    | "lighting"        // Éclairage
-    | "decoration"      // Décoration
-  )[];
-  
+  projectType:
+    | "interior_residential" // Intérieur résidentiel
+    | "exterior_residential" // Extérieur résidentiel
+    | "commercial" // Commercial (bureau, magasin)
+    | "industrial" // Industriel
+    | "landscape" // Paysagisme
+    | "renovation" // Rénovation lourde
+    | "energy"; // Énergétique (panneaux solaires, isolation)
+
+  trades: // Métiers détectés
+  (| "flooring" // Revêtement sols
+    | "painting" // Peinture
+    | "tiling" // Carrelage
+    | "carpentry" // Menuiserie
+    | "roofing" // Toiture
+    | "facade" // Façade
+    | "electricity" // Électricité
+    | "plumbing" // Plomberie
+    | "hvac" // Chauffage/Clim
+    | "solar" // Solaire
+    | "landscaping" // Paysagisme
+    | "furniture" // Ameublement
+    | "lighting" // Éclairage
+    | "decoration"
+  )[]; // Décoration
+
   environment: "indoor" | "outdoor" | "mixed";
 }
 
@@ -317,12 +331,13 @@ async function detectProjectContext(
   imageData: { base64: string; mimeType: string },
   instructions: GenerationInstruction[]
 ): Promise<ProjectContext> {
-  
   const detectionPrompt = `Analyse cette image et ces instructions utilisateur.
 Détermine le TYPE DE PROJET et les MÉTIERS impliqués.
 
 Instructions utilisateur :
-${instructions.map((i, idx) => `${idx+1}. ${i.location} → ${i.referenceName}`).join('\n')}
+${instructions
+  .map((i, idx) => `${idx + 1}. ${i.location} → ${i.referenceName}`)
+  .join("\n")}
 
 Réponds en JSON :
 {
@@ -343,10 +358,10 @@ INDICES :
     model: MODELS.ANALYZER,
     contents: [
       { text: detectionPrompt },
-      { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } }
-    ]
+      { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } },
+    ],
   });
-  
+
   // Parser la réponse JSON
   // ...
 }
@@ -411,7 +426,7 @@ const TRADE_SPECIFIC_RULES: Record<string, string> = {
 - Joints réguliers et alignés
 - Coupe aux angles cohérente
 - Respect du calepinage (départ centré ou coin)
-- Brillance et reflets selon le type de carrelage`
+- Brillance et reflets selon le type de carrelage`,
 };
 
 function enrichPromptWithTradeRules(
@@ -419,13 +434,13 @@ function enrichPromptWithTradeRules(
   context: ProjectContext
 ): string {
   let enrichedPrompt = basePrompt;
-  
+
   for (const trade of context.trades) {
     if (TRADE_SPECIFIC_RULES[trade]) {
       enrichedPrompt += `\n\n${TRADE_SPECIFIC_RULES[trade]}`;
     }
   }
-  
+
   return enrichedPrompt;
 }
 ```
@@ -436,17 +451,21 @@ function enrichPromptWithTradeRules(
 interface ReferenceAnalysis {
   type: "material" | "object";
   category: string;
-  
+
   // NOUVEAU
-  imageType: "real_photo" | "3d_render" | "catalog_cutout" | "technical_drawing";
+  imageType:
+    | "real_photo"
+    | "3d_render"
+    | "catalog_cutout"
+    | "technical_drawing";
   adaptationNeeded: boolean;
   adaptationInstructions?: string;
 }
 
-async function analyzeReferenceWithStyle(
-  imageData: { base64: string; mimeType: string }
-): Promise<ReferenceAnalysis> {
-  
+async function analyzeReferenceWithStyle(imageData: {
+  base64: string;
+  mimeType: string;
+}): Promise<ReferenceAnalysis> {
   const stylePrompt = `Analyse cette image de référence.
 Détermine si c'est :
 - Une PHOTO RÉELLE (vraie photo prise dans un contexte réel)
@@ -502,9 +521,11 @@ EXEMPLE :
 ## 📊 PLAN D'IMPLÉMENTATION PAR PHASES
 
 ### 🎯 PHASE 1 : Sélection de Zones (Prioritaire)
+
 **Durée estimée** : 2-3 semaines
 
 #### Étape 1.1 : Frontend - Éditeur de Masques
+
 - [ ] Installer Fabric.js ou Konva.js
 - [ ] Créer `ZoneMaskEditor.tsx`
   - [ ] Canvas interactif avec image de fond
@@ -518,6 +539,7 @@ EXEMPLE :
   - [ ] Prévisualisation du masque
 
 #### Étape 1.2 : Backend - Support des Masques
+
 - [ ] Modifier `GenerationInstruction` (ajouter `maskImagePath`)
 - [ ] Migration BDD : `ALTER TABLE instructions ADD COLUMN mask_image_path`
 - [ ] API : Sauvegarder les masques sur S3
@@ -525,6 +547,7 @@ EXEMPLE :
 - [ ] Enrichir le prompt avec instructions de masque
 
 #### Étape 1.3 : Tests & Validation
+
 - [ ] Test cas simple : 1 zone, 1 référence
 - [ ] Test cas complexe : 3 zones, 3 références
 - [ ] Test sans masque (backward compatibility)
@@ -533,19 +556,23 @@ EXEMPLE :
 ---
 
 ### 🏗️ PHASE 2 : Optimisation Multi-Métiers BTP
+
 **Durée estimée** : 2 semaines
 
 #### Étape 2.1 : Détection de Contexte
+
 - [ ] Implémenter `detectProjectContext()`
 - [ ] Tester sur 20 images variées (intérieur, extérieur, différents métiers)
 - [ ] Ajuster les prompts de détection
 
 #### Étape 2.2 : Prompts Spécialisés
+
 - [ ] Créer `TRADE_SPECIFIC_RULES` pour 10 métiers
 - [ ] Implémenter `enrichPromptWithTradeRules()`
 - [ ] Tests A/B : avec/sans règles spécialisées
 
 #### Étape 2.3 : Cas d'Usage Prioritaires
+
 - [ ] Panneaux solaires sur toiture
 - [ ] Façade extérieure (bardage, enduit)
 - [ ] Terrasse/Revêtement extérieur
@@ -555,14 +582,17 @@ EXEMPLE :
 ---
 
 ### 🎨 PHASE 3 : Adaptation Images 3D/Catalogue
+
 **Durée estimée** : 1 semaine
 
 #### Étape 3.1 : Détection Type d'Image
+
 - [ ] Implémenter `analyzeReferenceWithStyle()`
 - [ ] Classifier : photo réelle vs 3D vs catalogue
 - [ ] Générer instructions d'adaptation
 
 #### Étape 3.2 : Prompts d'Adaptation
+
 - [ ] Règles pour "réaliser" les renders 3D
 - [ ] Règles pour intégrer images catalogue
 - [ ] Tests qualité
@@ -570,14 +600,17 @@ EXEMPLE :
 ---
 
 ### 🔄 PHASE 4 : Correction de Perspective
+
 **Durée estimée** : 1 semaine
 
 #### Étape 4.1 : Détection d'Angle
+
 - [ ] Analyser perspective de l'image originale
 - [ ] Analyser perspective de la référence
 - [ ] Détecter décalage d'angle
 
 #### Étape 4.2 : Instructions d'Adaptation
+
 - [ ] Ajouter bloc `PERSPECTIVE_ADAPTATION` au prompt
 - [ ] Tests sur cas critiques (face → 3/4, plongée → contre-plongée)
 
@@ -588,6 +621,7 @@ EXEMPLE :
 ### Scénarios de Test Prioritaires
 
 #### Test 1 : Intérieur Résidentiel
+
 - **Image** : Salon avec parquet, murs blancs, canapé
 - **Instructions** :
   1. Sol → Carrelage gris (avec masque précis du sol)
@@ -595,12 +629,14 @@ EXEMPLE :
   3. Canapé → Canapé moderne bleu (avec masque)
 
 #### Test 2 : Extérieur - Façade
+
 - **Image** : Maison avec façade crépi
 - **Instructions** :
   1. Façade principale → Bardage bois (avec masque)
   2. Toiture → Panneaux solaires (avec masque)
 
 #### Test 3 : Paysagisme
+
 - **Image** : Jardin avec pelouse
 - **Instructions** :
   1. Zone gauche → Massif de plantes (avec masque)
@@ -608,6 +644,7 @@ EXEMPLE :
   3. Fond → Pergola moderne (ajout)
 
 #### Test 4 : Image Catalogue
+
 - **Image** : Cuisine réelle
 - **Référence** : Crédence catalogue (fond blanc)
 - **Validation** : L'IA doit adapter l'image catalogue au contexte réel
@@ -617,12 +654,14 @@ EXEMPLE :
 ## 📈 MÉTRIQUES DE SUCCÈS
 
 ### KPI Techniques
+
 - ✅ Précision du masque : >95% de respect des limites
 - ✅ Temps de génération : <180 secondes
 - ✅ Taux de succès : >85% de générations satisfaisantes
 - ✅ Support multi-métiers : 15+ métiers BTP couverts
 
 ### KPI Utilisateur
+
 - ✅ Satisfaction : >4/5 sur la précision des zones
 - ✅ Facilité d'utilisation : temps pour définir un masque <2 min
 - ✅ Taux de régénération : <30% (réduction grâce aux masques)
@@ -632,18 +671,21 @@ EXEMPLE :
 ## 🚀 NEXT STEPS IMMÉDIATS
 
 ### Semaine 1-2 : POC Sélection de Zones
+
 1. Installer Fabric.js : `npm install fabric`
 2. Créer composant `ZoneMaskEditor.tsx` (version MVP)
 3. Tester export masque PNG
 4. Intégrer dans modal d'instruction
 
 ### Semaine 3-4 : Intégration Backend
+
 1. Modifier schéma BDD
 2. Adapter API `/api/generate-stream.ts`
 3. Modifier `generateWithNanoBanana()` pour masques
 4. Tests end-to-end
 
 ### Semaine 5-6 : Optimisation Métiers
+
 1. Implémenter détection contexte
 2. Créer 5 premiers prompts métiers (solaire, façade, paysage, carrelage, menuiserie)
 3. Tests A/B
@@ -655,22 +697,27 @@ EXEMPLE :
 ### Librairies Suggérées
 
 **Canvas/Masques** :
+
 - ✅ **Fabric.js** (recommandé) - Puissant, bien maintenu
 - Alternative : **Konva.js** (plus React-friendly)
 - Alternative : **react-canvas-draw** (plus simple mais limité)
 
 **Traitement d'Image** :
+
 - Déjà utilisé : **Sharp** (optimisation)
 - Garder pour manipulation de masques
 
 ### Format des Masques
+
 - **Format** : PNG 8-bit (noir/blanc)
 - **Résolution** : Identique à l'image originale
 - **Compression** : PNG sans perte
 - **Taille max** : 2 MB (compression si nécessaire)
 
 ### API Gemini - Ordre des Images
+
 Selon la doc :
+
 ```
 [prompt_text, image_originale, image_ref_1, mask_1, image_ref_2, mask_2, ...]
 ```
@@ -680,10 +727,12 @@ Selon la doc :
 ## ❓ QUESTIONS À CLARIFIER
 
 1. **Gemini supporte-t-il nativement les masques ?**
+
    - La doc fournie mentionne `mask: { uri: "..." }` mais à vérifier la syntaxe exacte pour `inlineData`
    - Alternative : inclure les masques dans le prompt visuel avec instructions explicites
 
 2. **Budget API Gemini**
+
    - Coût par génération avec masques ?
    - Limites de taille/nombre de masques ?
 
@@ -696,14 +745,17 @@ Selon la doc :
 ## 📚 RESSOURCES
 
 ### Documentation Gemini
+
 - [Gemini Image Editing API](https://ai.google.dev/gemini-api/docs/imagen)
 - [Nano Banana Pro Guide](https://developers.googleblog.com/en/gemini-3-image-generation/)
 
 ### Librairies Canvas
+
 - [Fabric.js](http://fabricjs.com/)
 - [Konva.js](https://konvajs.org/)
 
 ### Exemples d'UI de Sélection
+
 - Adobe Firefly : Masque à main levée
 - ChatGPT DALL-E : Gomme + brosse
 - Midjourney Pan : Délimitation rectangle
@@ -713,6 +765,7 @@ Selon la doc :
 ## ✅ CONCLUSION
 
 Ce plan couvre :
+
 1. ✅ **Sélection de zones** : Architecture complète frontend + backend
 2. ✅ **Multi-métiers BTP** : Détection contexte + prompts spécialisés
 3. ✅ **Images 3D/Catalogue** : Adaptation automatique

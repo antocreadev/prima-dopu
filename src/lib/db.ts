@@ -74,9 +74,7 @@ try {
 
 // Migration: ajouter mask_image_path si la colonne n'existe pas
 try {
-  db.exec(
-    `ALTER TABLE instructions ADD COLUMN mask_image_path TEXT`
-  );
+  db.exec(`ALTER TABLE instructions ADD COLUMN mask_image_path TEXT`);
 } catch {
   // La colonne existe déjà
 }

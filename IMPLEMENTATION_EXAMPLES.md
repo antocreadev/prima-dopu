@@ -22,8 +22,8 @@ npm install @types/fabric --save-dev
 
 ```tsx
 // src/components/ZoneMaskEditor.tsx
-import { useEffect, useRef, useState } from 'react';
-import { fabric } from 'fabric';
+import { useEffect, useRef, useState } from "react";
+import { fabric } from "fabric";
 
 interface ZoneMaskEditorProps {
   imageUrl: string;
@@ -36,11 +36,13 @@ export default function ZoneMaskEditor({
   imageUrl,
   onMaskComplete,
   onCancel,
-  instructionColor = '#ff0000'
+  instructionColor = "#ff0000",
 }: ZoneMaskEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
-  const [tool, setTool] = useState<'brush' | 'rectangle' | 'polygon' | 'eraser'>('brush');
+  const [tool, setTool] = useState<
+    "brush" | "rectangle" | "polygon" | "eraser"
+  >("brush");
   const [brushSize, setBrushSize] = useState(20);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function ZoneMaskEditor({
     const fabricCanvas = new fabric.Canvas(canvasRef.current, {
       width: 800,
       height: 600,
-      backgroundColor: '#f0f0f0'
+      backgroundColor: "#f0f0f0",
     });
 
     // Charger l'image de fond
@@ -60,16 +62,19 @@ export default function ZoneMaskEditor({
         fabricCanvas.width! / img.width!,
         fabricCanvas.height! / img.height!
       );
-      
+
       img.scale(scale);
       img.set({
         left: (fabricCanvas.width! - img.width! * scale) / 2,
         top: (fabricCanvas.height! - img.height! * scale) / 2,
         selectable: false,
-        evented: false
+        evented: false,
       });
 
-      fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
+      fabricCanvas.setBackgroundImage(
+        img,
+        fabricCanvas.renderAll.bind(fabricCanvas)
+      );
     });
 
     // Configuration du pinceau
@@ -88,10 +93,11 @@ export default function ZoneMaskEditor({
     if (!canvas) return;
 
     // Mettre à jour le mode de dessin selon l'outil
-    if (tool === 'brush' || tool === 'eraser') {
+    if (tool === "brush" || tool === "eraser") {
       canvas.isDrawingMode = true;
       canvas.freeDrawingBrush.width = brushSize;
-      canvas.freeDrawingBrush.color = tool === 'eraser' ? '#ffffff' : instructionColor;
+      canvas.freeDrawingBrush.color =
+        tool === "eraser" ? "#ffffff" : instructionColor;
     } else {
       canvas.isDrawingMode = false;
     }
@@ -99,7 +105,7 @@ export default function ZoneMaskEditor({
 
   const addRectangle = () => {
     if (!canvas) return;
-    
+
     const rect = new fabric.Rect({
       left: 100,
       top: 100,
@@ -108,30 +114,30 @@ export default function ZoneMaskEditor({
       fill: instructionColor,
       opacity: 0.5,
       stroke: instructionColor,
-      strokeWidth: 2
+      strokeWidth: 2,
     });
-    
+
     canvas.add(rect);
   };
 
   const addPolygon = () => {
     if (!canvas) return;
-    
+
     const points = [
       { x: 100, y: 100 },
       { x: 200, y: 50 },
       { x: 300, y: 100 },
       { x: 250, y: 200 },
-      { x: 150, y: 200 }
+      { x: 150, y: 200 },
     ];
-    
+
     const polygon = new fabric.Polygon(points, {
       fill: instructionColor,
       opacity: 0.5,
       stroke: instructionColor,
-      strokeWidth: 2
+      strokeWidth: 2,
     });
-    
+
     canvas.add(polygon);
   };
 
@@ -158,33 +164,33 @@ export default function ZoneMaskEditor({
     if (!canvas) return;
 
     // Créer un canvas temporaire pour le masque noir/blanc
-    const maskCanvas = document.createElement('canvas');
+    const maskCanvas = document.createElement("canvas");
     maskCanvas.width = canvas.width!;
     maskCanvas.height = canvas.height!;
-    const ctx = maskCanvas.getContext('2d')!;
+    const ctx = maskCanvas.getContext("2d")!;
 
     // Fond noir
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 
     // Dessiner les objets en blanc
     canvas.getObjects().forEach((obj) => {
       ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#ffffff';
-      
-      if (obj.type === 'path') {
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#ffffff";
+
+      if (obj.type === "path") {
         // Dessin à main levée
         const path = obj as fabric.Path;
         const pathData = path.path!;
         ctx.beginPath();
         pathData.forEach((segment: any) => {
           const cmd = segment[0];
-          if (cmd === 'M') {
+          if (cmd === "M") {
             ctx.moveTo(segment[1] + obj.left!, segment[2] + obj.top!);
-          } else if (cmd === 'L') {
+          } else if (cmd === "L") {
             ctx.lineTo(segment[1] + obj.left!, segment[2] + obj.top!);
-          } else if (cmd === 'Q') {
+          } else if (cmd === "Q") {
             ctx.quadraticCurveTo(
               segment[1] + obj.left!,
               segment[2] + obj.top!,
@@ -195,9 +201,14 @@ export default function ZoneMaskEditor({
         });
         ctx.lineWidth = obj.strokeWidth || 1;
         ctx.stroke();
-      } else if (obj.type === 'rect') {
-        ctx.fillRect(obj.left!, obj.top!, obj.width! * obj.scaleX!, obj.height! * obj.scaleY!);
-      } else if (obj.type === 'polygon') {
+      } else if (obj.type === "rect") {
+        ctx.fillRect(
+          obj.left!,
+          obj.top!,
+          obj.width! * obj.scaleX!,
+          obj.height! * obj.scaleY!
+        );
+      } else if (obj.type === "polygon") {
         const polygon = obj as fabric.Polygon;
         ctx.beginPath();
         polygon.points!.forEach((point, index) => {
@@ -212,12 +223,12 @@ export default function ZoneMaskEditor({
         ctx.closePath();
         ctx.fill();
       }
-      
+
       ctx.restore();
     });
 
     // Exporter en data URL PNG
-    const maskDataUrl = maskCanvas.toDataURL('image/png');
+    const maskDataUrl = maskCanvas.toDataURL("image/png");
     onMaskComplete(maskDataUrl);
   };
 
@@ -226,30 +237,54 @@ export default function ZoneMaskEditor({
       {/* Barre d'outils */}
       <div className="bg-slate-800 p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h2 className="text-white text-lg font-semibold">Délimiter la zone</h2>
-          
+          <h2 className="text-white text-lg font-semibold">
+            Délimiter la zone
+          </h2>
+
           <div className="flex gap-2">
             <button
-              onClick={() => setTool('brush')}
-              className={`px-3 py-2 rounded ${tool === 'brush' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => setTool("brush")}
+              className={`px-3 py-2 rounded ${
+                tool === "brush"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-700 text-slate-300"
+              }`}
             >
               🖌️ Pinceau
             </button>
             <button
-              onClick={() => { setTool('rectangle'); addRectangle(); }}
-              className={`px-3 py-2 rounded ${tool === 'rectangle' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => {
+                setTool("rectangle");
+                addRectangle();
+              }}
+              className={`px-3 py-2 rounded ${
+                tool === "rectangle"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-700 text-slate-300"
+              }`}
             >
               ▭ Rectangle
             </button>
             <button
-              onClick={() => { setTool('polygon'); addPolygon(); }}
-              className={`px-3 py-2 rounded ${tool === 'polygon' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => {
+                setTool("polygon");
+                addPolygon();
+              }}
+              className={`px-3 py-2 rounded ${
+                tool === "polygon"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-700 text-slate-300"
+              }`}
             >
               ⬠ Polygone
             </button>
             <button
-              onClick={() => setTool('eraser')}
-              className={`px-3 py-2 rounded ${tool === 'eraser' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => setTool("eraser")}
+              className={`px-3 py-2 rounded ${
+                tool === "eraser"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-700 text-slate-300"
+              }`}
             >
               🧹 Gomme
             </button>
@@ -293,7 +328,8 @@ export default function ZoneMaskEditor({
       {/* Actions */}
       <div className="bg-slate-800 p-4 flex justify-between items-center">
         <p className="text-slate-300 text-sm">
-          💡 Conseil : Dessinez la zone où vous souhaitez appliquer la référence. Soyez précis pour de meilleurs résultats.
+          💡 Conseil : Dessinez la zone où vous souhaitez appliquer la
+          référence. Soyez précis pour de meilleurs résultats.
         </p>
         <div className="flex gap-3">
           <button
@@ -395,7 +431,7 @@ import ZoneMaskEditor from "../components/ZoneMaskEditor";
         instructionColor: '#ff6b6b', // Couleur différente par instruction
         onMaskComplete: (maskDataUrl: string) => {
           currentMaskDataUrl = maskDataUrl;
-          
+
           // Afficher aperçu miniature
           const maskPreview = document.getElementById('maskPreview') as HTMLCanvasElement;
           const ctx = maskPreview.getContext('2d')!;
@@ -409,7 +445,7 @@ import ZoneMaskEditor from "../components/ZoneMaskEditor";
           img.src = maskDataUrl;
 
           document.getElementById('maskStatus')!.classList.remove('hidden');
-          
+
           // Fermer l'éditeur
           root.unmount();
         },
@@ -529,7 +565,7 @@ export interface GenerationInstruction {
   referenceName?: string;
   modificationType?: ModificationType;
   additionalDetails?: string;
-  
+
   // NOUVEAU
   maskImagePath?: string; // Chemin S3 du masque PNG
 }
@@ -572,10 +608,10 @@ for (let i = 0; i < parsedInstructions.length; i++) {
         icon: "🎨",
         message: `Masque ${i + 1}: délimitation de zone`,
       });
-      
+
       // Sauvegarder le masque sur S3
       maskPath = await saveImage(maskFile, userId, "masks");
-      
+
       await sendEvent("log", {
         icon: "✓",
         message: `Masque ${i + 1} sauvegardé`,
@@ -621,7 +657,12 @@ export function createInstruction(
     VALUES (?, ?, ?, ?, ?)
   `);
   stmt.run(id, generationId, location, referenceId, maskImagePath || null);
-  return { id, generation_id: generationId, location, reference_id: referenceId };
+  return {
+    id,
+    generation_id: generationId,
+    location,
+    reference_id: referenceId,
+  };
 }
 ```
 
@@ -655,9 +696,9 @@ async function generateWithNanoBanana(
   for (let i = 0; i < referenceImages.length; i++) {
     // Référence
     contents.push({
-      inlineData: { 
-        mimeType: referenceImages[i].mimeType, 
-        data: referenceImages[i].base64 
+      inlineData: {
+        mimeType: referenceImages[i].mimeType,
+        data: referenceImages[i].base64,
       },
     });
 
@@ -673,7 +714,11 @@ async function generateWithNanoBanana(
     }
   }
 
-  console.log(`   🖼️  ${1 + referenceImages.length} images + ${masks.length} masques envoyés`);
+  console.log(
+    `   🖼️  ${1 + referenceImages.length} images + ${
+      masks.length
+    } masques envoyés`
+  );
 
   // Enrichir le prompt avec instructions de masque
   const maskedPrompt = buildPromptWithMasks(prompt, masks.length);
@@ -710,10 +755,12 @@ ${maskCount} masque(s) de zone sont fournis avec les références.
 
 **Ordre des images** :
 IMAGE 1 : Image originale
-${Array.from({ length: maskCount }, (_, i) => 
-  `IMAGE ${2 + i * 2} : Référence ${i + 1}
+${Array.from(
+  { length: maskCount },
+  (_, i) =>
+    `IMAGE ${2 + i * 2} : Référence ${i + 1}
 IMAGE ${3 + i * 2} : Masque ${i + 1} pour la référence ${i + 1}`
-).join('\n')}
+).join("\n")}
 
 **RÈGLES ABSOLUES DES MASQUES** :
 1. Applique chaque référence UNIQUEMENT dans les zones BLANCHES de son masque
@@ -749,14 +796,21 @@ export async function generateBeforeAfterWithProgress(
 
   for (let i = 0; i < instructions.length; i++) {
     // Référence
-    const refImage = await prepareImageForAPI(instructions[i].referenceImagePath);
+    const refImage = await prepareImageForAPI(
+      instructions[i].referenceImagePath
+    );
     referenceImages.push(refImage);
 
     // NOUVEAU : Masque
     if (instructions[i].maskImagePath) {
-      const maskImage = await prepareImageForAPI(instructions[i].maskImagePath!);
+      const maskImage = await prepareImageForAPI(
+        instructions[i].maskImagePath!
+      );
       masks.push(maskImage);
-      log("✓", `Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(0)} KB`);
+      log(
+        "✓",
+        `Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(0)} KB`
+      );
     } else {
       // Pas de masque pour cette instruction
       masks.push({ base64: "", mimeType: "" });
@@ -786,23 +840,23 @@ export async function generateBeforeAfterWithProgress(
 
 ```typescript
 // tests/mask-editor.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
-describe('Mask Editor', () => {
-  it('should export valid PNG data URL', () => {
-    const mockCanvas = document.createElement('canvas');
+describe("Mask Editor", () => {
+  it("should export valid PNG data URL", () => {
+    const mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
-    const ctx = mockCanvas.getContext('2d')!;
-    
+    const ctx = mockCanvas.getContext("2d")!;
+
     // Dessiner un rectangle blanc sur fond noir
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, 800, 600);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(100, 100, 200, 150);
-    
-    const dataUrl = mockCanvas.toDataURL('image/png');
-    
+
+    const dataUrl = mockCanvas.toDataURL("image/png");
+
     expect(dataUrl).toMatch(/^data:image\/png;base64,/);
     expect(dataUrl.length).toBeGreaterThan(100);
   });
@@ -813,17 +867,19 @@ describe('Mask Editor', () => {
 
 ```typescript
 // tests/api-masks.test.ts
-import { describe, it, expect } from 'vitest';
-import { generateBeforeAfterWithProgress } from '../src/lib/gemini';
+import { describe, it, expect } from "vitest";
+import { generateBeforeAfterWithProgress } from "../src/lib/gemini";
 
-describe('API Generation with Masks', () => {
-  it('should generate with mask constraint', async () => {
-    const instructions = [{
-      location: "mur de gauche",
-      referenceImagePath: "references/test-ref.jpg",
-      referenceName: "Peinture bleue",
-      maskImagePath: "masks/test-mask.png"
-    }];
+describe("API Generation with Masks", () => {
+  it("should generate with mask constraint", async () => {
+    const instructions = [
+      {
+        location: "mur de gauche",
+        referenceImagePath: "references/test-ref.jpg",
+        referenceName: "Peinture bleue",
+        maskImagePath: "masks/test-mask.png",
+      },
+    ];
 
     const result = await generateBeforeAfterWithProgress(
       "originals/test-room.jpg",
@@ -849,12 +905,14 @@ describe('API Generation with Masks', () => {
 // src/lib/gemini.ts
 
 function logMaskUsage(instructions: GenerationInstruction[]) {
-  const withMask = instructions.filter(i => i.maskImagePath).length;
+  const withMask = instructions.filter((i) => i.maskImagePath).length;
   const total = instructions.length;
-  
+
   console.log(`\n📊 Utilisation des masques:`);
   console.log(`   Total instructions: ${total}`);
-  console.log(`   Avec masque: ${withMask} (${((withMask/total)*100).toFixed(0)}%)`);
+  console.log(
+    `   Avec masque: ${withMask} (${((withMask / total) * 100).toFixed(0)}%)`
+  );
   console.log(`   Sans masque: ${total - withMask}`);
 }
 ```
@@ -864,6 +922,7 @@ function logMaskUsage(instructions: GenerationInstruction[]) {
 ## 🚀 CHECKLIST DE DÉPLOIEMENT
 
 ### Phase 1 : POC Masques (Semaine 1-2)
+
 - [ ] Installer Fabric.js
 - [ ] Créer `ZoneMaskEditor.tsx`
 - [ ] Tester export PNG noir/blanc
@@ -871,6 +930,7 @@ function logMaskUsage(instructions: GenerationInstruction[]) {
 - [ ] Tests manuels (5 cas)
 
 ### Phase 2 : Backend (Semaine 3-4)
+
 - [ ] Migration BDD
 - [ ] Modifier `createInstruction()`
 - [ ] Modifier API `/api/generate-stream.ts`
@@ -878,12 +938,14 @@ function logMaskUsage(instructions: GenerationInstruction[]) {
 - [ ] Tests d'intégration
 
 ### Phase 3 : Tests Qualité (Semaine 5)
+
 - [ ] 10 générations test avec masques
 - [ ] Validation précision des masques
 - [ ] Comparaison avec/sans masques
 - [ ] Ajustement prompts si nécessaire
 
 ### Phase 4 : Déploiement (Semaine 6)
+
 - [ ] Documentation utilisateur
 - [ ] Tutoriel vidéo
 - [ ] Déploiement staging
@@ -895,17 +957,20 @@ function logMaskUsage(instructions: GenerationInstruction[]) {
 ## 💡 BONNES PRATIQUES
 
 ### UX
+
 - ✅ Toujours afficher un aperçu du masque avant validation
 - ✅ Permettre l'édition du masque après création
 - ✅ Couleurs différentes par instruction (rouge, bleu, vert)
 - ✅ Message de confirmation : "Masque validé ✓"
 
 ### Performance
+
 - ✅ Compresser les masques PNG (8-bit, pas 24-bit)
 - ✅ Limiter la résolution des masques (max 2048x2048)
 - ✅ Cache les masques côté client (localStorage)
 
 ### Qualité
+
 - ✅ Validation : masque noir/blanc uniquement
 - ✅ Validation : dimensions identiques à l'image
 - ✅ Alerte si masque trop petit (<5% de l'image)

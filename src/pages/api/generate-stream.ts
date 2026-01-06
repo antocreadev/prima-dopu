@@ -228,7 +228,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         if (referenceId && referencePath) {
-          createInstruction(generation.id, instr.location, referenceId, maskImagePath);
+          createInstruction(
+            generation.id,
+            instr.location,
+            referenceId,
+            maskImagePath
+          );
 
           const instruction: GenerationInstruction = {
             location: instr.location,
@@ -244,7 +249,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           geminiInstructions.push(instruction);
           await sendEvent("log", {
             icon: "✓",
-            message: `[${i + 1}] "${instr.location}" → ${referenceName}${maskImagePath ? " (avec masque)" : ""}`,
+            message: `[${i + 1}] "${instr.location}" → ${referenceName}${
+              maskImagePath ? " (avec masque)" : ""
+            }`,
             type: "success",
           });
         }

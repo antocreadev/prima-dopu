@@ -3,7 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
 import ShareButtons from "../components/ShareButtons.astro";
 import OnboardingTutorial from "../components/OnboardingTutorial.astro";
-import ZoneMaskEditor from "../components/ZoneMaskEditor.tsx";
+import ZoneMaskEditorWrapper from "../components/ZoneMaskEditorWrapper";
 import {
   getUserReferences,
   getUserFolders,
@@ -599,9 +599,15 @@ folders.forEach((f) => {
                 🖌️ Délimiter
               </button>
             </div>
-            <div id="maskIndicator" class="mt-2 text-xs text-green-600 items-center gap-1 hidden">
+            <div
+              id="maskIndicator"
+              class="mt-2 text-xs text-green-600 items-center gap-1 hidden"
+            >
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
               </svg>
               Zone délimitée avec précision
             </div>
@@ -930,7 +936,7 @@ folders.forEach((f) => {
       </div>
 
       <!-- Zone Mask Editor -->
-      <div id="maskEditorContainer"></div>
+      <ZoneMaskEditorWrapper client:only="react" />
     </div>
   </SignedIn>
 </Layout>
@@ -1014,7 +1020,6 @@ folders.forEach((f) => {
   const retryBtn = document.getElementById("retryBtn")!;
   const openMaskEditorBtn = document.getElementById("openMaskEditorBtn")!;
   const maskIndicator = document.getElementById("maskIndicator")!;
-  const maskEditorContainer = document.getElementById("maskEditorContainer")!;
 
   // Indicateurs
   const step1Indicator = document.getElementById("step1Indicator")!;
@@ -1260,8 +1265,15 @@ folders.forEach((f) => {
     });
   }
 
+  // Écouter les événements du mask editor
+  window.addEventListener("maskEditorSave", ((event: CustomEvent<{ maskDataUrl: string }>) => {
+    currentMaskDataUrl = event.detail.maskDataUrl;
+    maskIndicator.classList.remove("hidden");
+    maskIndicator.classList.add("flex");
+  }) as EventListener);
+
   // Gestionnaire pour l'éditeur de masque
-  openMaskEditorBtn.addEventListener("click", async () => {
+  openMaskEditorBtn.addEventListener("click", () => {
     if (!selectedImage) {
       alert("Veuillez d'abord sélectionner une image");
       return;
@@ -1284,29 +1296,10 @@ folders.forEach((f) => {
       referenceImageUrl = URL.createObjectURL(newReferenceFile);
     }
 
-    // Dynamiquement importer et rendre le composant ZoneMaskEditor
-    const { default: ZoneMaskEditor } = await import(
-      "../components/ZoneMaskEditor.tsx"
-    );
-    const { createRoot } = await import("react-dom/client");
-    const { createElement } = await import("react");
-
-    const root = createRoot(maskEditorContainer);
-    root.render(
-      createElement(ZoneMaskEditor, {
-        imageUrl,
-        referenceImage: referenceImageUrl,
-        onSave: (maskDataUrl: string) => {
-          currentMaskDataUrl = maskDataUrl;
-          maskIndicator.classList.remove("hidden");
-          maskIndicator.classList.add("flex");
-          root.unmount();
-        },
-        onCancel: () => {
-          root.unmount();
-        },
-      })
-    );
+    // Émettre l'événement pour ouvrir l'éditeur de masque
+    window.dispatchEvent(new CustomEvent("openMaskEditor", {
+      detail: { imageUrl, referenceImage: referenceImageUrl }
+    }));
   });
 
   useLibraryBtn.addEventListener("click", () => {
