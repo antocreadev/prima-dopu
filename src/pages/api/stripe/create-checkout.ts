@@ -52,6 +52,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const product = await getProductById(price.productId);
     const isSubscription = price.recurring !== null;
 
+    console.log(`🛒 Checkout: priceId=${priceId}, quantity=${quantity}`);
+    console.log(`🛒 Product: id=${product?.id}, type=${product?.type}, name=${product?.name}`);
+    console.log(`🛒 isSubscription=${isSubscription}, recurring=${JSON.stringify(price.recurring)}`);
+
     // Construire l'URL de base
     const baseUrl = new URL(request.url).origin;
 
