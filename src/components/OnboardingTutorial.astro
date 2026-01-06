@@ -1,8 +1,12 @@
 ---
 /**
- * Composant de tutoriel d'onboarding pour les nouveaux utilisateurs
- * Guide pas à pas interactif pour la première génération
- * Système inspiré des tutoriels de jeux vidéo / logiciels professionnels
+ * Tutoriel d'onboarding BLOQUANT
+ * 
+ * STRATÉGIE :
+ * - Bandeau fixe en haut avec l'étape actuelle
+ * - Overlay bloquant avec un "trou" autour de l'élément ciblé
+ * - L'utilisateur NE PEUT PAS interagir avec autre chose que l'élément ciblé
+ * - Vérification stricte avant de passer à l'étape suivante
  */
 interface Props {
   isFirstTime: boolean;
@@ -11,35 +15,94 @@ interface Props {
 const { isFirstTime } = Astro.props;
 ---
 
+<!-- Container principal du tutoriel -->
 <div 
-  id="onboarding-tutorial" 
-  class="fixed inset-0 z-[9999] pointer-events-none"
+  id="tutorial-system" 
   data-first-time={isFirstTime ? "true" : "false"}
-  style="display: none;"
+  class="hidden"
 >
-  <!-- Overlay avec "trou" pour spotlight -->
-  <svg id="tutorial-overlay-svg" class="absolute inset-0 w-full h-full pointer-events-auto" style="display: none;">
-    <defs>
-      <mask id="spotlight-mask">
-        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
-        <rect id="spotlight-hole" x="0" y="0" width="0" height="0" rx="12" fill="black"/>
-      </mask>
-    </defs>
-    <rect 
-      x="0" y="0" 
-      width="100%" height="100%" 
-      fill="rgba(0,0,0,0.75)" 
-      mask="url(#spotlight-mask)"
-    />
-  </svg>
-
-  <!-- Modal de bienvenue (étape 0) -->
+  <!-- Bandeau fixe en haut -->
   <div 
-    id="tutorial-welcome" 
-    class="absolute inset-0 flex items-center justify-center p-4 pointer-events-auto"
-    style="display: none;"
+    id="tutorial-banner"
+    class="fixed top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+    style="z-index: 100000;"
   >
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center animate-tutorial-appear">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <!-- Numéro d'étape -->
+        <div class="flex items-center gap-2">
+          <span id="tutorial-step-number" class="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 font-bold text-lg">1</span>
+          <span class="text-white/70">/</span>
+          <span id="tutorial-total-steps" class="text-white/70">4</span>
+        </div>
+        
+        <!-- Titre et description -->
+        <div>
+          <h3 id="tutorial-step-title" class="font-semibold text-lg">Chargement...</h3>
+          <p id="tutorial-step-description" class="text-white/80 text-sm"></p>
+        </div>
+      </div>
+      
+      <!-- Bouton passer -->
+      <button 
+        id="tutorial-skip-btn"
+        class="px-4 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+      >
+        Passer le tutoriel
+      </button>
+    </div>
+    
+    <!-- Barre de progression -->
+    <div class="h-1 bg-white/20">
+      <div id="tutorial-progress" class="h-full bg-white transition-all duration-300" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Overlay bloquant -->
+  <div 
+    id="tutorial-overlay"
+    class="fixed inset-0 pointer-events-auto"
+    style="z-index: 99998; background: rgba(0,0,0,0.7);"
+  >
+  </div>
+
+  <!-- Highlight autour de l'élément (trou dans l'overlay) - COMPLÈTEMENT TRANSPARENT -->
+  <div 
+    id="tutorial-highlight"
+    class="fixed pointer-events-none rounded-lg"
+    style="z-index: 99999; box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); transition: all 0.3s ease; border: 3px solid rgba(99, 102, 241, 0.8);"
+  >
+  </div>
+
+  <!-- Zone cliquable au-dessus du highlight -->
+  <div 
+    id="tutorial-clickzone"
+    class="fixed cursor-pointer"
+    style="z-index: 100001; background: transparent;"
+  >
+  </div>
+
+  <!-- Tooltip/Flèche pointant vers l'élément -->
+  <div 
+    id="tutorial-tooltip"
+    class="fixed bg-white rounded-xl shadow-2xl p-4 max-w-xs"
+    style="z-index: 100002;"
+  >
+    <div id="tutorial-tooltip-arrow" class="absolute w-4 h-4 bg-white transform rotate-45"></div>
+    <p id="tutorial-tooltip-text" class="text-slate-700 font-medium text-sm relative z-10"></p>
+    <div class="mt-2 flex items-center gap-2 text-xs text-indigo-600">
+      <span class="animate-pulse">👆</span>
+      <span id="tutorial-action-hint"></span>
+    </div>
+  </div>
+
+  <!-- Modal de bienvenue -->
+  <div 
+    id="tutorial-welcome"
+    class="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
+    style="z-index: 100003;"
+  >
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
       <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
         <span class="text-4xl">👋</span>
       </div>
@@ -50,6 +113,8 @@ const { isFirstTime } = Astro.props;
       
       <p class="text-slate-600 mb-6 leading-relaxed">
         Créez des visuels <strong class="text-indigo-600">avant/après</strong> professionnels en quelques clics grâce à l'IA.
+        <br><br>
+        <strong>Ce tutoriel va vous guider étape par étape.</strong>
       </p>
       
       <div class="space-y-3 text-left bg-slate-50 rounded-xl p-4 mb-6">
@@ -70,242 +135,193 @@ const { isFirstTime } = Astro.props;
       <button 
         type="button"
         id="tutorial-start-btn"
-        class="w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+        class="w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
       >
-        Commencer le tutoriel 🚀
+        C'est parti ! 🚀
       </button>
       
       <button 
         type="button"
-        id="tutorial-skip-btn"
+        id="tutorial-skip-welcome-btn"
         class="mt-4 text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
-        Passer et explorer par moi-même
+        Je connais déjà, passer →
       </button>
-    </div>
-  </div>
-
-  <!-- Tooltip flottant (étapes 1-4) -->
-  <div 
-    id="tutorial-tooltip" 
-    class="absolute bg-white rounded-xl shadow-2xl w-80 p-5 pointer-events-auto animate-tutorial-appear"
-    style="display: none;"
-  >
-    <!-- Flèche du tooltip -->
-    <div id="tooltip-arrow" class="absolute w-4 h-4 bg-white transform rotate-45"></div>
-    
-    <!-- Contenu -->
-    <div class="relative">
-      <!-- Header avec numéro d'étape -->
-      <div class="flex items-center gap-3 mb-3">
-        <span id="tooltip-step-number" class="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full font-bold text-sm"></span>
-        <h3 id="tooltip-title" class="font-semibold text-slate-900"></h3>
-      </div>
-      
-      <!-- Description -->
-      <div id="tooltip-description" class="text-slate-600 text-sm mb-4"></div>
-      
-      <!-- Footer avec navigation -->
-      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-        <span id="tooltip-progress" class="text-xs text-slate-400"></span>
-        <div class="flex gap-2">
-          <button 
-            type="button" 
-            id="tooltip-prev-btn"
-            class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Retour
-          </button>
-          <button 
-            type="button" 
-            id="tooltip-next-btn"
-            class="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1"
-          >
-            Suivant
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- Modal de fin -->
   <div 
-    id="tutorial-complete" 
-    class="absolute inset-0 flex items-center justify-center p-4 pointer-events-auto"
-    style="display: none;"
+    id="tutorial-complete"
+    class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 hidden"
+    style="z-index: 100003;"
   >
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-tutorial-appear">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
       <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
         <span class="text-4xl">🎉</span>
       </div>
       
       <h2 class="text-2xl font-bold text-slate-900 mb-3">
-        Vous êtes prêt !
+        Bravo, vous êtes prêt !
       </h2>
       
-      <p class="text-slate-600 mb-6 leading-relaxed">
-        Vous maîtrisez maintenant les bases de PrimaDopu. 
-        <strong class="text-indigo-600">Lancez votre première génération !</strong>
+      <p class="text-slate-600 mb-6">
+        Vous maîtrisez maintenant les bases de PrimaDopu.<br>
+        Lancez votre première génération !
       </p>
       
       <button 
         type="button"
         id="tutorial-finish-btn"
-        class="w-full py-3 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+        class="w-full py-3 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
       >
-        C'est parti ! ✨
+        Générer ma première image ! ✨
       </button>
-      
-      <p class="mt-4 text-xs text-slate-400">
-        💡 Vous pouvez revoir ce tutoriel depuis votre profil
-      </p>
     </div>
   </div>
 </div>
 
 <style>
-  @keyframes tutorial-appear {
-    from {
-      opacity: 0;
-      transform: scale(0.95) translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 0.8); }
+    50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 1); }
+    100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 0.8); }
   }
-
-  .animate-tutorial-appear {
-    animation: tutorial-appear 0.3s ease-out forwards;
+  
+  #tutorial-highlight {
+    animation: pulse-ring 2s infinite;
   }
-
-  #tutorial-tooltip {
-    transition: top 0.3s ease-out, left 0.3s ease-out;
-  }
-
-  #spotlight-hole {
-    transition: all 0.3s ease-out;
+  
+  /* Ajouter un padding au body quand le tutoriel est actif */
+  body.tutorial-active {
+    padding-top: 72px !important;
   }
 </style>
 
 <script>
   interface TutorialStep {
-    id: number;
-    targetSelector: string | null;  // null = pas de spotlight, juste modal
+    id: string;
+    target: string;
     title: string;
     description: string;
-    arrowPosition: 'top' | 'bottom' | 'left' | 'right';
-    highlightPadding?: number;
-    isModal?: boolean;  // Afficher comme modal centré sans spotlight
+    tooltip: string;
+    actionHint: string;
+    validate: () => boolean;
+    onEnter?: () => void;
+    allowModalInteraction?: boolean;
   }
 
-  const TUTORIAL_STEPS: TutorialStep[] = [
+  const STEPS: TutorialStep[] = [
     {
-      id: 1,
-      targetSelector: '#uploadZone',
+      id: 'upload',
+      target: '#uploadZone',
       title: 'Téléchargez votre photo',
-      description: `
-        <p class="mb-2">Cliquez ici ou glissez-déposez une photo de l'espace à transformer.</p>
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
-          <p class="text-xs text-amber-800">💡 <strong>Conseil :</strong> Privilégiez les photos horizontales pour un meilleur rendu.</p>
-        </div>
-      `,
-      arrowPosition: 'top',
-      highlightPadding: 8
+      description: 'Commencez par ajouter l\'image de l\'espace à transformer',
+      tooltip: 'Cliquez ici ou glissez-déposez une image',
+      actionHint: 'Ajoutez une image pour continuer',
+      validate: () => {
+        const preview = document.getElementById('imagePreview');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        const result = !!(preview && !preview.classList.contains('hidden') && placeholder?.classList.contains('hidden'));
+        console.log('[Tutorial] Validate upload:', result);
+        return result;
+      }
     },
     {
-      id: 2,
-      targetSelector: '#toStep2Btn',
+      id: 'continue',
+      target: '#toStep2Btn',
       title: 'Passez aux instructions',
-      description: `
-        <p>Une fois votre photo chargée, ce bouton <strong class="text-indigo-600">"Continuer →"</strong> devient actif.</p>
-        <p class="text-xs text-slate-500 mt-2">Cliquez dessus pour passer à l'étape suivante.</p>
-      `,
-      arrowPosition: 'top',
-      highlightPadding: 8
+      description: 'Votre image est chargée ! Continuez vers l\'étape suivante',
+      tooltip: 'Cliquez sur ce bouton pour continuer',
+      actionHint: 'Cliquez sur "Continuer →"',
+      validate: () => {
+        const step2 = document.getElementById('step2');
+        const result = !!(step2 && !step2.classList.contains('hidden'));
+        console.log('[Tutorial] Validate continue:', result);
+        return result;
+      }
     },
     {
-      id: 3,
-      targetSelector: null,
-      isModal: true,
-      title: 'Ajoutez vos instructions',
-      description: `
-        <div class="text-left">
-          <p class="mb-3">Dans l'écran suivant, vous pourrez :</p>
-          <div class="space-y-2">
-            <div class="flex items-start gap-2">
-              <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold shrink-0 mt-0.5">1</span>
-              <p class="text-sm">Cliquer sur <strong>"+ Ajouter une instruction"</strong></p>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold shrink-0 mt-0.5">2</span>
-              <p class="text-sm">Indiquer la <strong>zone</strong> (sol, murs, plafond...)</p>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold shrink-0 mt-0.5">3</span>
-              <p class="text-sm">Choisir un <strong>matériau de référence</strong></p>
-            </div>
-          </div>
-          <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-3">
-            <p class="text-xs text-purple-800">💡 <strong>Astuce :</strong> Ajoutez des photos de matériaux dans votre <a href="/library" class="underline font-medium">bibliothèque</a> pour des résultats précis !</p>
-          </div>
-        </div>
-      `,
-      arrowPosition: 'top'
+      id: 'add-instruction',
+      target: '#addInstructionBtn',
+      title: 'Ajoutez une instruction',
+      description: 'Définissez ce que vous voulez transformer',
+      tooltip: 'Cliquez pour ajouter votre première instruction',
+      actionHint: 'Cliquez sur "+ Ajouter une instruction"',
+      validate: () => {
+        const modal = document.getElementById('instructionModal');
+        const result = !!(modal && !modal.classList.contains('hidden'));
+        console.log('[Tutorial] Validate add-instruction:', result);
+        return result;
+      }
     },
     {
-      id: 4,
-      targetSelector: null,
-      isModal: true,
+      id: 'fill-instruction',
+      target: '#instructionModal > div',
+      title: 'Remplissez l\'instruction',
+      description: 'Indiquez la zone et choisissez une référence',
+      tooltip: 'Remplissez la zone (ex: "sol") et sélectionnez une image de référence, puis cliquez "Ajouter"',
+      actionHint: 'Complétez le formulaire et cliquez "Ajouter"',
+      allowModalInteraction: true,
+      onEnter: () => {
+        const zoneInput = document.getElementById('instructionLocation') as HTMLInputElement;
+        if (zoneInput) {
+          zoneInput.value = '';
+          setTimeout(() => zoneInput.focus(), 100);
+        }
+      },
+      validate: () => {
+        const modal = document.getElementById('instructionModal');
+        const list = document.getElementById('instructionsList');
+        const result = !!(modal?.classList.contains('hidden') && list && list.children.length > 0);
+        console.log('[Tutorial] Validate fill-instruction:', result, 'modal hidden:', modal?.classList.contains('hidden'), 'list children:', list?.children.length);
+        return result;
+      }
+    },
+    {
+      id: 'generate',
+      target: '#toStep3Btn',
       title: 'Lancez la génération !',
-      description: `
-        <div class="text-left">
-          <p class="mb-3">Quand vos instructions sont prêtes :</p>
-          <div class="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg mb-3">
-            <span class="text-2xl">🚀</span>
-            <p class="text-sm">Cliquez sur <strong class="text-indigo-600">"Générer →"</strong> pour lancer l'IA</p>
-          </div>
-          <div class="flex items-center gap-2 text-sm text-slate-600">
-            <span>⏱️</span>
-            <p>Le résultat arrive en <strong>moins de 2 minutes</strong></p>
-          </div>
-        </div>
-      `,
-      arrowPosition: 'top'
+      description: 'Tout est prêt, générez votre première image',
+      tooltip: 'Cliquez pour lancer l\'IA et créer votre image',
+      actionHint: 'Cliquez sur "Générer →"',
+      validate: () => {
+        const step3 = document.getElementById('step3');
+        const result = !!(step3 && !step3.classList.contains('hidden'));
+        console.log('[Tutorial] Validate generate:', result);
+        return result;
+      }
     }
   ];
 
-  class OnboardingTutorial {
+  class Tutorial {
     private container: HTMLElement;
-    private overlaySvg: SVGElement;
-    private spotlightHole: SVGRectElement;
-    private welcomeModal: HTMLElement;
+    private banner: HTMLElement;
+    private overlay: HTMLElement;
+    private highlight: HTMLElement;
+    private clickzone: HTMLElement;
     private tooltip: HTMLElement;
     private tooltipArrow: HTMLElement;
-    private completeModal: HTMLElement;
+    private welcome: HTMLElement;
+    private complete: HTMLElement;
     
-    private currentStep: number = 0;
-    private isActive: boolean = false;
-    private resizeObserver: ResizeObserver | null = null;
+    private currentStep = -1;
+    private isActive = false;
+    private pollInterval: number | null = null;
 
     constructor() {
-      // Récupérer les éléments
-      this.container = document.getElementById('onboarding-tutorial') as HTMLElement;
-      this.overlaySvg = document.getElementById('tutorial-overlay-svg') as unknown as SVGElement;
-      this.spotlightHole = document.getElementById('spotlight-hole') as unknown as SVGRectElement;
-      this.welcomeModal = document.getElementById('tutorial-welcome') as HTMLElement;
-      this.tooltip = document.getElementById('tutorial-tooltip') as HTMLElement;
-      this.tooltipArrow = document.getElementById('tooltip-arrow') as HTMLElement;
-      this.completeModal = document.getElementById('tutorial-complete') as HTMLElement;
+      this.container = document.getElementById('tutorial-system')!;
+      this.banner = document.getElementById('tutorial-banner')!;
+      this.overlay = document.getElementById('tutorial-overlay')!;
+      this.highlight = document.getElementById('tutorial-highlight')!;
+      this.clickzone = document.getElementById('tutorial-clickzone')!;
+      this.tooltip = document.getElementById('tutorial-tooltip')!;
+      this.tooltipArrow = document.getElementById('tutorial-tooltip-arrow')!;
+      this.welcome = document.getElementById('tutorial-welcome')!;
+      this.complete = document.getElementById('tutorial-complete')!;
 
       if (!this.container) {
-        console.error('Tutorial container not found');
+        console.error('[Tutorial] Container not found');
         return;
       }
 
@@ -313,289 +329,296 @@ const { isFirstTime } = Astro.props;
     }
 
     private init() {
-      // Vérifier si on doit afficher le tutoriel
       const isFirstTime = this.container.dataset.firstTime === 'true';
-      const tutorialCompleted = localStorage.getItem('primadopu_tutorial_completed');
-      const shouldShow = localStorage.getItem('primadopu_show_tutorial');
-      
-      // Afficher si: première fois OU demandé explicitement (replay depuis profil)
-      if ((isFirstTime && tutorialCompleted !== 'true') || shouldShow === 'true') {
-        // Nettoyer le flag de replay
-        localStorage.removeItem('primadopu_show_tutorial');
-        this.start();
-      }
+      const completed = localStorage.getItem('primadopu_tutorial_completed') === 'true';
+      const shouldShow = localStorage.getItem('primadopu_show_tutorial') === 'true';
+
+      console.log('[Tutorial] Init:', { isFirstTime, completed, shouldShow });
 
       this.bindEvents();
+
+      const totalEl = document.getElementById('tutorial-total-steps');
+      if (totalEl) totalEl.textContent = STEPS.length.toString();
+
+      if ((isFirstTime && !completed) || shouldShow) {
+        localStorage.removeItem('primadopu_show_tutorial');
+        setTimeout(() => this.start(), 500);
+      }
     }
 
     private bindEvents() {
-      // Bouton démarrer
       document.getElementById('tutorial-start-btn')?.addEventListener('click', () => {
-        this.showStep(1);
+        this.welcome.classList.add('hidden');
+        this.goToStep(0);
       });
 
-      // Bouton passer
-      document.getElementById('tutorial-skip-btn')?.addEventListener('click', () => {
-        this.complete();
-      });
+      document.getElementById('tutorial-skip-btn')?.addEventListener('click', () => this.finish());
+      document.getElementById('tutorial-skip-welcome-btn')?.addEventListener('click', () => this.finish());
 
-      // Navigation tooltip
-      document.getElementById('tooltip-prev-btn')?.addEventListener('click', () => {
-        this.prevStep();
-      });
-
-      document.getElementById('tooltip-next-btn')?.addEventListener('click', () => {
-        this.nextStep();
-      });
-
-      // Bouton terminer
       document.getElementById('tutorial-finish-btn')?.addEventListener('click', () => {
-        this.complete();
+        this.finish();
+        const btn = document.getElementById('toStep3Btn') as HTMLButtonElement;
+        if (btn && !btn.disabled) btn.click();
       });
 
-      // Fermer avec Escape
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.isActive) {
-          this.complete();
+          this.finish();
         }
       });
 
-      // Observer les changements de taille pour repositionner
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.isActive && this.currentStep > 0 && this.currentStep <= TUTORIAL_STEPS.length) {
-          this.positionTooltipForStep(TUTORIAL_STEPS[this.currentStep - 1]);
+      window.addEventListener('resize', () => {
+        if (this.isActive && this.currentStep >= 0) {
+          this.positionElements();
         }
       });
-      this.resizeObserver.observe(document.body);
+
+      window.addEventListener('scroll', () => {
+        if (this.isActive && this.currentStep >= 0) {
+          this.positionElements();
+        }
+      }, true);
     }
 
     private start() {
-      this.container.style.display = 'block';
+      console.log('[Tutorial] Starting...');
       this.isActive = true;
-      document.body.style.overflow = 'hidden';
+      this.container.classList.remove('hidden');
+      document.body.classList.add('tutorial-active');
       
-      // Afficher l'écran de bienvenue
-      this.showWelcome();
+      this.welcome.classList.remove('hidden');
+      this.overlay.style.display = 'none';
+      this.highlight.style.display = 'none';
+      this.clickzone.style.display = 'none';
+      this.tooltip.style.display = 'none';
     }
 
-    private showWelcome() {
-      this.currentStep = 0;
-      this.hideAllPanels();
-      this.welcomeModal.style.display = 'flex';
-    }
+    private goToStep(index: number) {
+      console.log('[Tutorial] Going to step', index);
 
-    private showStep(stepNumber: number) {
-      const step = TUTORIAL_STEPS.find(s => s.id === stepNumber);
-      if (!step) {
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
+      }
+
+      if (index >= STEPS.length) {
         this.showComplete();
         return;
       }
 
-      this.currentStep = stepNumber;
-      this.hideAllPanels();
+      this.currentStep = index;
+      const step = STEPS[index];
 
-      // Si c'est une étape modale (sans spotlight)
-      if (step.isModal || !step.targetSelector) {
-        this.showModalStep(step);
-        return;
-      }
+      this.updateBanner(step, index);
 
-      // Vérifier si l'élément cible existe et est visible
-      const target = document.querySelector(step.targetSelector) as HTMLElement;
-      if (!target || target.offsetParent === null) {
-        console.warn(`Target element not found or hidden: ${step.targetSelector}`);
-        // Si l'élément n'existe pas ou est caché, afficher comme modal
-        this.showModalStep(step);
-        return;
-      }
+      this.waitForTarget(step.target, (target) => {
+        console.log('[Tutorial] Target found:', step.target);
+        
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-      // Afficher l'overlay et le tooltip
-      this.overlaySvg.style.display = 'block';
-      this.tooltip.style.display = 'block';
+        setTimeout(() => {
+          this.positionElements();
+          
+          this.overlay.style.display = 'block';
+          this.highlight.style.display = 'block';
+          this.clickzone.style.display = 'block';
+          this.tooltip.style.display = 'block';
 
-      // Mettre à jour le contenu du tooltip
-      this.updateTooltipContent(step);
+          if (step.onEnter) step.onEnter();
 
-      // Positionner le spotlight et le tooltip
-      this.positionTooltipForStep(step);
+          this.setupClickForwarding(target, step);
+
+          this.startValidationPoll(step);
+        }, 400);
+      });
     }
 
-    private showModalStep(step: TutorialStep) {
-      // Afficher overlay sombre sans trou
-      this.overlaySvg.style.display = 'block';
-      // Réduire le spotlight à zéro pour avoir un overlay complet
-      this.spotlightHole.setAttribute('width', '0');
-      this.spotlightHole.setAttribute('height', '0');
+    private updateBanner(step: TutorialStep, index: number) {
+      const numEl = document.getElementById('tutorial-step-number');
+      const titleEl = document.getElementById('tutorial-step-title');
+      const descEl = document.getElementById('tutorial-step-description');
+      const progressEl = document.getElementById('tutorial-progress');
 
-      // Afficher et centrer le tooltip comme modal
-      this.tooltip.style.display = 'block';
-      this.tooltipArrow.style.display = 'none'; // Cacher la flèche
-
-      // Mettre à jour le contenu
-      this.updateTooltipContent(step);
-
-      // Centrer le tooltip
-      const tooltipRect = this.tooltip.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      this.tooltip.style.top = `${(viewportHeight - tooltipRect.height) / 2}px`;
-      this.tooltip.style.left = `${(viewportWidth - tooltipRect.width) / 2}px`;
+      if (numEl) numEl.textContent = (index + 1).toString();
+      if (titleEl) titleEl.textContent = step.title;
+      if (descEl) descEl.textContent = step.description;
+      if (progressEl) progressEl.style.width = `${((index + 1) / STEPS.length) * 100}%`;
     }
 
-    private updateTooltipContent(step: TutorialStep) {
-      const stepNumber = document.getElementById('tooltip-step-number');
-      const title = document.getElementById('tooltip-title');
-      const description = document.getElementById('tooltip-description');
-      const progress = document.getElementById('tooltip-progress');
-      const nextBtn = document.getElementById('tooltip-next-btn');
-      const prevBtn = document.getElementById('tooltip-prev-btn');
-
-      if (stepNumber) stepNumber.textContent = step.id.toString();
-      if (title) title.textContent = step.title;
-      if (description) description.innerHTML = step.description;
-      if (progress) progress.textContent = `Étape ${step.id}/${TUTORIAL_STEPS.length}`;
-
-      // Masquer le bouton retour sur la première étape
-      if (prevBtn) prevBtn.style.display = step.id === 1 ? 'none' : 'flex';
-
-      // Changer le texte du bouton suivant sur la dernière étape
-      if (nextBtn) {
-        if (step.id === TUTORIAL_STEPS.length) {
-          nextBtn.innerHTML = `Terminer <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
-          nextBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-          nextBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-        } else {
-          nextBtn.innerHTML = `Suivant <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
-          nextBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
-          nextBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-        }
-      }
-    }
-
-    private positionTooltipForStep(step: TutorialStep) {
-      if (!step.targetSelector) return;
+    private waitForTarget(selector: string, callback: (el: HTMLElement) => void, maxAttempts = 50) {
+      let attempts = 0;
       
-      const target = document.querySelector(step.targetSelector) as HTMLElement;
+      const check = () => {
+        const el = document.querySelector(selector) as HTMLElement;
+        if (el && el.offsetParent !== null) {
+          callback(el);
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(check, 100);
+        } else {
+          console.warn('[Tutorial] Target not found:', selector);
+          this.goToStep(this.currentStep + 1);
+        }
+      };
+      
+      check();
+    }
+
+    private positionElements() {
+      if (this.currentStep < 0 || this.currentStep >= STEPS.length) return;
+
+      const step = STEPS[this.currentStep];
+      const target = document.querySelector(step.target) as HTMLElement;
+      
       if (!target) return;
 
-      // Réafficher la flèche (au cas où elle était cachée pour une étape modale)
-      this.tooltipArrow.style.display = 'block';
+      const rect = target.getBoundingClientRect();
+      const padding = 8;
 
-      // Faire défiler l'élément dans la vue si nécessaire
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.highlight.style.top = `${rect.top - padding}px`;
+      this.highlight.style.left = `${rect.left - padding}px`;
+      this.highlight.style.width = `${rect.width + padding * 2}px`;
+      this.highlight.style.height = `${rect.height + padding * 2}px`;
 
-      // Attendre un peu que le scroll soit terminé
-      setTimeout(() => {
-        const rect = target.getBoundingClientRect();
-        const padding = step.highlightPadding || 8;
+      this.clickzone.style.top = `${rect.top - padding}px`;
+      this.clickzone.style.left = `${rect.left - padding}px`;
+      this.clickzone.style.width = `${rect.width + padding * 2}px`;
+      this.clickzone.style.height = `${rect.height + padding * 2}px`;
 
-        // Positionner le spotlight (trou dans l'overlay)
-        this.spotlightHole.setAttribute('x', (rect.left - padding).toString());
-        this.spotlightHole.setAttribute('y', (rect.top - padding).toString());
-        this.spotlightHole.setAttribute('width', (rect.width + padding * 2).toString());
-        this.spotlightHole.setAttribute('height', (rect.height + padding * 2).toString());
+      this.positionTooltip(rect);
 
-        // Positionner le tooltip
-        const tooltipRect = this.tooltip.getBoundingClientRect();
-        const gap = 16;
-        let top = 0;
-        let left = 0;
+      const textEl = document.getElementById('tutorial-tooltip-text');
+      const hintEl = document.getElementById('tutorial-action-hint');
+      if (textEl) textEl.textContent = step.tooltip;
+      if (hintEl) hintEl.textContent = step.actionHint;
+    }
 
-        // Réinitialiser les classes de position de la flèche
-        this.tooltipArrow.className = 'absolute w-4 h-4 bg-white transform rotate-45';
+    private positionTooltip(rect: DOMRect) {
+      const tooltipWidth = 280;
+      const tooltipHeight = 100;
+      const gap = 16;
+      
+      let top = 0;
+      let left = 0;
+      let arrowPosition = 'top';
 
-        switch (step.arrowPosition) {
-          case 'top':
-            // Tooltip en dessous de l'élément, flèche en haut
-            top = rect.bottom + gap;
-            left = rect.left + rect.width / 2 - tooltipRect.width / 2;
-            this.tooltipArrow.style.cssText = 'display: block; top: -8px; left: 50%; margin-left: -8px;';
-            break;
-          case 'bottom':
-            // Tooltip au-dessus de l'élément, flèche en bas
-            top = rect.top - tooltipRect.height - gap;
-            left = rect.left + rect.width / 2 - tooltipRect.width / 2;
-            this.tooltipArrow.style.cssText = 'display: block; bottom: -8px; left: 50%; margin-left: -8px;';
-            break;
-          case 'left':
-            // Tooltip à droite de l'élément, flèche à gauche
-            top = rect.top + rect.height / 2 - tooltipRect.height / 2;
-            left = rect.right + gap;
-            this.tooltipArrow.style.cssText = 'display: block; left: -8px; top: 50%; margin-top: -8px;';
-            break;
-          case 'right':
-            // Tooltip à gauche de l'élément, flèche à droite
-            top = rect.top + rect.height / 2 - tooltipRect.height / 2;
-            left = rect.left - tooltipRect.width - gap;
-            this.tooltipArrow.style.cssText = 'display: block; right: -8px; top: 50%; margin-top: -8px;';
-            break;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const spaceRight = window.innerWidth - rect.right;
+
+      if (spaceBelow > tooltipHeight + gap + 50) {
+        top = rect.bottom + gap;
+        left = rect.left + rect.width / 2 - tooltipWidth / 2;
+        arrowPosition = 'top';
+      } else if (spaceAbove > tooltipHeight + gap + 100) {
+        top = rect.top - tooltipHeight - gap;
+        left = rect.left + rect.width / 2 - tooltipWidth / 2;
+        arrowPosition = 'bottom';
+      } else if (spaceRight > tooltipWidth + gap) {
+        top = rect.top + rect.height / 2 - tooltipHeight / 2;
+        left = rect.right + gap;
+        arrowPosition = 'left';
+      } else {
+        top = rect.top + rect.height / 2 - tooltipHeight / 2;
+        left = rect.left - tooltipWidth - gap;
+        arrowPosition = 'right';
+      }
+
+      left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
+      top = Math.max(100, Math.min(top, window.innerHeight - tooltipHeight - 16));
+
+      this.tooltip.style.top = `${top}px`;
+      this.tooltip.style.left = `${left}px`;
+
+      this.tooltipArrow.className = 'absolute w-4 h-4 bg-white transform rotate-45';
+      switch (arrowPosition) {
+        case 'top':
+          this.tooltipArrow.style.cssText = 'top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0;';
+          break;
+        case 'bottom':
+          this.tooltipArrow.style.cssText = 'bottom: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;';
+          break;
+        case 'left':
+          this.tooltipArrow.style.cssText = 'left: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;';
+          break;
+        case 'right':
+          this.tooltipArrow.style.cssText = 'right: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0;';
+          break;
+      }
+    }
+
+    private setupClickForwarding(target: HTMLElement, step: TutorialStep) {
+      this.clickzone.onclick = null;
+
+      if (step.allowModalInteraction) {
+        // Pour le modal, on laisse passer les clics
+        this.clickzone.style.display = 'none';
+        this.overlay.style.pointerEvents = 'none';
+      } else {
+        this.clickzone.style.display = 'block';
+        this.overlay.style.pointerEvents = 'auto';
+        
+        this.clickzone.onclick = (e) => {
+          e.stopPropagation();
+          
+          if (step.id === 'upload') {
+            const fileInput = document.getElementById('imageInput') as HTMLInputElement;
+            if (fileInput) fileInput.click();
+          } else {
+            target.click();
+          }
+        };
+      }
+    }
+
+    private startValidationPoll(step: TutorialStep) {
+      this.pollInterval = window.setInterval(() => {
+        if (step.validate()) {
+          console.log('[Tutorial] Step validated:', step.id);
+          this.goToStep(this.currentStep + 1);
+        } else {
+          this.positionElements();
         }
-
-        // S'assurer que le tooltip reste dans la fenêtre
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        if (left < 16) left = 16;
-        if (left + tooltipRect.width > viewportWidth - 16) left = viewportWidth - tooltipRect.width - 16;
-        if (top < 16) top = 16;
-        if (top + tooltipRect.height > viewportHeight - 16) top = viewportHeight - tooltipRect.height - 16;
-
-        this.tooltip.style.top = `${top}px`;
-        this.tooltip.style.left = `${left}px`;
-      }, 100);
+      }, 300);
     }
 
     private showComplete() {
-      this.hideAllPanels();
-      this.completeModal.style.display = 'flex';
-      this.currentStep = TUTORIAL_STEPS.length + 1;
-    }
-
-    private hideAllPanels() {
-      this.welcomeModal.style.display = 'none';
-      this.overlaySvg.style.display = 'none';
+      console.log('[Tutorial] Showing complete modal');
+      
+      this.overlay.style.display = 'none';
+      this.highlight.style.display = 'none';
+      this.clickzone.style.display = 'none';
       this.tooltip.style.display = 'none';
-      this.completeModal.style.display = 'none';
+      
+      this.complete.classList.remove('hidden');
     }
 
-    private nextStep() {
-      if (this.currentStep < TUTORIAL_STEPS.length) {
-        this.showStep(this.currentStep + 1);
-      } else {
-        this.showComplete();
+    private finish() {
+      console.log('[Tutorial] Finishing');
+      
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
       }
-    }
 
-    private prevStep() {
-      if (this.currentStep > 1) {
-        this.showStep(this.currentStep - 1);
-      } else {
-        this.showWelcome();
-      }
-    }
-
-    private complete() {
+      this.container.classList.add('hidden');
+      this.welcome.classList.add('hidden');
+      this.complete.classList.add('hidden');
+      
+      document.body.classList.remove('tutorial-active');
+      
       localStorage.setItem('primadopu_tutorial_completed', 'true');
-      this.hide();
-    }
-
-    private hide() {
-      this.hideAllPanels();
-      this.container.style.display = 'none';
+      
       this.isActive = false;
-      document.body.style.overflow = '';
     }
   }
 
-  // Initialiser le tutoriel quand le DOM est prêt
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new OnboardingTutorial());
+    document.addEventListener('DOMContentLoaded', () => new Tutorial());
   } else {
-    new OnboardingTutorial();
+    new Tutorial();
   }
 
-  // Exposer une fonction globale pour rejouer le tutoriel (utilisé par le bouton du profil)
   (window as any).replayTutorial = () => {
     localStorage.removeItem('primadopu_tutorial_completed');
     localStorage.setItem('primadopu_show_tutorial', 'true');
