@@ -84,24 +84,24 @@ export const POST: APIRoute = async ({ request }) => {
             ? getPlanFromProductType(productType)
             : "standard";
 
-          const subData = subscription as unknown as {
-            current_period_start: number;
-            current_period_end: number;
-            cancel_at_period_end: boolean;
-          };
+          // Dans l'API Stripe 2025-12-15.clover, current_period est sur les items
+          const item = subscription.items.data[0];
+          const periodStart = (item as any)?.current_period_start;
+          const periodEnd = (item as any)?.current_period_end;
+          const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
 
           upsertSubscription(userId, {
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: subscriptionId,
             plan_type: planType,
             status: "active",
-            current_period_start: new Date(
-              subData.current_period_start * 1000
-            ).toISOString(),
-            current_period_end: new Date(
-              subData.current_period_end * 1000
-            ).toISOString(),
-            cancel_at_period_end: subData.cancel_at_period_end ? 1 : 0,
+            current_period_start: periodStart
+              ? new Date(periodStart * 1000).toISOString()
+              : null,
+            current_period_end: periodEnd
+              ? new Date(periodEnd * 1000).toISOString()
+              : null,
+            cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
           });
 
           console.log(`📝 Abonnement ${planType} créé pour ${userId}`);
@@ -137,23 +137,19 @@ export const POST: APIRoute = async ({ request }) => {
         const sub = getSubscriptionByStripeId(subscription.id);
 
         if (sub) {
-          // Récupérer le type de produit depuis les métadonnées ou le prix
-          const priceId = subscription.items.data[0]?.price.id;
-          let planType = sub.plan_type;
+          // Dans l'API Stripe 2025-12-15.clover, current_period_end est sur les items
+          const item = subscription.items.data[0];
+          const periodEnd = (item as any)?.current_period_end;
+          const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
+          const status = (subscription as any).status;
 
-          const subData = subscription as unknown as {
-            current_period_end: number;
-            cancel_at_period_end: boolean;
-            status: string;
-          };
+          console.log(`🔍 Subscription update: periodEnd=${periodEnd}, cancel=${cancelAtPeriodEnd}, status=${status}`);
 
           // Mettre à jour l'abonnement
           upsertSubscription(sub.user_id, {
-            status: subData.status as any,
-            cancel_at_period_end: subData.cancel_at_period_end ? 1 : 0,
-            current_period_end: new Date(
-              subData.current_period_end * 1000
-            ).toISOString(),
+            status: status as any,
+            cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
+            ...(periodEnd && { current_period_end: new Date(periodEnd * 1000).toISOString() }),
           });
 
           console.log(`🔄 Abonnement mis à jour pour ${sub.user_id}`);
@@ -239,9 +235,10 @@ export const POST: APIRoute = async ({ request }) => {
               `🔍 Product type: ${productType}, planType: ${planType}`
             );
 
-            // Accéder directement aux propriétés de la subscription
-            const periodStart = (subscription as any).current_period_start;
-            const periodEnd = (subscription as any).current_period_end;
+            // Dans l'API Stripe 2025-12-15.clover, current_period est sur les items
+            const item = subscription.items.data[0];
+            const periodStart = (item as any)?.current_period_start;
+            const periodEnd = (item as any)?.current_period_end;
             const cancelAtPeriodEnd = (subscription as any)
               .cancel_at_period_end;
 
