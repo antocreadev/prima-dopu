@@ -19,8 +19,13 @@ const WEBHOOK_SECRET =
   "";
 
 export const POST: APIRoute = async ({ request }) => {
+  console.log("🔔 Webhook endpoint appelé");
+  
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
+
+  console.log(`🔔 Signature présente: ${!!sig}`);
+  console.log(`🔔 WEBHOOK_SECRET configuré: ${!!WEBHOOK_SECRET}`);
 
   if (!sig) {
     console.error("Webhook: Signature manquante");
