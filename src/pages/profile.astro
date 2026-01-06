@@ -325,6 +325,21 @@ const creditStats = getCreditStats(
               </a>
             </div>
           </div>
+
+          <!-- Section Aide -->
+          <div class="border-t border-slate-200 pt-4">
+            <h3 class="font-medium text-slate-800 mb-4">📖 Aide & Support</h3>
+            <button
+              id="restart-tutorial"
+              class="flex items-center gap-3 p-4 w-full bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors text-left"
+            >
+              <span class="text-2xl">🎓</span>
+              <div>
+                <span class="font-medium text-indigo-800">Revoir le tutoriel</span>
+                <p class="text-sm text-indigo-600">Apprenez à utiliser PrimaDopu étape par étape</p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -332,6 +347,14 @@ const creditStats = getCreditStats(
 </Layout>
 
 <script>
+  // Relancer le tutoriel
+  document
+    .getElementById("restart-tutorial")
+    ?.addEventListener("click", () => {
+      localStorage.removeItem("primadopu_tutorial_completed");
+      window.location.href = "/generate";
+    });
+
   // Gérer l'abonnement Stripe avec confirmation
   document
     .getElementById("manage-stripe-subscription")

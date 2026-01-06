@@ -1,0 +1,447 @@
+---
+/**
+ * Composant de tutoriel d'onboarding pour les nouveaux utilisateurs
+ * Guide pas à pas pour la première génération
+ */
+interface Props {
+  isFirstTime: boolean;
+}
+
+const { isFirstTime } = Astro.props;
+---
+
+{isFirstTime && (
+  <div id="onboarding-overlay" class="fixed inset-0 z-[200] hidden">
+    <!-- Backdrop semi-transparent -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    
+    <!-- Container du tutoriel -->
+    <div id="tutorial-container" class="relative h-full flex items-center justify-center p-4">
+      
+      <!-- Étape 0: Écran de bienvenue -->
+      <div id="tutorial-step-0" class="tutorial-step">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center animate-fade-in">
+          <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+            <span class="text-4xl">👋</span>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-900 mb-3">
+            Bienvenue sur PrimaDopu !
+          </h2>
+          <p class="text-slate-600 mb-6 leading-relaxed">
+            Créez des visuels <strong class="text-indigo-600">avant/après</strong> professionnels en quelques clics grâce à l'IA.
+          </p>
+          <div class="space-y-3 text-left bg-slate-50 rounded-xl p-4 mb-6">
+            <div class="flex items-start gap-3">
+              <span class="text-xl">📸</span>
+              <p class="text-sm text-slate-700">Uploadez une photo de votre espace</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="text-xl">🎨</span>
+              <p class="text-sm text-slate-700">Indiquez les changements souhaités</p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="text-xl">✨</span>
+              <p class="text-sm text-slate-700">L'IA génère le résultat en moins de 2 minutes</p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            class="tutorial-next w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+          >
+            Commencer le tutoriel 🚀
+          </button>
+          <button 
+            type="button"
+            class="tutorial-skip mt-3 text-sm text-slate-500 hover:text-slate-700 underline"
+          >
+            Passer le tutoriel
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape 1: Zone d'upload -->
+      <div id="tutorial-step-1" class="tutorial-step hidden">
+        <div class="tutorial-spotlight" id="spotlight-1"></div>
+        <div class="tutorial-tooltip bg-white rounded-xl shadow-2xl max-w-sm p-5 animate-fade-in" id="tooltip-1">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full font-bold text-sm">1</span>
+            <h3 class="font-semibold text-slate-900">Téléchargez votre photo</h3>
+          </div>
+          <p class="text-slate-600 text-sm mb-4">
+            Cliquez ou glissez-déposez une photo de l'espace que vous souhaitez transformer. 
+            <span class="text-amber-600 font-medium">Conseil : privilégiez les photos horizontales pour un meilleur rendu.</span>
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Étape 1/4</span>
+            <div class="flex gap-2">
+              <button type="button" class="tutorial-prev px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                ← Retour
+              </button>
+              <button type="button" class="tutorial-next px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                Suivant →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 2: Bouton Continuer vers instructions -->
+      <div id="tutorial-step-2" class="tutorial-step hidden">
+        <div class="tutorial-spotlight" id="spotlight-2"></div>
+        <div class="tutorial-tooltip bg-white rounded-xl shadow-2xl max-w-sm p-5 animate-fade-in" id="tooltip-2">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full font-bold text-sm">2</span>
+            <h3 class="font-semibold text-slate-900">Passez aux instructions</h3>
+          </div>
+          <p class="text-slate-600 text-sm mb-4">
+            Une fois votre photo chargée, cliquez sur ce bouton pour passer à l'étape des instructions.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Étape 2/4</span>
+            <div class="flex gap-2">
+              <button type="button" class="tutorial-prev px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                ← Retour
+              </button>
+              <button type="button" class="tutorial-next px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                Suivant →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 3: Zone d'instructions -->
+      <div id="tutorial-step-3" class="tutorial-step hidden">
+        <div class="tutorial-spotlight" id="spotlight-3"></div>
+        <div class="tutorial-tooltip bg-white rounded-xl shadow-2xl max-w-sm p-5 animate-fade-in" id="tooltip-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full font-bold text-sm">3</span>
+            <h3 class="font-semibold text-slate-900">Ajoutez vos instructions</h3>
+          </div>
+          <p class="text-slate-600 text-sm mb-2">
+            Décrivez les changements que vous souhaitez :
+          </p>
+          <ul class="text-sm text-slate-600 mb-4 space-y-1">
+            <li class="flex items-center gap-2">
+              <span class="text-green-500">✓</span>
+              <span><strong>Où</strong> : "le sol", "les murs", "le plafond"</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-green-500">✓</span>
+              <span><strong>Quoi</strong> : choisissez une texture de référence</span>
+            </li>
+          </ul>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <p class="text-xs text-amber-800">
+              💡 <strong>Astuce :</strong> Ajoutez des références (photos de matériaux) dans votre bibliothèque pour des résultats plus précis !
+            </p>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Étape 3/4</span>
+            <div class="flex gap-2">
+              <button type="button" class="tutorial-prev px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                ← Retour
+              </button>
+              <button type="button" class="tutorial-next px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                Suivant →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 4: Bouton Générer -->
+      <div id="tutorial-step-4" class="tutorial-step hidden">
+        <div class="tutorial-spotlight" id="spotlight-4"></div>
+        <div class="tutorial-tooltip bg-white rounded-xl shadow-2xl max-w-sm p-5 animate-fade-in" id="tooltip-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-full font-bold text-sm">4</span>
+            <h3 class="font-semibold text-slate-900">Lancez la génération !</h3>
+          </div>
+          <p class="text-slate-600 text-sm mb-4">
+            Une fois vos instructions ajoutées, cliquez sur <strong class="text-indigo-600">"Générer"</strong> et laissez l'IA faire la magie ! 
+            Le résultat sera prêt en moins de 2 minutes.
+          </p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Étape 4/4</span>
+            <div class="flex gap-2">
+              <button type="button" class="tutorial-prev px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                ← Retour
+              </button>
+              <button type="button" class="tutorial-finish px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                C'est parti ! ✨
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
+
+<style>
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .tutorial-step {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tutorial-spotlight {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    transition: all 0.3s ease-out;
+  }
+
+  .tutorial-tooltip {
+    position: absolute;
+    z-index: 10;
+    max-width: 350px;
+  }
+
+  /* Flèche du tooltip */
+  .tutorial-tooltip::before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    transform: rotate(45deg);
+  }
+
+  .tutorial-tooltip.arrow-top::before {
+    top: -6px;
+    left: 50%;
+    margin-left: -6px;
+  }
+
+  .tutorial-tooltip.arrow-bottom::before {
+    bottom: -6px;
+    left: 50%;
+    margin-left: -6px;
+  }
+
+  .tutorial-tooltip.arrow-left::before {
+    left: -6px;
+    top: 50%;
+    margin-top: -6px;
+  }
+
+  .tutorial-tooltip.arrow-right::before {
+    right: -6px;
+    top: 50%;
+    margin-top: -6px;
+  }
+</style>
+
+<script>
+  // Configuration des éléments cibles pour chaque étape
+  const TUTORIAL_TARGETS: Record<number, { selector: string; position: 'top' | 'bottom' | 'left' | 'right' }> = {
+    1: { selector: '#uploadZone', position: 'bottom' },
+    2: { selector: '#toStep2Btn', position: 'bottom' },
+    3: { selector: '#step2', position: 'top' },
+    4: { selector: '#toStep3Btn', position: 'top' },
+  };
+
+  class OnboardingTutorial {
+    private overlay: HTMLElement | null;
+    private currentStep: number = 0;
+    private totalSteps: number = 4;
+    private isActive: boolean = false;
+
+    constructor() {
+      this.overlay = document.getElementById('onboarding-overlay');
+      this.init();
+    }
+
+    private init() {
+      if (!this.overlay) return;
+
+      // Vérifier si le tutoriel a déjà été complété
+      const tutorialCompleted = localStorage.getItem('primadopu_tutorial_completed');
+      if (tutorialCompleted === 'true') {
+        return;
+      }
+
+      // Afficher le tutoriel
+      this.show();
+      this.bindEvents();
+    }
+
+    private bindEvents() {
+      if (!this.overlay) return;
+
+      // Boutons suivant
+      this.overlay.querySelectorAll('.tutorial-next').forEach(btn => {
+        btn.addEventListener('click', () => this.nextStep());
+      });
+
+      // Boutons précédent
+      this.overlay.querySelectorAll('.tutorial-prev').forEach(btn => {
+        btn.addEventListener('click', () => this.prevStep());
+      });
+
+      // Bouton passer
+      this.overlay.querySelectorAll('.tutorial-skip').forEach(btn => {
+        btn.addEventListener('click', () => this.complete());
+      });
+
+      // Bouton terminer
+      this.overlay.querySelectorAll('.tutorial-finish').forEach(btn => {
+        btn.addEventListener('click', () => this.complete());
+      });
+
+      // Fermer avec Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isActive) {
+          this.complete();
+        }
+      });
+
+      // Resize handler pour repositionner les tooltips
+      window.addEventListener('resize', () => {
+        if (this.isActive && this.currentStep > 0) {
+          this.positionTooltip(this.currentStep);
+        }
+      });
+    }
+
+    private show() {
+      if (!this.overlay) return;
+      this.overlay.classList.remove('hidden');
+      this.isActive = true;
+      document.body.style.overflow = 'hidden';
+      this.showStep(0);
+    }
+
+    private hide() {
+      if (!this.overlay) return;
+      this.overlay.classList.add('hidden');
+      this.isActive = false;
+      document.body.style.overflow = '';
+    }
+
+    private showStep(step: number) {
+      if (!this.overlay) return;
+
+      // Masquer toutes les étapes
+      this.overlay.querySelectorAll('.tutorial-step').forEach(el => {
+        el.classList.add('hidden');
+      });
+
+      // Afficher l'étape courante
+      const stepEl = document.getElementById(`tutorial-step-${step}`);
+      if (stepEl) {
+        stepEl.classList.remove('hidden');
+      }
+
+      // Positionner le spotlight et tooltip pour les étapes 1-4
+      if (step > 0) {
+        this.positionTooltip(step);
+      }
+
+      this.currentStep = step;
+    }
+
+    private positionTooltip(step: number) {
+      const config = TUTORIAL_TARGETS[step as keyof typeof TUTORIAL_TARGETS];
+      if (!config) return;
+
+      const target = document.querySelector(config.selector);
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const spotlight = document.getElementById(`spotlight-${step}`);
+      const tooltip = document.getElementById(`tooltip-${step}`);
+
+      if (spotlight) {
+        // Positionner le spotlight autour de l'élément cible
+        const padding = 8;
+        spotlight.style.top = `${rect.top - padding}px`;
+        spotlight.style.left = `${rect.left - padding}px`;
+        spotlight.style.width = `${rect.width + padding * 2}px`;
+        spotlight.style.height = `${rect.height + padding * 2}px`;
+      }
+
+      if (tooltip) {
+        // Retirer les classes de flèche existantes
+        tooltip.classList.remove('arrow-top', 'arrow-bottom', 'arrow-left', 'arrow-right');
+
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const gap = 16;
+
+        switch (config.position) {
+          case 'bottom':
+            tooltip.style.top = `${rect.bottom + gap}px`;
+            tooltip.style.left = `${Math.max(16, Math.min(rect.left + rect.width / 2 - tooltipRect.width / 2, window.innerWidth - tooltipRect.width - 16))}px`;
+            tooltip.classList.add('arrow-top');
+            break;
+          case 'top':
+            tooltip.style.top = `${rect.top - tooltipRect.height - gap}px`;
+            tooltip.style.left = `${Math.max(16, Math.min(rect.left + rect.width / 2 - tooltipRect.width / 2, window.innerWidth - tooltipRect.width - 16))}px`;
+            tooltip.classList.add('arrow-bottom');
+            break;
+          case 'left':
+            tooltip.style.top = `${rect.top + rect.height / 2 - tooltipRect.height / 2}px`;
+            tooltip.style.left = `${rect.left - tooltipRect.width - gap}px`;
+            tooltip.classList.add('arrow-right');
+            break;
+          case 'right':
+            tooltip.style.top = `${rect.top + rect.height / 2 - tooltipRect.height / 2}px`;
+            tooltip.style.left = `${rect.right + gap}px`;
+            tooltip.classList.add('arrow-left');
+            break;
+        }
+      }
+    }
+
+    private nextStep() {
+      if (this.currentStep < this.totalSteps) {
+        this.showStep(this.currentStep + 1);
+      } else {
+        this.complete();
+      }
+    }
+
+    private prevStep() {
+      if (this.currentStep > 0) {
+        this.showStep(this.currentStep - 1);
+      }
+    }
+
+    private complete() {
+      localStorage.setItem('primadopu_tutorial_completed', 'true');
+      this.hide();
+    }
+  }
+
+  // Initialiser le tutoriel au chargement
+  document.addEventListener('DOMContentLoaded', () => {
+    new OnboardingTutorial();
+  });
+
+  // Réinitialiser le tutoriel (pour debug)
+  (window as any).resetTutorial = () => {
+    localStorage.removeItem('primadopu_tutorial_completed');
+    location.reload();
+  };
+</script>

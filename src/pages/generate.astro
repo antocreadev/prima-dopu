@@ -2,11 +2,13 @@
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
 import ShareButtons from "../components/ShareButtons.astro";
+import OnboardingTutorial from "../components/OnboardingTutorial.astro";
 import {
   getUserReferences,
   getUserFolders,
   getCreditStats,
   canUserGenerate,
+  isFirstTimeUser,
   type PlanType,
 } from "../lib/db";
 import { getUserPlan } from "../lib/plans";
@@ -22,6 +24,9 @@ if (!userId) {
 // Déterminer le plan de l'utilisateur
 const userPlanInfo = getUserPlan(userId);
 const isAdmin = userPlanInfo.isAdmin === true;
+
+// Vérifier si c'est un nouvel utilisateur (pour le tutoriel)
+const isFirstTime = isFirstTimeUser(userId);
 
 // Récupérer les crédits bonus (supplémentaires achetés)
 const bonusCredits = getCreditsBalance(userId);
@@ -57,6 +62,9 @@ folders.forEach((f) => {
 ---
 
 <Layout title="Générer">
+  <!-- Tutoriel d'onboarding pour les nouveaux utilisateurs -->
+  <OnboardingTutorial isFirstTime={isFirstTime} />
+  
   <SignedOut>
     <div class="text-center py-20">
       <p class="text-slate-600">
@@ -238,8 +246,8 @@ folders.forEach((f) => {
         </style>
 
         <div
+          id="uploadZone"
           class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors"
-          id="dropZone"
         >
           <input type="file" id="imageInput" accept="image/*" class="hidden" />
           <div id="uploadPlaceholder">
@@ -847,7 +855,7 @@ folders.forEach((f) => {
   const step3 = document.getElementById("step3")!;
   const imageInput = document.getElementById("imageInput") as HTMLInputElement;
   const selectImageBtn = document.getElementById("selectImageBtn")!;
-  const dropZone = document.getElementById("dropZone")!;
+  const uploadZone = document.getElementById("uploadZone")!;
   const uploadPlaceholder = document.getElementById("uploadPlaceholder")!;
   const imagePreview = document.getElementById("imagePreview")!;
   const previewImg = document.getElementById("previewImg") as HTMLImageElement;
@@ -942,18 +950,18 @@ folders.forEach((f) => {
     if (file) handleImageSelect(file);
   });
 
-  dropZone.addEventListener("dragover", (e) => {
+  uploadZone.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropZone.classList.add("border-indigo-400", "bg-indigo-50");
+    uploadZone.classList.add("border-indigo-400", "bg-indigo-50");
   });
 
-  dropZone.addEventListener("dragleave", () => {
-    dropZone.classList.remove("border-indigo-400", "bg-indigo-50");
+  uploadZone.addEventListener("dragleave", () => {
+    uploadZone.classList.remove("border-indigo-400", "bg-indigo-50");
   });
 
-  dropZone.addEventListener("drop", (e) => {
+  uploadZone.addEventListener("drop", (e) => {
     e.preventDefault();
-    dropZone.classList.remove("border-indigo-400", "bg-indigo-50");
+    uploadZone.classList.remove("border-indigo-400", "bg-indigo-50");
     const file = e.dataTransfer?.files?.[0];
     if (file && isImageFile(file)) handleImageSelect(file);
   });

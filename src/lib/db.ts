@@ -251,6 +251,28 @@ export function getUserGenerations(userId: string): Generation[] {
   return stmt.all(userId) as Generation[];
 }
 
+/**
+ * Vérifie si l'utilisateur n'a jamais fait de génération (pour le tutoriel)
+ */
+export function isFirstTimeUser(userId: string): boolean {
+  const result = db
+    .prepare("SELECT COUNT(*) as count FROM generations WHERE user_id = ?")
+    .get(userId) as { count: number };
+  return result.count === 0;
+}
+
+/**
+ * Compte le nombre de générations complètes d'un utilisateur
+ */
+export function getUserGenerationCount(userId: string): number {
+  const result = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM generations WHERE user_id = ? AND status = 'completed'"
+    )
+    .get(userId) as { count: number };
+  return result.count;
+}
+
 export function updateGeneration(
   id: string,
   updates: Partial<Pick<Generation, "generated_image_path" | "status">>
