@@ -1,0 +1,606 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { isAdminUser } from "../../lib/plans";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+// Vérifier l'accès admin
+if (!userId || !isAdminUser(userId)) {
+  return Astro.redirect("/");
+}
+
+// Récupérer les stats globales via API côté serveur
+import db from "../../lib/db";
+
+// Stats globales
+const totalUsers = db.prepare(`
+  SELECT COUNT(DISTINCT user_id) as count FROM user_credits
+`).get() as { count: number };
+
+const totalGenerations = db.prepare(`
+  SELECT COUNT(*) as count FROM generations
+`).get() as { count: number };
+
+const completedGenerations = db.prepare(`
+  SELECT COUNT(*) as count FROM generations WHERE status = 'completed'
+`).get() as { count: number };
+
+const totalReferences = db.prepare(`
+  SELECT COUNT(*) as count FROM material_refs
+`).get() as { count: number };
+
+// Générations des dernières 24h
+const recentGenerations = db.prepare(`
+  SELECT COUNT(*) as count FROM generations 
+  WHERE created_at >= datetime('now', '-24 hours')
+`).get() as { count: number };
+
+// Générations des 7 derniers jours
+const weekGenerations = db.prepare(`
+  SELECT COUNT(*) as count FROM generations 
+  WHERE created_at >= datetime('now', '-7 days')
+`).get() as { count: number };
+
+// Répartition par plan
+const subscriptionStats = db.prepare(`
+  SELECT 
+    plan_type,
+    COUNT(*) as count,
+    SUM(credits_balance) as total_bonus_credits
+  FROM subscriptions
+  GROUP BY plan_type
+`).all() as Array<{ plan_type: string; count: number; total_bonus_credits: number }>;
+
+// Dernières générations
+const latestGenerations = db.prepare(`
+  SELECT 
+    g.id,
+    g.user_id,
+    g.status,
+    g.created_at,
+    g.original_image_path,
+    g.generated_image_path,
+    (SELECT COUNT(*) FROM instructions WHERE generation_id = g.id) as instruction_count
+  FROM generations g
+  ORDER BY g.created_at DESC
+  LIMIT 20
+`).all() as Array<{
+  id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+  original_image_path: string;
+  generated_image_path: string | null;
+  instruction_count: number;
+}>;
+
+// Top utilisateurs (par nombre de générations)
+const topUsers = db.prepare(`
+  SELECT 
+    uc.user_id,
+    uc.total_generations,
+    uc.monthly_generations,
+    s.plan_type,
+    s.credits_balance,
+    s.stripe_customer_id,
+    (SELECT COUNT(*) FROM material_refs WHERE user_id = uc.user_id) as ref_count
+  FROM user_credits uc
+  LEFT JOIN subscriptions s ON s.user_id = uc.user_id
+  ORDER BY uc.total_generations DESC
+  LIMIT 50
+`).all() as Array<{
+  user_id: string;
+  total_generations: number;
+  monthly_generations: number;
+  plan_type: string | null;
+  credits_balance: number | null;
+  stripe_customer_id: string | null;
+  ref_count: number;
+}>;
+
+// Achats de crédits récents
+const recentPurchases = db.prepare(`
+  SELECT 
+    cp.*,
+    s.plan_type
+  FROM credit_purchases cp
+  LEFT JOIN subscriptions s ON s.user_id = cp.user_id
+  WHERE cp.status = 'completed'
+  ORDER BY cp.created_at DESC
+  LIMIT 20
+`).all() as Array<{
+  id: string;
+  user_id: string;
+  credits_amount: number;
+  price_paid: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  plan_type: string | null;
+}>;
+
+const planLabels: Record<string, string> = {
+  free: "Gratuit",
+  standard: "Standard",
+  pro: "Pro"
+};
+---
+
+<Layout title="Administration">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-900">🛡️ Administration</h1>
+        <p class="text-slate-600 mt-1">Tableau de bord et gestion des utilisateurs</p>
+      </div>
+      <a href="/" class="text-slate-500 hover:text-slate-700 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Retour au site
+      </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <div class="text-3xl font-bold text-indigo-600">{totalUsers.count}</div>
+        <div class="text-sm text-slate-600">Utilisateurs</div>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <div class="text-3xl font-bold text-green-600">{completedGenerations.count}</div>
+        <div class="text-sm text-slate-600">Générations réussies</div>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <div class="text-3xl font-bold text-amber-600">{recentGenerations.count}</div>
+        <div class="text-sm text-slate-600">Dernières 24h</div>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+        <div class="text-3xl font-bold text-purple-600">{weekGenerations.count}</div>
+        <div class="text-sm text-slate-600">7 derniers jours</div>
+      </div>
+    </div>
+
+    <!-- Répartition par plan -->
+    <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-8">
+      <h2 class="text-lg font-semibold mb-4">📊 Répartition par plan</h2>
+      <div class="grid grid-cols-3 gap-4">
+        {subscriptionStats.map((stat) => (
+          <div class="bg-slate-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold text-slate-900">{stat.count}</div>
+            <div class="text-sm text-slate-600">{planLabels[stat.plan_type] || stat.plan_type}</div>
+            {stat.total_bonus_credits > 0 && (
+              <div class="text-xs text-amber-600 mt-1">
+                💎 {stat.total_bonus_credits} crédits bonus
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="border-b border-slate-200">
+        <nav class="flex" id="admin-tabs">
+          <button class="tab-btn active px-6 py-4 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600" data-tab="users">
+            👥 Utilisateurs ({topUsers.length})
+          </button>
+          <button class="tab-btn px-6 py-4 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800" data-tab="generations">
+            🎨 Générations ({latestGenerations.length})
+          </button>
+          <button class="tab-btn px-6 py-4 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800" data-tab="purchases">
+            💳 Achats ({recentPurchases.length})
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tab: Utilisateurs -->
+      <div id="tab-users" class="tab-content p-6">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-slate-200">
+                <th class="pb-3 font-semibold text-slate-700">Utilisateur</th>
+                <th class="pb-3 font-semibold text-slate-700">Plan</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Générations</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Ce mois</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Références</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Crédits bonus</th>
+                <th class="pb-3 font-semibold text-slate-700 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topUsers.map((user) => (
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3">
+                    <div class="font-mono text-xs text-slate-600" title={user.user_id}>
+                      {user.user_id.substring(0, 20)}...
+                    </div>
+                    {user.stripe_customer_id && (
+                      <a 
+                        href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
+                        target="_blank"
+                        class="text-xs text-indigo-600 hover:underline"
+                      >
+                        Stripe ↗
+                      </a>
+                    )}
+                  </td>
+                  <td class="py-3">
+                    <span class:list={[
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      user.plan_type === "pro" ? "bg-slate-800 text-white" :
+                      user.plan_type === "standard" ? "bg-orange-100 text-orange-700" :
+                      "bg-slate-100 text-slate-600"
+                    ]}>
+                      {planLabels[user.plan_type || "free"] || "Gratuit"}
+                    </span>
+                  </td>
+                  <td class="py-3 text-center font-medium">{user.total_generations}</td>
+                  <td class="py-3 text-center">{user.monthly_generations}</td>
+                  <td class="py-3 text-center">{user.ref_count}</td>
+                  <td class="py-3 text-center">
+                    <span class="inline-flex items-center gap-1">
+                      💎 {user.credits_balance || 0}
+                    </span>
+                  </td>
+                  <td class="py-3 text-right">
+                    <button 
+                      class="edit-user-btn text-indigo-600 hover:text-indigo-800 text-xs font-medium"
+                      data-user-id={user.user_id}
+                      data-plan={user.plan_type || "free"}
+                      data-credits={user.credits_balance || 0}
+                    >
+                      Modifier
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Générations -->
+      <div id="tab-generations" class="tab-content p-6 hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-slate-200">
+                <th class="pb-3 font-semibold text-slate-700">ID</th>
+                <th class="pb-3 font-semibold text-slate-700">Utilisateur</th>
+                <th class="pb-3 font-semibold text-slate-700">Status</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Instructions</th>
+                <th class="pb-3 font-semibold text-slate-700">Date</th>
+                <th class="pb-3 font-semibold text-slate-700 text-right">Images</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latestGenerations.map((gen) => (
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 font-mono text-xs text-slate-600">
+                    {gen.id.substring(0, 8)}...
+                  </td>
+                  <td class="py-3 font-mono text-xs text-slate-600">
+                    {gen.user_id.substring(0, 15)}...
+                  </td>
+                  <td class="py-3">
+                    <span class:list={[
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      gen.status === "completed" ? "bg-green-100 text-green-700" :
+                      gen.status === "failed" ? "bg-red-100 text-red-700" :
+                      gen.status === "processing" ? "bg-blue-100 text-blue-700" :
+                      "bg-slate-100 text-slate-600"
+                    ]}>
+                      {gen.status}
+                    </span>
+                  </td>
+                  <td class="py-3 text-center">{gen.instruction_count}</td>
+                  <td class="py-3 text-slate-600">
+                    {new Date(gen.created_at).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </td>
+                  <td class="py-3 text-right">
+                    <div class="flex justify-end gap-2">
+                      <a 
+                        href={`/api/images/${gen.original_image_path}`}
+                        target="_blank"
+                        class="text-xs text-indigo-600 hover:underline"
+                      >
+                        Original
+                      </a>
+                      {gen.generated_image_path && (
+                        <a 
+                          href={`/api/images/${gen.generated_image_path}`}
+                          target="_blank"
+                          class="text-xs text-green-600 hover:underline"
+                        >
+                          Généré
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Achats -->
+      <div id="tab-purchases" class="tab-content p-6 hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b border-slate-200">
+                <th class="pb-3 font-semibold text-slate-700">ID</th>
+                <th class="pb-3 font-semibold text-slate-700">Utilisateur</th>
+                <th class="pb-3 font-semibold text-slate-700">Plan</th>
+                <th class="pb-3 font-semibold text-slate-700 text-center">Crédits</th>
+                <th class="pb-3 font-semibold text-slate-700 text-right">Prix</th>
+                <th class="pb-3 font-semibold text-slate-700">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentPurchases.map((purchase) => (
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="py-3 font-mono text-xs text-slate-600">
+                    {purchase.id.substring(0, 8)}...
+                  </td>
+                  <td class="py-3 font-mono text-xs text-slate-600">
+                    {purchase.user_id.substring(0, 15)}...
+                  </td>
+                  <td class="py-3">
+                    <span class:list={[
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      purchase.plan_type === "pro" ? "bg-slate-800 text-white" :
+                      purchase.plan_type === "standard" ? "bg-orange-100 text-orange-700" :
+                      "bg-slate-100 text-slate-600"
+                    ]}>
+                      {planLabels[purchase.plan_type || "free"] || "Gratuit"}
+                    </span>
+                  </td>
+                  <td class="py-3 text-center font-medium">
+                    💎 +{purchase.credits_amount}
+                  </td>
+                  <td class="py-3 text-right font-medium">
+                    {(purchase.price_paid / 100).toFixed(2)}€
+                  </td>
+                  <td class="py-3 text-slate-600">
+                    {new Date(purchase.created_at).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'édition utilisateur -->
+  <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold">Modifier l'utilisateur</h3>
+        <button id="close-modal" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="edit-form" class="space-y-4">
+        <input type="hidden" id="edit-user-id" name="userId" />
+        
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">
+            ID Utilisateur
+          </label>
+          <div id="display-user-id" class="font-mono text-sm text-slate-600 bg-slate-100 p-2 rounded-lg break-all"></div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="edit-plan">
+            Type de plan
+          </label>
+          <select 
+            id="edit-plan" 
+            name="planType"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="free">Gratuit</option>
+            <option value="standard">Standard (25/mois)</option>
+            <option value="pro">Pro (50/mois)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="edit-credits">
+            Crédits bonus 💎
+          </label>
+          <input 
+            type="number" 
+            id="edit-credits" 
+            name="creditsBalance"
+            min="0"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          <p class="text-xs text-slate-500 mt-1">
+            Ces crédits n'expirent jamais et sont utilisés après le quota mensuel.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="add-credits">
+            Ajouter des crédits bonus
+          </label>
+          <div class="flex gap-2">
+            <input 
+              type="number" 
+              id="add-credits" 
+              min="0"
+              placeholder="0"
+              class="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button 
+              type="button"
+              id="add-credits-btn"
+              class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium"
+            >
+              + Ajouter
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-4 border-t border-slate-200">
+          <button 
+            type="button"
+            id="cancel-modal"
+            class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+          >
+            Annuler
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </form>
+
+      <div id="edit-result" class="mt-4 hidden"></div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .tab-btn.active {
+    border-color: rgb(79 70 229);
+    color: rgb(79 70 229);
+  }
+</style>
+
+<script>
+  // Gestion des onglets
+  const tabs = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-tab');
+      const targetId = `tab-${tabId}`;
+      
+      // Désactiver tous les onglets
+      tabs.forEach(t => t.classList.remove('active', 'border-indigo-600', 'text-indigo-600'));
+      tabContents.forEach(c => c.classList.add('hidden'));
+      
+      // Activer l'onglet cliqué
+      tab.classList.add('active', 'border-indigo-600', 'text-indigo-600');
+      document.getElementById(targetId)?.classList.remove('hidden');
+    });
+  });
+
+  // Gestion de la modal d'édition
+  const modal = document.getElementById('edit-modal');
+  const closeModal = document.getElementById('close-modal');
+  const cancelModal = document.getElementById('cancel-modal');
+  const editForm = document.getElementById('edit-form') as HTMLFormElement;
+  const editResult = document.getElementById('edit-result');
+  const addCreditsBtn = document.getElementById('add-credits-btn');
+  const addCreditsInput = document.getElementById('add-credits') as HTMLInputElement;
+  const creditsBalanceInput = document.getElementById('edit-credits') as HTMLInputElement;
+
+  // Ouvrir la modal
+  document.querySelectorAll('.edit-user-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const userId = (btn as HTMLElement).dataset.userId;
+      const plan = (btn as HTMLElement).dataset.plan;
+      const credits = (btn as HTMLElement).dataset.credits;
+
+      (document.getElementById('edit-user-id') as HTMLInputElement).value = userId || '';
+      (document.getElementById('display-user-id') as HTMLElement).textContent = userId || '';
+      (document.getElementById('edit-plan') as HTMLSelectElement).value = plan || 'free';
+      creditsBalanceInput.value = credits || '0';
+      addCreditsInput.value = '';
+
+      modal?.classList.remove('hidden');
+      modal?.classList.add('flex');
+    });
+  });
+
+  // Fermer la modal
+  [closeModal, cancelModal].forEach(btn => {
+    btn?.addEventListener('click', () => {
+      modal?.classList.add('hidden');
+      modal?.classList.remove('flex');
+    });
+  });
+
+  // Ajouter des crédits (bouton +)
+  addCreditsBtn?.addEventListener('click', () => {
+    const toAdd = parseInt(addCreditsInput.value) || 0;
+    if (toAdd > 0) {
+      const current = parseInt(creditsBalanceInput.value) || 0;
+      creditsBalanceInput.value = String(current + toAdd);
+      addCreditsInput.value = '';
+    }
+  });
+
+  // Soumettre le formulaire
+  editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(editForm);
+    const data = {
+      userId: formData.get('userId'),
+      planType: formData.get('planType'),
+      creditsBalance: parseInt(formData.get('creditsBalance') as string) || 0
+    };
+
+    try {
+      const response = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        editResult!.innerHTML = '<div class="bg-green-100 text-green-700 p-3 rounded-lg">✅ Modifications enregistrées</div>';
+        editResult!.classList.remove('hidden');
+        
+        // Recharger la page après 1s
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        editResult!.innerHTML = `<div class="bg-red-100 text-red-700 p-3 rounded-lg">❌ ${result.error}</div>`;
+        editResult!.classList.remove('hidden');
+      }
+    } catch (error) {
+      editResult!.innerHTML = '<div class="bg-red-100 text-red-700 p-3 rounded-lg">❌ Erreur serveur</div>';
+      editResult!.classList.remove('hidden');
+    }
+  });
+
+  // Fermer la modal en cliquant à l'extérieur
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  });
+</script>
