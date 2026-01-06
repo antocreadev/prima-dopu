@@ -1,7 +1,7 @@
 ---
 /**
  * Tutoriel d'onboarding BLOQUANT
- * 
+ *
  * STRATÉGIE :
  * - Bandeau fixe en haut avec l'étape actuelle
  * - Overlay bloquant avec un "trou" autour de l'élément ciblé
@@ -16,13 +16,13 @@ const { isFirstTime } = Astro.props;
 ---
 
 <!-- Container principal du tutoriel -->
-<div 
-  id="tutorial-system" 
+<div
+  id="tutorial-system"
   data-first-time={isFirstTime ? "true" : "false"}
   class="hidden"
 >
   <!-- Bandeau fixe en haut -->
-  <div 
+  <div
     id="tutorial-banner"
     class="fixed top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
     style="z-index: 100000;"
@@ -31,35 +31,46 @@ const { isFirstTime } = Astro.props;
       <div class="flex items-center gap-4">
         <!-- Numéro d'étape -->
         <div class="flex items-center gap-2">
-          <span id="tutorial-step-number" class="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 font-bold text-lg">1</span>
+          <span
+            id="tutorial-step-number"
+            class="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 font-bold text-lg"
+            >1</span
+          >
           <span class="text-white/70">/</span>
           <span id="tutorial-total-steps" class="text-white/70">4</span>
         </div>
-        
+
         <!-- Titre et description -->
         <div>
-          <h3 id="tutorial-step-title" class="font-semibold text-lg">Chargement...</h3>
+          <h3 id="tutorial-step-title" class="font-semibold text-lg">
+            Chargement...
+          </h3>
           <p id="tutorial-step-description" class="text-white/80 text-sm"></p>
         </div>
       </div>
-      
+
       <!-- Bouton passer -->
-      <button 
+      <button
         id="tutorial-skip-btn"
         class="px-4 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
       >
         Passer le tutoriel
       </button>
     </div>
-    
+
     <!-- Barre de progression -->
     <div class="h-1 bg-white/20">
-      <div id="tutorial-progress" class="h-full bg-white transition-all duration-300" style="width: 0%"></div>
+      <div
+        id="tutorial-progress"
+        class="h-full bg-white transition-all duration-300"
+        style="width: 0%"
+      >
+      </div>
     </div>
   </div>
 
   <!-- Overlay bloquant avec trou découpé -->
-  <div 
+  <div
     id="tutorial-overlay"
     class="fixed inset-0 pointer-events-auto"
     style="z-index: 99998; background: rgba(0,0,0,0.8);"
@@ -67,7 +78,7 @@ const { isFirstTime } = Astro.props;
   </div>
 
   <!-- Bordure autour de l'élément ciblé (juste la bordure, pas d'overlay) -->
-  <div 
+  <div
     id="tutorial-highlight"
     class="fixed pointer-events-none rounded-xl"
     style="z-index: 99999; border: 4px solid #818cf8; background: transparent;"
@@ -75,7 +86,7 @@ const { isFirstTime } = Astro.props;
   </div>
 
   <!-- Zone cliquable au-dessus du highlight -->
-  <div 
+  <div
     id="tutorial-clickzone"
     class="fixed cursor-pointer"
     style="z-index: 100001; background: transparent;"
@@ -83,13 +94,21 @@ const { isFirstTime } = Astro.props;
   </div>
 
   <!-- Tooltip/Flèche pointant vers l'élément -->
-  <div 
+  <div
     id="tutorial-tooltip"
     class="fixed bg-white rounded-xl shadow-2xl p-4 max-w-xs"
     style="z-index: 100002;"
   >
-    <div id="tutorial-tooltip-arrow" class="absolute w-4 h-4 bg-white transform rotate-45"></div>
-    <p id="tutorial-tooltip-text" class="text-slate-700 font-medium text-sm relative z-10"></p>
+    <div
+      id="tutorial-tooltip-arrow"
+      class="absolute w-4 h-4 bg-white transform rotate-45"
+    >
+    </div>
+    <p
+      id="tutorial-tooltip-text"
+      class="text-slate-700 font-medium text-sm relative z-10"
+    >
+    </p>
     <div class="mt-2 flex items-center gap-2 text-xs text-indigo-600">
       <span class="animate-pulse">👆</span>
       <span id="tutorial-action-hint"></span>
@@ -97,50 +116,70 @@ const { isFirstTime } = Astro.props;
   </div>
 
   <!-- Modal de bienvenue -->
-  <div 
+  <div
     id="tutorial-welcome"
     class="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
     style="z-index: 100003;"
   >
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
-      <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+    <div
+      class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center"
+    >
+      <div
+        class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg"
+      >
         <span class="text-4xl">👋</span>
       </div>
-      
+
       <h2 class="text-2xl font-bold text-slate-900 mb-3">
         Bienvenue sur PrimaDopu !
       </h2>
-      
+
       <p class="text-slate-600 mb-6 leading-relaxed">
-        Créez des visuels <strong class="text-indigo-600">avant/après</strong> professionnels en quelques clics grâce à l'IA.
-        <br><br>
+        Créez des visuels <strong class="text-indigo-600">avant/après</strong> professionnels
+        en quelques clics grâce à l'IA.
+        <br /><br />
         <strong>Ce tutoriel va vous guider étape par étape.</strong>
       </p>
-      
+
       <div class="space-y-3 text-left bg-slate-50 rounded-xl p-4 mb-6">
         <div class="flex items-start gap-3">
-          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0">1</span>
-          <p class="text-sm text-slate-700">Téléchargez une photo de votre espace</p>
+          <span
+            class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0"
+            >1</span
+          >
+          <p class="text-sm text-slate-700">
+            Téléchargez une photo de votre espace
+          </p>
         </div>
         <div class="flex items-start gap-3">
-          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0">2</span>
-          <p class="text-sm text-slate-700">Ajoutez vos instructions de transformation</p>
+          <span
+            class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0"
+            >2</span
+          >
+          <p class="text-sm text-slate-700">
+            Ajoutez vos instructions de transformation
+          </p>
         </div>
         <div class="flex items-start gap-3">
-          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0">3</span>
-          <p class="text-sm text-slate-700">L'IA génère le résultat en moins de 2 minutes</p>
+          <span
+            class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold shrink-0"
+            >3</span
+          >
+          <p class="text-sm text-slate-700">
+            L'IA génère le résultat en moins de 2 minutes
+          </p>
         </div>
       </div>
-      
-      <button 
+
+      <button
         type="button"
         id="tutorial-start-btn"
         class="w-full py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
       >
         C'est parti ! 🚀
       </button>
-      
-      <button 
+
+      <button
         type="button"
         id="tutorial-skip-welcome-btn"
         class="mt-4 text-sm text-slate-500 hover:text-slate-700 transition-colors"
@@ -151,26 +190,30 @@ const { isFirstTime } = Astro.props;
   </div>
 
   <!-- Modal de fin -->
-  <div 
+  <div
     id="tutorial-complete"
     class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 hidden"
     style="z-index: 100003;"
   >
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
-      <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+    <div
+      class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center"
+    >
+      <div
+        class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg"
+      >
         <span class="text-4xl">🎉</span>
       </div>
-      
+
       <h2 class="text-2xl font-bold text-slate-900 mb-3">
         Bravo, vous êtes prêt !
       </h2>
-      
+
       <p class="text-slate-600 mb-6">
-        Vous maîtrisez maintenant les bases de PrimaDopu.<br>
+        Vous maîtrisez maintenant les bases de PrimaDopu.<br />
         Lancez votre première génération !
       </p>
-      
-      <button 
+
+      <button
         type="button"
         id="tutorial-finish-btn"
         class="w-full py-3 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
@@ -183,16 +226,22 @@ const { isFirstTime } = Astro.props;
 
 <style>
   @keyframes pulse-ring {
-    0% { border-color: #818cf8; }
-    50% { border-color: #c7d2fe; }
-    100% { border-color: #818cf8; }
+    0% {
+      border-color: #818cf8;
+    }
+    50% {
+      border-color: #c7d2fe;
+    }
+    100% {
+      border-color: #818cf8;
+    }
   }
-  
+
   #tutorial-highlight {
     animation: pulse-ring 1.5s ease-in-out infinite;
     background: transparent !important;
   }
-  
+
   /* Ajouter un padding au body quand le tutoriel est actif */
   body.tutorial-active {
     padding-top: 72px !important;
@@ -214,85 +263,103 @@ const { isFirstTime } = Astro.props;
 
   const STEPS: TutorialStep[] = [
     {
-      id: 'upload',
-      target: '#uploadZone',
-      title: 'Téléchargez votre photo',
-      description: 'Commencez par ajouter l\'image de l\'espace à transformer',
-      tooltip: 'Cliquez ici ou glissez-déposez une image',
-      actionHint: 'Ajoutez une image pour continuer',
+      id: "upload",
+      target: "#uploadZone",
+      title: "Téléchargez votre photo",
+      description: "Commencez par ajouter l'image de l'espace à transformer",
+      tooltip: "Cliquez ici ou glissez-déposez une image",
+      actionHint: "Ajoutez une image pour continuer",
       validate: () => {
-        const preview = document.getElementById('imagePreview');
-        const placeholder = document.getElementById('uploadPlaceholder');
-        const result = !!(preview && !preview.classList.contains('hidden') && placeholder?.classList.contains('hidden'));
-        console.log('[Tutorial] Validate upload:', result);
+        const preview = document.getElementById("imagePreview");
+        const placeholder = document.getElementById("uploadPlaceholder");
+        const result = !!(
+          preview &&
+          !preview.classList.contains("hidden") &&
+          placeholder?.classList.contains("hidden")
+        );
+        console.log("[Tutorial] Validate upload:", result);
         return result;
-      }
+      },
     },
     {
-      id: 'continue',
-      target: '#toStep2Btn',
-      title: 'Passez aux instructions',
-      description: 'Votre image est chargée ! Continuez vers l\'étape suivante',
-      tooltip: 'Cliquez sur ce bouton pour continuer',
+      id: "continue",
+      target: "#toStep2Btn",
+      title: "Passez aux instructions",
+      description: "Votre image est chargée ! Continuez vers l'étape suivante",
+      tooltip: "Cliquez sur ce bouton pour continuer",
       actionHint: 'Cliquez sur "Continuer →"',
       validate: () => {
-        const step2 = document.getElementById('step2');
-        const result = !!(step2 && !step2.classList.contains('hidden'));
-        console.log('[Tutorial] Validate continue:', result);
+        const step2 = document.getElementById("step2");
+        const result = !!(step2 && !step2.classList.contains("hidden"));
+        console.log("[Tutorial] Validate continue:", result);
         return result;
-      }
+      },
     },
     {
-      id: 'add-instruction',
-      target: '#addInstructionBtn',
-      title: 'Ajoutez une instruction',
-      description: 'Définissez ce que vous voulez transformer',
-      tooltip: 'Cliquez pour ajouter votre première instruction',
+      id: "add-instruction",
+      target: "#addInstructionBtn",
+      title: "Ajoutez une instruction",
+      description: "Définissez ce que vous voulez transformer",
+      tooltip: "Cliquez pour ajouter votre première instruction",
       actionHint: 'Cliquez sur "+ Ajouter une instruction"',
       validate: () => {
-        const modal = document.getElementById('instructionModal');
-        const result = !!(modal && !modal.classList.contains('hidden'));
-        console.log('[Tutorial] Validate add-instruction:', result);
+        const modal = document.getElementById("instructionModal");
+        const result = !!(modal && !modal.classList.contains("hidden"));
+        console.log("[Tutorial] Validate add-instruction:", result);
         return result;
-      }
+      },
     },
     {
-      id: 'fill-instruction',
-      target: '#instructionModal > div',
-      title: 'Remplissez l\'instruction',
-      description: 'Indiquez la zone et choisissez une référence',
-      tooltip: 'Remplissez la zone (ex: "sol") et sélectionnez une image de référence, puis cliquez "Ajouter"',
+      id: "fill-instruction",
+      target: "#instructionModal > div",
+      title: "Remplissez l'instruction",
+      description: "Indiquez la zone et choisissez une référence",
+      tooltip:
+        'Remplissez la zone (ex: "sol") et sélectionnez une image de référence, puis cliquez "Ajouter"',
       actionHint: 'Complétez le formulaire et cliquez "Ajouter"',
       allowModalInteraction: true,
       onEnter: () => {
-        const zoneInput = document.getElementById('instructionLocation') as HTMLInputElement;
+        const zoneInput = document.getElementById(
+          "instructionLocation"
+        ) as HTMLInputElement;
         if (zoneInput) {
-          zoneInput.value = '';
+          zoneInput.value = "";
           setTimeout(() => zoneInput.focus(), 100);
         }
       },
       validate: () => {
-        const modal = document.getElementById('instructionModal');
-        const list = document.getElementById('instructionsList');
-        const result = !!(modal?.classList.contains('hidden') && list && list.children.length > 0);
-        console.log('[Tutorial] Validate fill-instruction:', result, 'modal hidden:', modal?.classList.contains('hidden'), 'list children:', list?.children.length);
+        const modal = document.getElementById("instructionModal");
+        const list = document.getElementById("instructionsList");
+        const result = !!(
+          modal?.classList.contains("hidden") &&
+          list &&
+          list.children.length > 0
+        );
+        console.log(
+          "[Tutorial] Validate fill-instruction:",
+          result,
+          "modal hidden:",
+          modal?.classList.contains("hidden"),
+          "list children:",
+          list?.children.length
+        );
         return result;
-      }
+      },
     },
     {
-      id: 'generate',
-      target: '#toStep3Btn',
-      title: 'Lancez la génération !',
-      description: 'Tout est prêt, générez votre première image',
-      tooltip: 'Cliquez pour lancer l\'IA et créer votre image',
+      id: "generate",
+      target: "#toStep3Btn",
+      title: "Lancez la génération !",
+      description: "Tout est prêt, générez votre première image",
+      tooltip: "Cliquez pour lancer l'IA et créer votre image",
       actionHint: 'Cliquez sur "Générer →"',
       validate: () => {
-        const step3 = document.getElementById('step3');
-        const result = !!(step3 && !step3.classList.contains('hidden'));
-        console.log('[Tutorial] Validate generate:', result);
+        const step3 = document.getElementById("step3");
+        const result = !!(step3 && !step3.classList.contains("hidden"));
+        console.log("[Tutorial] Validate generate:", result);
         return result;
-      }
-    }
+      },
+    },
   ];
 
   class Tutorial {
@@ -305,24 +372,24 @@ const { isFirstTime } = Astro.props;
     private tooltipArrow: HTMLElement;
     private welcome: HTMLElement;
     private complete: HTMLElement;
-    
+
     private currentStep = -1;
     private isActive = false;
     private pollInterval: number | null = null;
 
     constructor() {
-      this.container = document.getElementById('tutorial-system')!;
-      this.banner = document.getElementById('tutorial-banner')!;
-      this.overlay = document.getElementById('tutorial-overlay')!;
-      this.highlight = document.getElementById('tutorial-highlight')!;
-      this.clickzone = document.getElementById('tutorial-clickzone')!;
-      this.tooltip = document.getElementById('tutorial-tooltip')!;
-      this.tooltipArrow = document.getElementById('tutorial-tooltip-arrow')!;
-      this.welcome = document.getElementById('tutorial-welcome')!;
-      this.complete = document.getElementById('tutorial-complete')!;
+      this.container = document.getElementById("tutorial-system")!;
+      this.banner = document.getElementById("tutorial-banner")!;
+      this.overlay = document.getElementById("tutorial-overlay")!;
+      this.highlight = document.getElementById("tutorial-highlight")!;
+      this.clickzone = document.getElementById("tutorial-clickzone")!;
+      this.tooltip = document.getElementById("tutorial-tooltip")!;
+      this.tooltipArrow = document.getElementById("tutorial-tooltip-arrow")!;
+      this.welcome = document.getElementById("tutorial-welcome")!;
+      this.complete = document.getElementById("tutorial-complete")!;
 
       if (!this.container) {
-        console.error('[Tutorial] Container not found');
+        console.error("[Tutorial] Container not found");
         return;
       }
 
@@ -330,72 +397,88 @@ const { isFirstTime } = Astro.props;
     }
 
     private init() {
-      const isFirstTime = this.container.dataset.firstTime === 'true';
-      const completed = localStorage.getItem('primadopu_tutorial_completed') === 'true';
-      const shouldShow = localStorage.getItem('primadopu_show_tutorial') === 'true';
+      const isFirstTime = this.container.dataset.firstTime === "true";
+      const completed =
+        localStorage.getItem("primadopu_tutorial_completed") === "true";
+      const shouldShow =
+        localStorage.getItem("primadopu_show_tutorial") === "true";
 
-      console.log('[Tutorial] Init:', { isFirstTime, completed, shouldShow });
+      console.log("[Tutorial] Init:", { isFirstTime, completed, shouldShow });
 
       this.bindEvents();
 
-      const totalEl = document.getElementById('tutorial-total-steps');
+      const totalEl = document.getElementById("tutorial-total-steps");
       if (totalEl) totalEl.textContent = STEPS.length.toString();
 
       if ((isFirstTime && !completed) || shouldShow) {
-        localStorage.removeItem('primadopu_show_tutorial');
+        localStorage.removeItem("primadopu_show_tutorial");
         setTimeout(() => this.start(), 500);
       }
     }
 
     private bindEvents() {
-      document.getElementById('tutorial-start-btn')?.addEventListener('click', () => {
-        this.welcome.classList.add('hidden');
-        this.goToStep(0);
-      });
+      document
+        .getElementById("tutorial-start-btn")
+        ?.addEventListener("click", () => {
+          this.welcome.classList.add("hidden");
+          this.goToStep(0);
+        });
 
-      document.getElementById('tutorial-skip-btn')?.addEventListener('click', () => this.finish());
-      document.getElementById('tutorial-skip-welcome-btn')?.addEventListener('click', () => this.finish());
+      document
+        .getElementById("tutorial-skip-btn")
+        ?.addEventListener("click", () => this.finish());
+      document
+        .getElementById("tutorial-skip-welcome-btn")
+        ?.addEventListener("click", () => this.finish());
 
-      document.getElementById('tutorial-finish-btn')?.addEventListener('click', () => {
-        this.finish();
-        const btn = document.getElementById('toStep3Btn') as HTMLButtonElement;
-        if (btn && !btn.disabled) btn.click();
-      });
+      document
+        .getElementById("tutorial-finish-btn")
+        ?.addEventListener("click", () => {
+          this.finish();
+          const btn = document.getElementById(
+            "toStep3Btn"
+          ) as HTMLButtonElement;
+          if (btn && !btn.disabled) btn.click();
+        });
 
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && this.isActive) {
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.isActive) {
           this.finish();
         }
       });
 
-      window.addEventListener('resize', () => {
+      window.addEventListener("resize", () => {
         if (this.isActive && this.currentStep >= 0) {
           this.positionElements();
         }
       });
 
-      window.addEventListener('scroll', () => {
-        if (this.isActive && this.currentStep >= 0) {
-          this.positionElements();
-        }
-      }, true);
+      window.addEventListener(
+        "scroll",
+        () => {
+          if (this.isActive && this.currentStep >= 0) {
+            this.positionElements();
+          }
+        },
+        true
+      );
     }
 
     private start() {
-      console.log('[Tutorial] Starting...');
+      console.log("[Tutorial] Starting...");
       this.isActive = true;
-      this.container.classList.remove('hidden');
-      document.body.classList.add('tutorial-active');
-      
-      this.welcome.classList.remove('hidden');
-      this.overlay.style.display = 'none';
-      this.highlight.style.display = 'none';
-      this.clickzone.style.display = 'none';
-      this.tooltip.style.display = 'none';
+      this.container.classList.remove("hidden");
+      document.body.classList.add("tutorial-active");
+
+      this.welcome.classList.remove("hidden");
+      this.overlay.style.display = "none";
+      this.highlight.style.display = "none";
+      this.clickzone.style.display = "none";
+      this.tooltip.style.display = "none";
     }
 
     private goToStep(index: number) {
-      console.log('[Tutorial] Going to step', index);
+      console.log("[Tutorial] Going to step", index);
 
       if (this.pollInterval) {
         clearInterval(this.pollInterval);
@@ -413,17 +496,17 @@ const { isFirstTime } = Astro.props;
       this.updateBanner(step, index);
 
       this.waitForTarget(step.target, (target) => {
-        console.log('[Tutorial] Target found:', step.target);
-        
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        console.log("[Tutorial] Target found:", step.target);
+
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
 
         setTimeout(() => {
           this.positionElements();
-          
-          this.overlay.style.display = 'block';
-          this.highlight.style.display = 'block';
-          this.clickzone.style.display = 'block';
-          this.tooltip.style.display = 'block';
+
+          this.overlay.style.display = "block";
+          this.highlight.style.display = "block";
+          this.clickzone.style.display = "block";
+          this.tooltip.style.display = "block";
 
           if (step.onEnter) step.onEnter();
 
@@ -435,20 +518,25 @@ const { isFirstTime } = Astro.props;
     }
 
     private updateBanner(step: TutorialStep, index: number) {
-      const numEl = document.getElementById('tutorial-step-number');
-      const titleEl = document.getElementById('tutorial-step-title');
-      const descEl = document.getElementById('tutorial-step-description');
-      const progressEl = document.getElementById('tutorial-progress');
+      const numEl = document.getElementById("tutorial-step-number");
+      const titleEl = document.getElementById("tutorial-step-title");
+      const descEl = document.getElementById("tutorial-step-description");
+      const progressEl = document.getElementById("tutorial-progress");
 
       if (numEl) numEl.textContent = (index + 1).toString();
       if (titleEl) titleEl.textContent = step.title;
       if (descEl) descEl.textContent = step.description;
-      if (progressEl) progressEl.style.width = `${((index + 1) / STEPS.length) * 100}%`;
+      if (progressEl)
+        progressEl.style.width = `${((index + 1) / STEPS.length) * 100}%`;
     }
 
-    private waitForTarget(selector: string, callback: (el: HTMLElement) => void, maxAttempts = 50) {
+    private waitForTarget(
+      selector: string,
+      callback: (el: HTMLElement) => void,
+      maxAttempts = 50
+    ) {
       let attempts = 0;
-      
+
       const check = () => {
         const el = document.querySelector(selector) as HTMLElement;
         if (el && el.offsetParent !== null) {
@@ -457,11 +545,11 @@ const { isFirstTime } = Astro.props;
           attempts++;
           setTimeout(check, 100);
         } else {
-          console.warn('[Tutorial] Target not found:', selector);
+          console.warn("[Tutorial] Target not found:", selector);
           this.goToStep(this.currentStep + 1);
         }
       };
-      
+
       check();
     }
 
@@ -470,12 +558,12 @@ const { isFirstTime } = Astro.props;
 
       const step = STEPS[this.currentStep];
       const target = document.querySelector(step.target) as HTMLElement;
-      
+
       if (!target) return;
 
       const rect = target.getBoundingClientRect();
       const padding = 12;
-      
+
       // Calculer les coordonnées du trou
       const holeTop = rect.top - padding;
       const holeLeft = rect.left - padding;
@@ -483,7 +571,7 @@ const { isFirstTime } = Astro.props;
       const holeHeight = rect.height + padding * 2;
       const holeRight = holeLeft + holeWidth;
       const holeBottom = holeTop + holeHeight;
-      
+
       // Créer un clip-path polygon qui fait un trou dans l'overlay
       // Le polygon dessine l'extérieur (écran entier) puis l'intérieur (trou) en sens inverse
       const clipPath = `polygon(
@@ -498,7 +586,7 @@ const { isFirstTime } = Astro.props;
         100% 100%, 
         100% 0%
       )`;
-      
+
       this.overlay.style.clipPath = clipPath;
 
       // Positionner la bordure highlight
@@ -515,8 +603,8 @@ const { isFirstTime } = Astro.props;
 
       this.positionTooltip(rect);
 
-      const textEl = document.getElementById('tutorial-tooltip-text');
-      const hintEl = document.getElementById('tutorial-action-hint');
+      const textEl = document.getElementById("tutorial-tooltip-text");
+      const hintEl = document.getElementById("tutorial-action-hint");
       if (textEl) textEl.textContent = step.tooltip;
       if (hintEl) hintEl.textContent = step.actionHint;
     }
@@ -525,10 +613,10 @@ const { isFirstTime } = Astro.props;
       const tooltipWidth = 280;
       const tooltipHeight = 100;
       const gap = 16;
-      
+
       let top = 0;
       let left = 0;
-      let arrowPosition = 'top';
+      let arrowPosition = "top";
 
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
@@ -537,40 +625,51 @@ const { isFirstTime } = Astro.props;
       if (spaceBelow > tooltipHeight + gap + 50) {
         top = rect.bottom + gap;
         left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        arrowPosition = 'top';
+        arrowPosition = "top";
       } else if (spaceAbove > tooltipHeight + gap + 100) {
         top = rect.top - tooltipHeight - gap;
         left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        arrowPosition = 'bottom';
+        arrowPosition = "bottom";
       } else if (spaceRight > tooltipWidth + gap) {
         top = rect.top + rect.height / 2 - tooltipHeight / 2;
         left = rect.right + gap;
-        arrowPosition = 'left';
+        arrowPosition = "left";
       } else {
         top = rect.top + rect.height / 2 - tooltipHeight / 2;
         left = rect.left - tooltipWidth - gap;
-        arrowPosition = 'right';
+        arrowPosition = "right";
       }
 
-      left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
-      top = Math.max(100, Math.min(top, window.innerHeight - tooltipHeight - 16));
+      left = Math.max(
+        16,
+        Math.min(left, window.innerWidth - tooltipWidth - 16)
+      );
+      top = Math.max(
+        100,
+        Math.min(top, window.innerHeight - tooltipHeight - 16)
+      );
 
       this.tooltip.style.top = `${top}px`;
       this.tooltip.style.left = `${left}px`;
 
-      this.tooltipArrow.className = 'absolute w-4 h-4 bg-white transform rotate-45';
+      this.tooltipArrow.className =
+        "absolute w-4 h-4 bg-white transform rotate-45";
       switch (arrowPosition) {
-        case 'top':
-          this.tooltipArrow.style.cssText = 'top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0;';
+        case "top":
+          this.tooltipArrow.style.cssText =
+            "top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0;";
           break;
-        case 'bottom':
-          this.tooltipArrow.style.cssText = 'bottom: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;';
+        case "bottom":
+          this.tooltipArrow.style.cssText =
+            "bottom: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;";
           break;
-        case 'left':
-          this.tooltipArrow.style.cssText = 'left: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;';
+        case "left":
+          this.tooltipArrow.style.cssText =
+            "left: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;";
           break;
-        case 'right':
-          this.tooltipArrow.style.cssText = 'right: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0;';
+        case "right":
+          this.tooltipArrow.style.cssText =
+            "right: -8px; top: 50%; transform: translateY(-50%) rotate(45deg); border-right: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0;";
           break;
       }
     }
@@ -580,17 +679,19 @@ const { isFirstTime } = Astro.props;
 
       if (step.allowModalInteraction) {
         // Pour le modal, on laisse passer les clics
-        this.clickzone.style.display = 'none';
-        this.overlay.style.pointerEvents = 'none';
+        this.clickzone.style.display = "none";
+        this.overlay.style.pointerEvents = "none";
       } else {
-        this.clickzone.style.display = 'block';
-        this.overlay.style.pointerEvents = 'auto';
-        
+        this.clickzone.style.display = "block";
+        this.overlay.style.pointerEvents = "auto";
+
         this.clickzone.onclick = (e) => {
           e.stopPropagation();
-          
-          if (step.id === 'upload') {
-            const fileInput = document.getElementById('imageInput') as HTMLInputElement;
+
+          if (step.id === "upload") {
+            const fileInput = document.getElementById(
+              "imageInput"
+            ) as HTMLInputElement;
             if (fileInput) fileInput.click();
           } else {
             target.click();
@@ -602,7 +703,7 @@ const { isFirstTime } = Astro.props;
     private startValidationPoll(step: TutorialStep) {
       this.pollInterval = window.setInterval(() => {
         if (step.validate()) {
-          console.log('[Tutorial] Step validated:', step.id);
+          console.log("[Tutorial] Step validated:", step.id);
           this.goToStep(this.currentStep + 1);
         } else {
           this.positionElements();
@@ -611,45 +712,45 @@ const { isFirstTime } = Astro.props;
     }
 
     private showComplete() {
-      console.log('[Tutorial] Showing complete modal');
-      
-      this.overlay.style.display = 'none';
-      this.highlight.style.display = 'none';
-      this.clickzone.style.display = 'none';
-      this.tooltip.style.display = 'none';
-      
-      this.complete.classList.remove('hidden');
+      console.log("[Tutorial] Showing complete modal");
+
+      this.overlay.style.display = "none";
+      this.highlight.style.display = "none";
+      this.clickzone.style.display = "none";
+      this.tooltip.style.display = "none";
+
+      this.complete.classList.remove("hidden");
     }
 
     private finish() {
-      console.log('[Tutorial] Finishing');
-      
+      console.log("[Tutorial] Finishing");
+
       if (this.pollInterval) {
         clearInterval(this.pollInterval);
         this.pollInterval = null;
       }
 
-      this.container.classList.add('hidden');
-      this.welcome.classList.add('hidden');
-      this.complete.classList.add('hidden');
-      
-      document.body.classList.remove('tutorial-active');
-      
-      localStorage.setItem('primadopu_tutorial_completed', 'true');
-      
+      this.container.classList.add("hidden");
+      this.welcome.classList.add("hidden");
+      this.complete.classList.add("hidden");
+
+      document.body.classList.remove("tutorial-active");
+
+      localStorage.setItem("primadopu_tutorial_completed", "true");
+
       this.isActive = false;
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new Tutorial());
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => new Tutorial());
   } else {
     new Tutorial();
   }
 
   (window as any).replayTutorial = () => {
-    localStorage.removeItem('primadopu_tutorial_completed');
-    localStorage.setItem('primadopu_show_tutorial', 'true');
-    window.location.href = '/generate';
+    localStorage.removeItem("primadopu_tutorial_completed");
+    localStorage.setItem("primadopu_show_tutorial", "true");
+    window.location.href = "/generate";
   };
 </script>

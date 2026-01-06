@@ -15,10 +15,7 @@ import {
   type ModificationType,
 } from "../../lib/gemini";
 import { getUserPlan, isAdminUser } from "../../lib/plans";
-import {
-  getCreditsBalance,
-  useCredit,
-} from "../../lib/subscriptions";
+import { getCreditsBalance, useCredit } from "../../lib/subscriptions";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -91,9 +88,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${
-          isAdmin ? "∞" : creditCheck.totalAvailable
-        }${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
+        message: `Plan: ${userPlanInfo.planName} | Crédits: ${
+          creditCheck.used
+        }/${isAdmin ? "∞" : creditCheck.totalAvailable}${creditsInfo}${
+          isAdmin ? " (Admin)" : ""
+        }`,
       });
 
       // Vérifier si l'utilisateur peut générer (avec les crédits bonus inclus)

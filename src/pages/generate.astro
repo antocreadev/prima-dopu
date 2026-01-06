@@ -64,7 +64,7 @@ folders.forEach((f) => {
 <Layout title="Générer">
   <!-- Tutoriel d'onboarding pour les nouveaux utilisateurs -->
   <OnboardingTutorial isFirstTime={isFirstTime} />
-  
+
   <SignedOut>
     <div class="text-center py-20">
       <p class="text-slate-600">
@@ -557,8 +557,18 @@ folders.forEach((f) => {
           <h2 class="text-xl font-semibold mb-4">Ajouter une instruction</h2>
 
           <div class="mb-4">
-            <label class="block text-sm font-medium text-slate-700 mb-2">
+            <label class="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
               Zone à modifier *
+              <button
+                type="button"
+                id="toggleTipsBtn"
+                class="text-slate-400 hover:text-indigo-600 transition-colors"
+                title="Voir les conseils"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
             </label>
             <input
               type="text"
@@ -568,61 +578,98 @@ folders.forEach((f) => {
             />
 
             <!-- Suggestions rapides -->
-            <div class="mt-2 flex flex-wrap gap-1">
+            <div class="mt-2 flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
+              <style>
+                .zone-suggestions-container::-webkit-scrollbar {
+                  height: 6px;
+                }
+                .zone-suggestions-container::-webkit-scrollbar-track {
+                  background: #f1f5f9;
+                  border-radius: 3px;
+                }
+                .zone-suggestions-container::-webkit-scrollbar-thumb {
+                  background: #cbd5e1;
+                  border-radius: 3px;
+                }
+                .zone-suggestions-container::-webkit-scrollbar-thumb:hover {
+                  background: #94a3b8;
+                }
+              </style>
               <button
                 type="button"
-                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 whitespace-nowrap flex-shrink-0"
                 data-zone="tout le sol"
               >
                 🟫 Sol complet
               </button>
               <button
                 type="button"
-                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 whitespace-nowrap flex-shrink-0"
                 data-zone="mur de gauche"
               >
                 ⬅️ Mur gauche
               </button>
               <button
                 type="button"
-                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 whitespace-nowrap flex-shrink-0"
                 data-zone="mur de droite"
               >
                 ➡️ Mur droite
               </button>
               <button
                 type="button"
-                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 whitespace-nowrap flex-shrink-0"
                 data-zone="mur du fond"
               >
                 ⬆️ Mur fond
               </button>
               <button
                 type="button"
-                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+                class="zone-suggestion px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 whitespace-nowrap flex-shrink-0"
                 data-zone="plafond"
               >
                 🔝 Plafond
               </button>
             </div>
 
-            <div class="mt-2 text-xs text-slate-500">
-              <p class="font-medium mb-1">
-                💡 Conseils pour de meilleurs résultats :
-              </p>
-              <ul class="list-disc list-inside space-y-0.5">
-                <li>
-                  <strong>Soyez précis</strong> : "mur de droite" plutôt que "mur"
-                </li>
-                <li>
-                  <strong>Une zone par instruction</strong> : créez une instruction
-                  par zone
-                </li>
-                <li>
-                  <strong>Pour le sol</strong> : précisez "pose horizontale" ou "pose
-                  verticale" si souhaité
-                </li>
-              </ul>
+            <!-- Conseils (cachés par défaut) - Affichage en notification -->
+            <div id="tipsSection" class="fixed top-4 right-4 z-50 hidden max-w-sm animate-fadeIn">
+              <div class="bg-white border-l-4 border-amber-400 shadow-xl rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <div class="flex-shrink-0">
+                    <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-medium mb-2 text-amber-800 text-sm">
+                      💡 Conseils pour de meilleurs résultats
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li>
+                        <strong>Soyez précis</strong> : "mur de droite" plutôt que "mur"
+                      </li>
+                      <li>
+                        <strong>Une zone par instruction</strong> : créez une instruction
+                        par zone
+                      </li>
+                      <li>
+                        <strong>Pour le sol</strong> : précisez "pose horizontale" ou "pose
+                        verticale" si souhaité
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    id="closeTipsBtn"
+                    class="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1117,6 +1164,10 @@ folders.forEach((f) => {
     newReferenceUpload.classList.add("hidden");
     instructionModal.classList.remove("hidden");
     instructionModal.classList.add("flex");
+    
+    // Cacher les conseils par défaut à l'ouverture
+    const tipsSection = document.getElementById("tipsSection");
+    if (tipsSection) tipsSection.classList.add("hidden");
 
     // Ajouter les gestionnaires pour les suggestions de zone
     document.querySelectorAll(".zone-suggestion").forEach((btn) => {
@@ -1127,6 +1178,23 @@ folders.forEach((f) => {
       });
     });
   });
+
+  // Gestionnaire pour le bouton de conseils
+  const toggleTipsBtn = document.getElementById("toggleTipsBtn");
+  const tipsSection = document.getElementById("tipsSection");
+  const closeTipsBtn = document.getElementById("closeTipsBtn");
+  
+  if (toggleTipsBtn && tipsSection) {
+    toggleTipsBtn.addEventListener("click", () => {
+      tipsSection.classList.toggle("hidden");
+    });
+  }
+  
+  if (closeTipsBtn && tipsSection) {
+    closeTipsBtn.addEventListener("click", () => {
+      tipsSection.classList.add("hidden");
+    });
+  }
 
   useLibraryBtn.addEventListener("click", () => {
     useLibrary = true;
