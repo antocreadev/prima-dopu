@@ -81,7 +81,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       sessionParams.mode = "payment";
       sessionParams.payment_intent_data = {
-        metadata: { userId, quantity: quantity.toString() },
+        metadata: {
+          userId,
+          quantity: quantity.toString(),
+          productType: product?.type || "unknown",
+        },
       };
     }
 

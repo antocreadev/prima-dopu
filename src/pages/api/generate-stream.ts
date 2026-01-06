@@ -73,36 +73,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Vérifier le plan de l'utilisateur (hybride Clerk + Stripe)
       const isAdmin = isAdminUser(userId);
-      
+
       // D'abord vérifier avec le nouveau système Stripe
       const stripePlanInfo = getUserPlanInfo(userId, isAdmin);
       const stripeCreditsBalance = getCreditsBalance(userId);
-      
+
       // Ensuite vérifier avec l'ancien système Clerk (pour transition)
       const authObj = locals.auth();
       const clerkPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
-      
+
       // Utiliser le plan le plus avantageux entre Clerk et Stripe
-      const effectivePlanType = stripePlanInfo.isPaid ? stripePlanInfo.planType : clerkPlanInfo.planType;
-      const effectivePlanName = stripePlanInfo.isPaid ? stripePlanInfo.planName : clerkPlanInfo.planName;
-      
+      const effectivePlanType = stripePlanInfo.isPaid
+        ? stripePlanInfo.planType
+        : clerkPlanInfo.planType;
+      const effectivePlanName = stripePlanInfo.isPaid
+        ? stripePlanInfo.planName
+        : clerkPlanInfo.planName;
+
       const creditCheck = canUserGenerate(userId, effectivePlanType, isAdmin);
 
       // Afficher les crédits bonus Stripe s'il y en a
-      const creditsInfo = stripeCreditsBalance > 0 
-        ? ` + ${stripeCreditsBalance} bonus`
-        : "";
+      const creditsInfo =
+        stripeCreditsBalance > 0 ? ` + ${stripeCreditsBalance} bonus` : "";
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${effectivePlanName} | Crédits: ${
-          creditCheck.used
-        }/${isAdmin ? "∞" : creditCheck.limit}${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
+        message: `Plan: ${effectivePlanName} | Crédits: ${creditCheck.used}/${
+          isAdmin ? "∞" : creditCheck.limit
+        }${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
       });
 
       // Vérifier si l'utilisateur peut générer
       // Priorité: 1) Admin 2) Crédits bonus Stripe 3) Crédits de l'abonnement
-      let canGenerate = isAdmin || creditCheck.canGenerate || stripeCreditsBalance > 0;
+      let canGenerate =
+        isAdmin || creditCheck.canGenerate || stripeCreditsBalance > 0;
       let usedBonusCredit = false;
 
       if (!isAdmin && !creditCheck.canGenerate) {
@@ -111,7 +115,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           usedBonusCredit = true;
           await sendEvent("log", {
             icon: "💎",
-            message: `Utilisation d'un crédit bonus (reste: ${stripeCreditsBalance - 1})`,
+            message: `Utilisation d'un crédit bonus (reste: ${
+              stripeCreditsBalance - 1
+            })`,
           });
         } else {
           await sendEvent("error", {
@@ -208,7 +214,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (!imageExists) {
               await sendEvent("log", {
                 icon: "⚠️",
-                message: `Réf "${ref.name || referenceId}" introuvable sur S3, ignorée`,
+                message: `Réf "${
+                  ref.name || referenceId
+                }" introuvable sur S3, ignorée`,
                 type: "warning",
               });
               continue; // Passer à l'instruction suivante

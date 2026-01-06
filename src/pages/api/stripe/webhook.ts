@@ -52,13 +52,13 @@ export const POST: APIRoute = async ({ request }) => {
       // ==========================================
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        
+
         // Debug: log toutes les metadata
         console.log("🔍 Session metadata:", JSON.stringify(session.metadata));
         console.log("🔍 Session customer:", session.customer);
         console.log("🔍 Session mode:", session.mode);
         console.log("🔍 Session subscription:", session.subscription);
-        
+
         const userId = session.metadata?.userId;
         const productType = session.metadata?.productType as
           | ProductType
@@ -77,8 +77,9 @@ export const POST: APIRoute = async ({ request }) => {
         if (session.mode === "subscription") {
           // Abonnement créé
           const subscriptionId = session.subscription as string;
-          const subscription =
-            await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = await stripe.subscriptions.retrieve(
+            subscriptionId
+          );
           const planType = productType
             ? getPlanFromProductType(productType)
             : "standard";
@@ -193,52 +194,83 @@ export const POST: APIRoute = async ({ request }) => {
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
-        
+
         console.log(`🔍 Invoice billing_reason: ${invoice.billing_reason}`);
-        
+
         // Récupérer le userId depuis les metadata de la subscription
-        const subscriptionDetails = (invoice as any).parent?.subscription_details;
+        const subscriptionDetails = (invoice as any).parent
+          ?.subscription_details;
         const userId = subscriptionDetails?.metadata?.userId;
         const subscriptionId = subscriptionDetails?.subscription;
-        
-        console.log(`🔍 Invoice userId: ${userId}, subscriptionId: ${subscriptionId}`);
-        
+
+        console.log(
+          `🔍 Invoice userId: ${userId}, subscriptionId: ${subscriptionId}`
+        );
+
         // Création initiale d'un abonnement
-        if (invoice.billing_reason === "subscription_create" && userId && subscriptionId) {
+        if (
+          invoice.billing_reason === "subscription_create" &&
+          userId &&
+          subscriptionId
+        ) {
           try {
             // Récupérer les détails de la subscription
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            
-            console.log(`🔍 Subscription retrieved:`, JSON.stringify(subscription, null, 2).substring(0, 500));
-            
+            const subscription = await stripe.subscriptions.retrieve(
+              subscriptionId
+            );
+
+            console.log(
+              `🔍 Subscription retrieved:`,
+              JSON.stringify(subscription, null, 2).substring(0, 500)
+            );
+
             // Déterminer le type de plan depuis le produit
-            const productId = subscription.items.data[0]?.price.product as string;
+            const productId = subscription.items.data[0]?.price
+              .product as string;
             const product = await stripe.products.retrieve(productId);
-            const productType = product.metadata?.type as ProductType | undefined;
-            const planType = productType ? getPlanFromProductType(productType) : "standard";
-            
-            console.log(`🔍 Product type: ${productType}, planType: ${planType}`);
-            
+            const productType = product.metadata?.type as
+              | ProductType
+              | undefined;
+            const planType = productType
+              ? getPlanFromProductType(productType)
+              : "standard";
+
+            console.log(
+              `🔍 Product type: ${productType}, planType: ${planType}`
+            );
+
             // Accéder directement aux propriétés de la subscription
             const periodStart = (subscription as any).current_period_start;
             const periodEnd = (subscription as any).current_period_end;
-            const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
-            
-            console.log(`🔍 Period: ${periodStart} -> ${periodEnd}, cancel: ${cancelAtPeriodEnd}`);
-            
+            const cancelAtPeriodEnd = (subscription as any)
+              .cancel_at_period_end;
+
+            console.log(
+              `🔍 Period: ${periodStart} -> ${periodEnd}, cancel: ${cancelAtPeriodEnd}`
+            );
+
             upsertSubscription(userId, {
               stripe_customer_id: customerId,
               stripe_subscription_id: subscriptionId,
               plan_type: planType,
               status: "active",
-              current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-              current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+              current_period_start: periodStart
+                ? new Date(periodStart * 1000).toISOString()
+                : null,
+              current_period_end: periodEnd
+                ? new Date(periodEnd * 1000).toISOString()
+                : null,
               cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
             });
-            
-            console.log(`✅ Abonnement ${planType} créé via invoice pour ${userId}`);
+
+            console.log(
+              `✅ Abonnement ${planType} créé via invoice pour ${userId}`
+            );
           } catch (subError: any) {
-            console.error(`❌ Erreur lors de la création de l'abonnement:`, subError.message);
+            console.error(
+              `❌ Erreur lors de la création de l'abonnement:`,
+              subError.message
+            );
             throw subError;
           }
         }
@@ -251,6 +283,49 @@ export const POST: APIRoute = async ({ request }) => {
             });
             console.log(`✅ Renouvellement réussi pour ${sub.user_id}`);
           }
+        }
+        break;
+      }
+
+      // ==========================================
+      // PAYMENT INTENT RÉUSSI (achat de crédits one-time)
+      // ==========================================
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const userId = paymentIntent.metadata?.userId;
+        const quantity = parseInt(paymentIntent.metadata?.quantity || "1", 10);
+        const productType = paymentIntent.metadata?.productType;
+
+        console.log(
+          `🔍 PaymentIntent metadata:`,
+          JSON.stringify(paymentIntent.metadata)
+        );
+
+        // Seulement traiter les achats de crédits (pas les abonnements)
+        if (
+          userId &&
+          (productType === "credit_with_sub" || productType === "credit_no_sub")
+        ) {
+          const creditsToAdd = quantity;
+
+          // Vérifier si pas déjà traité via checkout.session.completed
+          // On utilise l'ID du payment_intent pour éviter les doublons
+
+          // Enregistrer l'achat
+          createCreditPurchase(userId, {
+            stripe_payment_intent_id: paymentIntent.id,
+            credits_amount: creditsToAdd,
+            price_paid: paymentIntent.amount || 0,
+            currency: paymentIntent.currency || "eur",
+            status: "completed",
+          });
+
+          // Ajouter les crédits
+          const newBalance = addCredits(userId, creditsToAdd);
+
+          console.log(
+            `💰 ${creditsToAdd} crédits ajoutés via PaymentIntent pour ${userId} (nouveau solde: ${newBalance})`
+          );
         }
         break;
       }

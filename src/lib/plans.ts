@@ -59,7 +59,7 @@ export const CLERK_PLAN_MAPPING: Record<string, UserPlanInfo> = {
     planType: "standard",
     planName: "Standard",
     planKey: "abonnement_50",
-    monthlyLimit: 20,
+    monthlyLimit: 25,
     totalLimit: null,
     isPaid: true,
   },
@@ -88,7 +88,9 @@ type HasFunction = (params: Record<string, unknown>) => boolean;
 /**
  * Mapping du plan_type Stripe vers notre système
  */
-function getStripeSubscriptionPlan(subscription: Subscription): UserPlanInfo | null {
+function getStripeSubscriptionPlan(
+  subscription: Subscription
+): UserPlanInfo | null {
   // Vérifier si l'abonnement est actif
   if (subscription.status !== "active") {
     return null;

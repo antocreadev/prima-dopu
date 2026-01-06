@@ -196,7 +196,9 @@ async function prepareImageForAPI(
     buffer = await getImageBuffer(imagePath);
   } catch (error: any) {
     console.error(`Erreur lecture image S3: ${imagePath}`, error);
-    throw new Error(`Image introuvable sur S3: ${imagePath}. ${error?.message || ''}`);
+    throw new Error(
+      `Image introuvable sur S3: ${imagePath}. ${error?.message || ""}`
+    );
   }
   let mimeType = getMimeType(imagePath);
 

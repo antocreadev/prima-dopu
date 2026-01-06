@@ -1,6 +1,34 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
+import { getUserPlanFromAuth } from "../lib/plans";
+import { getSubscription, getCreditsBalance } from "../lib/subscriptions";
+
+const auth = Astro.locals.auth();
+const userId = auth.userId;
+
+// Récupérer le plan actuel si connecté
+let currentPlan = {
+  planType: "free" as string,
+  isPaid: false,
+  creditsBalance: 0,
+  hasSubscription: false,
+};
+
+if (userId) {
+  const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
+  const subscription = getSubscription(userId);
+  const creditsBalance = getCreditsBalance(userId);
+
+  currentPlan = {
+    planType: subscription?.plan_type || userPlanInfo.planType,
+    isPaid:
+      userPlanInfo.isPaid ||
+      (subscription?.status === "active" && subscription?.plan_type !== "free"),
+    creditsBalance,
+    hasSubscription: !!subscription?.stripe_subscription_id,
+  };
+}
 ---
 
 <Layout
@@ -8,82 +36,129 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
   description="Découvrez nos offres d'abonnement pour créer des visuels avant/après professionnels avec l'IA."
   disableStickyHeader={true}
 >
-  <div class="max-w-6xl mx-auto px-4">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
     <div class="text-center mb-12">
-      <h1 class="text-4xl font-bold text-slate-900 mb-4">
-        Choisissez votre formule
+      <h1 class="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+        Tarifs simples et transparents
       </h1>
       <p class="text-xl text-slate-600 max-w-2xl mx-auto">
-        Des tarifs simples et transparents en euros
+        Choisissez la formule adaptée à vos besoins. Sans engagement.
       </p>
+    </div>
+
+    <!-- Plan actuel (si connecté et abonné) -->
+    <SignedIn>
+      {
+        currentPlan.isPaid && (
+          <div class="mb-8 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 text-center">
+            <p class="text-orange-800">
+              Vous êtes actuellement sur le plan{" "}
+              <strong class="capitalize">
+                {currentPlan.planType === "pro"
+                  ? "Pro (50 projets/mois)"
+                  : "Standard (25 projets/mois)"}
+              </strong>
+              {currentPlan.creditsBalance > 0 && (
+                <span class="ml-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                  +{currentPlan.creditsBalance} crédit(s) bonus
+                </span>
+              )}
+            </p>
+            <button
+              id="manage-subscription-btn"
+              class="mt-3 text-sm text-orange-600 hover:text-orange-800 underline font-medium"
+            >
+              Gérer mon abonnement →
+            </button>
+          </div>
+        )
+      }
+    </SignedIn>
+
+    <!-- Toggle Mensuel / Annuel -->
+    <div class="flex justify-center mb-12">
+      <div class="bg-slate-100 p-1.5 rounded-full flex items-center gap-1">
+        <button
+          id="toggle-monthly"
+          class="px-6 py-2.5 rounded-full text-sm font-semibold transition-all billing-toggle"
+          data-billing="monthly"
+        >
+          Mensuel
+        </button>
+        <button
+          id="toggle-yearly"
+          class="px-6 py-2.5 rounded-full text-sm font-semibold transition-all billing-toggle active flex items-center gap-2"
+          data-billing="yearly"
+        >
+          Annuel
+          <span
+            class="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold"
+            >-25%</span
+          >
+        </button>
+      </div>
     </div>
 
     <!-- Indicateur de chargement -->
     <div id="loading-products" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      <div
+        class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"
+      >
+      </div>
       <p class="mt-4 text-slate-600">Chargement des offres...</p>
     </div>
 
-    <!-- Conteneur des abonnements -->
+    <!-- Grille des abonnements -->
     <div id="subscriptions-container" class="hidden mb-16">
-      <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
-        📦 Abonnements mensuels
-      </h2>
-      <div id="subscriptions-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        id="subscriptions-grid"
+        class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+      >
         <!-- Les cartes seront générées dynamiquement -->
       </div>
     </div>
 
-    <!-- Conteneur des crédits unitaires -->
-    <div id="credits-container" class="hidden mb-16">
-      <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
-        🎯 Crédits à l'unité
-      </h2>
-      <p class="text-center text-slate-600 mb-6">
-        Besoin de plus de générations ? Achetez des crédits supplémentaires.
-      </p>
-      <div id="credits-grid" class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-        <!-- Les cartes seront générées dynamiquement -->
+    <!-- Section crédits supplémentaires -->
+    <div id="credits-section" class="hidden mb-20">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2" id="credits-title">
+          Besoin de plus de générations ?
+        </h2>
+        <p class="text-slate-600">
+          Achetez des crédits supplémentaires valables sans limite de temps.
+        </p>
+      </div>
+
+      <div id="credits-grid" class="flex justify-center">
+        <!-- La carte crédits sera générée dynamiquement -->
       </div>
     </div>
 
     <!-- Erreur -->
     <div id="error-container" class="hidden text-center py-12">
-      <p class="text-red-600">Erreur lors du chargement des offres. Veuillez réessayer.</p>
-      <button onclick="loadProducts()" class="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+      <p class="text-red-600 mb-4">Erreur lors du chargement des offres.</p>
+      <button
+        onclick="loadProducts()"
+        class="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
+      >
         Réessayer
       </button>
     </div>
 
-    <!-- Plan actuel (pour utilisateurs connectés) -->
-    <SignedIn>
-      <div id="current-plan" class="hidden mb-8 p-4 bg-blue-50 rounded-xl text-center">
-        <p class="text-blue-800">
-          Votre plan actuel : <strong id="current-plan-name">-</strong>
-          <span id="credits-balance" class="ml-2"></span>
-        </p>
-        <button
-          id="manage-subscription-btn"
-          class="hidden mt-2 text-sm text-blue-600 underline hover:text-blue-800"
-        >
-          Gérer mon abonnement
-        </button>
-      </div>
-    </SignedIn>
-
     <!-- FAQ -->
-    <div class="bg-slate-50 rounded-2xl p-8">
+    <div class="bg-white rounded-2xl border border-slate-200 p-8">
       <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">
         Questions fréquentes
       </h2>
-      <div class="grid md:grid-cols-2 gap-6">
+      <div class="grid md:grid-cols-2 gap-8">
         <div>
           <h3 class="font-semibold text-slate-900 mb-2">
             Qu'est-ce qu'une génération ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Une génération correspond à la création d'une image avant/après.
-            Chaque transformation compte comme une génération.
+            Une génération = une transformation avant/après. Chaque création
+            utilise un crédit.
           </p>
         </div>
         <div>
@@ -91,25 +166,26 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
             Les crédits sont-ils reportés ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Les crédits mensuels sont remis à zéro chaque mois. Les crédits achetés à l'unité sont valables sans limite de temps.
+            Les crédits mensuels sont remis à zéro chaque mois. Les crédits
+            achetés à l'unité n'expirent jamais.
           </p>
         </div>
         <div>
           <h3 class="font-semibold text-slate-900 mb-2">
-            Puis-je changer de formule ?
+            Puis-je annuler à tout moment ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Oui, vous pouvez passer à une formule supérieure ou inférieure à
-            tout moment depuis votre profil.
+            Oui, sans engagement. L'abonnement reste actif jusqu'à la fin de la
+            période payée.
           </p>
         </div>
         <div>
           <h3 class="font-semibold text-slate-900 mb-2">
-            Comment fonctionne la facturation ?
+            Quelle est la différence annuel/mensuel ?
           </h3>
           <p class="text-slate-600 text-sm">
-            Les abonnements sont facturés mensuellement ou annuellement. Vous pouvez annuler à
-            tout moment, sans engagement.
+            L'abonnement annuel offre 25% de réduction. Vous payez 9 mois pour
+            12 mois d'accès.
           </p>
         </div>
       </div>
@@ -117,235 +193,460 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
   </div>
 </Layout>
 
-<script>
-  interface Price {
-    id: string;
-    amount: number;
-    amountFormatted: string;
-    currency: string;
-    interval: 'month' | 'year' | null;
+<style>
+  .billing-toggle {
+    color: #475569;
+    background-color: transparent;
+  }
+  .billing-toggle.active {
+    background-color: white;
+    color: #0f172a;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   }
 
-  interface Product {
-    id: string;
-    name: string;
-    description: string | null;
-    type: string;
-    prices: Price[];
+  .plan-card {
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border-width: 2px;
+    transition: all 0.3s;
   }
+  .plan-card.popular {
+    border-color: #f97316;
+    background: linear-gradient(to bottom, #fff7ed, white);
+    box-shadow:
+      0 25px 50px -12px rgb(0 0 0 / 0.25),
+      0 0 0 0 #ffedd5;
+    transform: scale(1.05);
+    z-index: 10;
+  }
+  .plan-card:not(.popular) {
+    border-color: #e2e8f0;
+    background-color: white;
+  }
+  .plan-card:not(.popular):hover {
+    border-color: #fdba74;
+  }
+</style>
 
-  interface ProductsResponse {
-    subscriptions: Product[];
-    credits: Product[];
-    currentPlan: {
-      planType: string;
-      status: string;
-      creditsBalance: number;
-      cancelAtPeriodEnd: boolean;
-    } | null;
-  }
+<script define:vars={{ currentPlan }}>
+  // Variables depuis le serveur
+  const userPlan = currentPlan;
+
+  // État du billing - ANNUEL par défaut
+  let billingPeriod = "yearly";
+
+  // Données des produits
+  let productsData = null;
+
+  // Toggle billing period
+  document.querySelectorAll(".billing-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document
+        .querySelectorAll(".billing-toggle")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      billingPeriod = btn.dataset.billing;
+      if (productsData) renderSubscriptions(productsData.subscriptions);
+    });
+  });
 
   async function loadProducts() {
-    const loadingEl = document.getElementById('loading-products');
-    const subsContainer = document.getElementById('subscriptions-container');
-    const creditsContainer = document.getElementById('credits-container');
-    const errorContainer = document.getElementById('error-container');
-    const currentPlanEl = document.getElementById('current-plan');
+    const loadingEl = document.getElementById("loading-products");
+    const subsContainer = document.getElementById("subscriptions-container");
+    const creditsSection = document.getElementById("credits-section");
+    const errorContainer = document.getElementById("error-container");
 
     try {
-      loadingEl?.classList.remove('hidden');
-      subsContainer?.classList.add('hidden');
-      creditsContainer?.classList.add('hidden');
-      errorContainer?.classList.add('hidden');
+      loadingEl?.classList.remove("hidden");
+      subsContainer?.classList.add("hidden");
+      creditsSection?.classList.add("hidden");
+      errorContainer?.classList.add("hidden");
 
-      const response = await fetch('/api/stripe/products');
-      if (!response.ok) throw new Error('Erreur API');
+      const response = await fetch("/api/stripe/products");
+      if (!response.ok) throw new Error("Erreur API");
 
-      const data: ProductsResponse = await response.json();
-
-      // Afficher le plan actuel
-      if (data.currentPlan && currentPlanEl) {
-        currentPlanEl.classList.remove('hidden');
-        const planNames: Record<string, string> = {
-          free: 'Gratuit',
-          standard: 'Standard',
-          pro: 'Pro'
-        };
-        document.getElementById('current-plan-name')!.textContent = 
-          planNames[data.currentPlan.planType] || data.currentPlan.planType;
-        
-        if (data.currentPlan.creditsBalance > 0) {
-          document.getElementById('credits-balance')!.textContent = 
-            `(${data.currentPlan.creditsBalance} crédit(s) bonus)`;
-        }
-
-        if (data.currentPlan.planType !== 'free') {
-          document.getElementById('manage-subscription-btn')?.classList.remove('hidden');
-        }
-      }
+      productsData = await response.json();
 
       // Afficher les abonnements
-      if (data.subscriptions.length > 0) {
-        renderSubscriptions(data.subscriptions);
-        subsContainer?.classList.remove('hidden');
+      if (productsData.subscriptions.length > 0) {
+        renderSubscriptions(productsData.subscriptions);
+        subsContainer?.classList.remove("hidden");
       }
 
       // Afficher les crédits
-      if (data.credits.length > 0) {
-        renderCredits(data.credits);
-        creditsContainer?.classList.remove('hidden');
+      if (productsData.credits.length > 0) {
+        renderCredits(productsData.credits);
+        creditsSection?.classList.remove("hidden");
       }
 
-      loadingEl?.classList.add('hidden');
+      loadingEl?.classList.add("hidden");
     } catch (error) {
-      console.error('Erreur chargement produits:', error);
-      loadingEl?.classList.add('hidden');
-      errorContainer?.classList.remove('hidden');
+      console.error("Erreur chargement produits:", error);
+      loadingEl?.classList.add("hidden");
+      errorContainer?.classList.remove("hidden");
     }
   }
 
-  function renderSubscriptions(products: Product[]) {
-    const grid = document.getElementById('subscriptions-grid')!;
-    
-    // Ajouter d'abord le plan gratuit
-    grid.innerHTML = `
-      <div class="rounded-2xl p-6 border-2 border-slate-200 bg-white">
-        <h3 class="text-xl font-bold text-slate-900 mb-2">Gratuit</h3>
-        <div class="mb-4">
-          <span class="text-3xl font-bold text-slate-900">0€</span>
-        </div>
-        <ul class="space-y-2 mb-6 text-sm text-slate-600">
-          <li class="flex items-center gap-2">
-            <span class="text-green-500">✓</span> 3 générations au total
-          </li>
-          <li class="flex items-center gap-2">
-            <span class="text-green-500">✓</span> Toutes les fonctionnalités
-          </li>
-        </ul>
-        <a href="/sign-up" class="block w-full py-2 px-4 bg-slate-200 text-slate-700 rounded-lg font-semibold text-center hover:bg-slate-300 transition-colors">
-          Commencer
-        </a>
+  function renderSubscriptions(products) {
+    const grid = document.getElementById("subscriptions-grid");
+    grid.innerHTML = "";
+
+    // Trouver les produits
+    const standardProduct = products.find(
+      (p) => p.type === "subscription_25" || p.name.includes("25")
+    );
+    const proProduct = products.find(
+      (p) => p.type === "subscription_50" || p.name.includes("50")
+    );
+
+    // Prix
+    const standardMonthly = standardProduct?.prices.find(
+      (p) => p.interval === "month"
+    );
+    const standardYearly = standardProduct?.prices.find(
+      (p) => p.interval === "year"
+    );
+    const proMonthly = proProduct?.prices.find((p) => p.interval === "month");
+    const proYearly = proProduct?.prices.find((p) => p.interval === "year");
+
+    // Liste complète des fonctionnalités (vert = inclus, gris = non inclus)
+    const features = [
+      { label: "IA avancée", free: true, standard: true, pro: true },
+      {
+        label: "Résultat en ~3 minutes",
+        free: true,
+        standard: true,
+        pro: true,
+      },
+      {
+        label: "Images haute résolution",
+        free: true,
+        standard: true,
+        pro: true,
+      },
+      { label: "Historique illimité", free: true, standard: true, pro: true },
+      {
+        label: "Bibliothèque de références",
+        free: true,
+        standard: true,
+        pro: true,
+      },
+      {
+        label: "Crédits -50% (tarif abonné)",
+        free: false,
+        standard: true,
+        pro: true,
+      },
+      { label: "Support prioritaire", free: false, standard: true, pro: true },
+      {
+        label: "Support pour développement personnalisé",
+        free: false,
+        standard: false,
+        pro: true,
+      },
+    ];
+
+    const renderFeature = (label, included, highlight = false) => {
+      if (included) {
+        return `<li class="flex items-center gap-2.5 py-1.5">
+          <svg class="w-5 h-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="${highlight ? "font-semibold text-slate-900" : "text-slate-600"}">${label}</span>
+        </li>`;
+      } else {
+        return `<li class="flex items-center gap-2.5 py-1.5">
+          <svg class="w-5 h-5 text-slate-300 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-400">${label}</span>
+        </li>`;
+      }
+    };
+
+    const isFreeCurrentPlan = userPlan.planType === "free" && !userPlan.isPaid;
+    const isStandardCurrentPlan = userPlan.planType === "standard";
+    const isProCurrentPlan = userPlan.planType === "pro";
+
+    // Carte GRATUIT
+    const freeCard = document.createElement("div");
+    freeCard.className =
+      "bg-white border-2 border-slate-200 rounded-2xl p-6 flex flex-col h-full";
+    freeCard.innerHTML = `
+      <div class="mb-4">
+        <h3 class="text-xl font-bold text-slate-900">Gratuit</h3>
+        <p class="text-slate-500 text-sm mt-1">Pour découvrir</p>
       </div>
+      <div class="mb-6">
+        <div class="flex items-baseline gap-1">
+          <span class="text-4xl font-bold text-slate-900">0€</span>
+        </div>
+        <p class="text-slate-500 text-sm mt-1">Sans carte bancaire</p>
+      </div>
+      <div class="mb-4 pb-4 border-b border-slate-100">
+        <p class="text-sm font-semibold text-slate-900">✓ 3 générations au total</p>
+      </div>
+      <ul class="space-y-0.5 mb-6 flex-grow text-sm">
+        ${features.map((f) => renderFeature(f.label, f.free)).join("")}
+      </ul>
+      ${
+        isFreeCurrentPlan
+          ? `
+        <div class="py-3 px-4 bg-slate-100 text-slate-600 rounded-xl font-semibold text-center mt-auto">Plan actuel</div>
+      `
+          : `
+        <a href="/sign-up" class="block py-3 px-4 bg-slate-100 text-slate-700 rounded-xl font-semibold text-center hover:bg-slate-200 transition-colors mt-auto">Commencer gratuitement</a>
+      `
+      }
     `;
+    grid.appendChild(freeCard);
 
-    // Ajouter les abonnements payants
-    products.forEach((product, index) => {
-      const monthlyPrice = product.prices.find(p => p.interval === 'month');
-      const yearlyPrice = product.prices.find(p => p.interval === 'year');
-      const isPopular = index === 1 || product.name.includes('50');
+    // Carte STANDARD
+    const standardCard = document.createElement("div");
+    standardCard.className =
+      "bg-white border-2 border-slate-200 rounded-2xl p-6 flex flex-col h-full";
+    const standardPriceMonthly =
+      billingPeriod === "yearly" && standardYearly
+        ? Math.round(standardYearly.amount / 12 / 100)
+        : (standardMonthly?.amount || 0) / 100;
+    const standardPriceId =
+      billingPeriod === "yearly" && standardYearly
+        ? standardYearly.id
+        : standardMonthly?.id;
 
-      const card = document.createElement('div');
-      card.className = `rounded-2xl p-6 border-2 transition-all ${
-        isPopular 
-          ? 'border-orange-500 bg-orange-50 shadow-xl scale-105' 
-          : 'border-slate-200 bg-white hover:border-orange-300'
-      }`;
-
-      card.innerHTML = `
-        ${isPopular ? '<div class="text-center mb-3"><span class="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">Populaire</span></div>' : ''}
-        <h3 class="text-xl font-bold text-slate-900 mb-2">${product.name}</h3>
-        ${product.description ? `<p class="text-sm text-slate-600 mb-3">${product.description}</p>` : ''}
-        
-        <div class="mb-4">
-          ${monthlyPrice ? `
-            <div class="mb-2">
-              <span class="text-3xl font-bold text-slate-900">${monthlyPrice.amountFormatted}</span>
-              <span class="text-slate-500">/mois</span>
-            </div>
-          ` : ''}
-          ${yearlyPrice ? `
-            <div class="text-sm text-green-600">
-              ou ${yearlyPrice.amountFormatted}/an (économisez 2 mois)
-            </div>
-          ` : ''}
+    standardCard.innerHTML = `
+      <div class="mb-4">
+        <h3 class="text-xl font-bold text-slate-900">Standard</h3>
+        <p class="text-slate-500 text-sm mt-1">Pour les créateurs réguliers</p>
+      </div>
+      <div class="mb-6">
+        <div class="flex items-baseline gap-1">
+          <span class="text-4xl font-bold text-slate-900">${standardPriceMonthly}€</span>
+          <span class="text-slate-500">/mois</span>
         </div>
+        ${
+          billingPeriod === "yearly" && standardYearly
+            ? `
+          <p class="text-green-600 text-sm mt-1 font-medium">Facturé ${standardYearly.amountFormatted}/an</p>
+        `
+            : `<p class="text-slate-500 text-sm mt-1">Facturation mensuelle</p>`
+        }
+      </div>
+      <div class="mb-4 pb-4 border-b border-slate-100">
+        <p class="text-sm font-semibold text-slate-900">✓ 25 générations/mois</p>
+      </div>
+      <ul class="space-y-0.5 mb-6 flex-grow text-sm">
+        ${features.map((f) => renderFeature(f.label, f.standard)).join("")}
+      </ul>
+      ${
+        isStandardCurrentPlan
+          ? `
+        <div class="py-3 px-4 bg-orange-100 text-orange-700 rounded-xl font-semibold text-center mt-auto">✓ Votre plan actuel</div>
+      `
+          : `
+        <button onclick="checkout('${standardPriceId}')" class="w-full py-3 px-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors mt-auto">${userPlan.isPaid ? "Changer de plan" : "Commencer"}</button>
+      `
+      }
+    `;
+    grid.appendChild(standardCard);
 
-        <div class="space-y-2 mb-6">
-          ${monthlyPrice ? `
-            <button 
-              onclick="checkout('${monthlyPrice.id}')"
-              class="w-full py-2 px-4 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
-            >
-              Mensuel
-            </button>
-          ` : ''}
-          ${yearlyPrice ? `
-            <button 
-              onclick="checkout('${yearlyPrice.id}')"
-              class="w-full py-2 px-4 border-2 border-orange-500 text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors"
-            >
-              Annuel
-            </button>
-          ` : ''}
+    // Carte PRO (populaire)
+    const proCard = document.createElement("div");
+    proCard.className =
+      "bg-slate-900 border-2 border-orange-500 rounded-2xl p-6 flex flex-col h-full relative";
+    const proPriceMonthly =
+      billingPeriod === "yearly" && proYearly
+        ? Math.round(proYearly.amount / 12 / 100)
+        : (proMonthly?.amount || 0) / 100;
+    const proPriceId =
+      billingPeriod === "yearly" && proYearly ? proYearly.id : proMonthly?.id;
+
+    const renderProFeature = (label, included) => {
+      if (included) {
+        return `<li class="flex items-center gap-2.5 py-1.5">
+          <svg class="w-5 h-5 text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-300">${label}</span>
+        </li>`;
+      } else {
+        return `<li class="flex items-center gap-2.5 py-1.5">
+          <svg class="w-5 h-5 text-slate-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-500">${label}</span>
+        </li>`;
+      }
+    };
+
+    proCard.innerHTML = `
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+        <span class="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Le plus populaire</span>
+      </div>
+      <div class="mb-4 mt-2">
+        <h3 class="text-xl font-bold text-white">Pro</h3>
+        <p class="text-slate-400 text-sm mt-1">Pour les professionnels</p>
+      </div>
+      <div class="mb-6">
+        <div class="flex items-baseline gap-1">
+          <span class="text-4xl font-bold text-white">${proPriceMonthly}€</span>
+          <span class="text-slate-400">/mois</span>
         </div>
-      `;
-
-      grid.appendChild(card);
-    });
+        ${
+          billingPeriod === "yearly" && proYearly
+            ? `
+          <p class="text-green-400 text-sm mt-1 font-medium">Facturé ${proYearly.amountFormatted}/an</p>
+        `
+            : `<p class="text-slate-400 text-sm mt-1">Facturation mensuelle</p>`
+        }
+      </div>
+      <div class="mb-4 pb-4 border-b border-slate-700">
+        <p class="text-sm font-semibold text-white">✓ 50 générations/mois</p>
+      </div>
+      <ul class="space-y-0.5 mb-6 flex-grow text-sm">
+        ${features.map((f) => renderProFeature(f.label, f.pro)).join("")}
+      </ul>
+      ${
+        isProCurrentPlan
+          ? `
+        <div class="py-3 px-4 bg-orange-500/20 text-orange-400 rounded-xl font-semibold text-center mt-auto">✓ Votre plan actuel</div>
+      `
+          : `
+        <button onclick="checkout('${proPriceId}')" class="w-full py-3 px-4 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors mt-auto">${userPlan.isPaid ? "Changer de plan" : "Commencer"}</button>
+      `
+      }
+    `;
+    grid.appendChild(proCard);
   }
 
-  function renderCredits(products: Product[]) {
-    const grid = document.getElementById('credits-grid')!;
-    grid.innerHTML = '';
+  function renderCredits(products) {
+    const grid = document.getElementById("credits-grid");
+    grid.innerHTML = "";
 
-    products.forEach(product => {
-      const price = product.prices[0];
-      if (!price) return;
+    // Trouver les prix des crédits
+    const creditWithSub = products.find((p) => p.type === "credit_with_sub");
+    const creditNoSub = products.find((p) => p.type === "credit_no_sub");
 
-      const isWithSub = product.type === 'credit_with_sub';
+    // Sélectionner le bon produit selon le statut abonné
+    const product = userPlan.isPaid ? creditWithSub : creditNoSub;
+    const price = product?.prices[0];
 
-      const card = document.createElement('div');
-      card.className = 'rounded-xl p-6 border-2 border-slate-200 bg-white hover:border-orange-300 transition-all';
+    if (!price) return;
 
-      card.innerHTML = `
-        <h3 class="text-lg font-bold text-slate-900 mb-2">${product.name}</h3>
-        ${product.description ? `<p class="text-sm text-slate-600 mb-3">${product.description}</p>` : ''}
-        <div class="mb-4">
-          <span class="text-2xl font-bold text-slate-900">${price.amountFormatted}</span>
+    // Calculer la réduction pour le message marketing
+    const priceWithSub = creditWithSub?.prices[0]?.amount || 0;
+    const priceNoSub = creditNoSub?.prices[0]?.amount || 0;
+    const discountPercent =
+      priceNoSub > 0 ? Math.round((1 - priceWithSub / priceNoSub) * 100) : 50;
+
+    const card = document.createElement("div");
+    card.className =
+      "rounded-2xl p-6 border-2 border-slate-200 bg-white hover:border-orange-300 transition-all max-w-md";
+
+    card.innerHTML = `
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl mb-3">
+          <span class="text-2xl">💎</span>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900">Crédits supplémentaires</h3>
+        <p class="text-slate-500 text-sm mt-1">N'expirent jamais</p>
+      </div>
+
+      <div class="text-center mb-6">
+        <div class="flex items-baseline justify-center gap-1">
+          <span class="text-4xl font-bold text-slate-900">${price.amountFormatted}</span>
           <span class="text-slate-500">/crédit</span>
         </div>
-        ${isWithSub ? '<p class="text-xs text-green-600 mb-3">💎 Tarif réservé aux abonnés</p>' : ''}
-        
-        <div class="flex items-center gap-2 mb-4">
-          <label class="text-sm text-slate-600">Quantité:</label>
-          <input 
-            type="number" 
-            min="1" 
-            max="100" 
-            value="1" 
-            class="credit-quantity w-20 px-2 py-1 border rounded text-center"
-            data-price-id="${price.id}"
-            data-unit-price="${price.amount}"
-          />
-          <span class="text-sm text-slate-600">= <strong class="credit-total">${price.amountFormatted}</strong></span>
-        </div>
-        
+        ${
+          userPlan.isPaid
+            ? `
+          <div class="mt-2 inline-flex items-center gap-1.5 text-green-600 text-sm font-medium bg-green-50 px-3 py-1 rounded-full">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            Vous économisez ${discountPercent}% (tarif abonné)
+          </div>
+        `
+            : `
+          <div class="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+            <p class="text-sm text-orange-800">
+              <span class="font-semibold">💡 Astuce :</span> Les abonnés paient seulement <strong>${creditWithSub?.prices[0]?.amountFormatted || "0,50€"}</strong>/crédit 
+              <span class="text-orange-600 font-semibold">(−${discountPercent}%)</span>
+            </p>
+    
+          </div>
+        `
+        }
+      </div>
+      
+      <div class="flex items-center justify-center gap-3 mb-4 p-3 bg-slate-50 rounded-xl">
         <button 
-          onclick="checkoutCredits('${price.id}', this)"
-          class="w-full py-2 px-4 bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900 transition-colors"
-        >
-          Acheter
-        </button>
-      `;
+          class="qty-btn w-10 h-10 flex items-center justify-center bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-lg font-bold transition-colors"
+          data-action="decrease"
+        >−</button>
+        <input 
+          type="number" 
+          min="1" 
+          max="100" 
+          value="5" 
+          class="credit-quantity w-20 px-2 py-2 border border-slate-300 rounded-lg text-center font-semibold text-lg"
+          data-price-id="${price.id}"
+          data-unit-price="${price.amount}"
+        />
+        <button 
+          class="qty-btn w-10 h-10 flex items-center justify-center bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-lg font-bold transition-colors"
+          data-action="increase"
+        >+</button>
+      </div>
 
-      // Mettre à jour le total quand la quantité change
-      const input = card.querySelector('.credit-quantity') as HTMLInputElement;
-      const totalEl = card.querySelector('.credit-total') as HTMLElement;
-      input?.addEventListener('input', () => {
-        const qty = parseInt(input.value) || 1;
-        const total = (price.amount * qty) / 100;
-        totalEl.textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total);
+      <div class="text-center mb-4">
+        <span class="text-lg text-slate-600">Total : <strong class="credit-total text-slate-900 text-xl">${((price.amount * 5) / 100).toFixed(2)}€</strong></span>
+      </div>
+      
+      <button 
+        onclick="checkoutCredits('${price.id}', this)"
+        class="w-full py-3.5 px-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors"
+      >
+        Acheter des crédits
+      </button>
+      
+      <p class="text-xs text-slate-400 text-center mt-4">
+        Les crédits s'ajoutent à votre quota mensuel et ne sont jamais perdus.
+      </p>
+    `;
+
+    // Gestion quantité
+    const input = card.querySelector(".credit-quantity");
+    const totalEl = card.querySelector(".credit-total");
+    const qtyBtns = card.querySelectorAll(".qty-btn");
+
+    const updateTotal = () => {
+      const qty = parseInt(input.value) || 1;
+      const total = (price.amount * qty) / 100;
+      totalEl.textContent = `${total.toFixed(2)}€`;
+    };
+
+    input?.addEventListener("input", updateTotal);
+
+    qtyBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        let qty = parseInt(input.value) || 1;
+        if (action === "increase" && qty < 100) qty++;
+        if (action === "decrease" && qty > 1) qty--;
+        input.value = qty.toString();
+        updateTotal();
       });
-
-      grid.appendChild(card);
     });
+
+    grid.appendChild(card);
   }
 
-  async function checkout(priceId: string) {
+  async function checkout(priceId) {
     try {
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId }),
       });
 
@@ -353,24 +654,26 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
 
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.error === "Non authentifié") {
+        window.location.href = "/sign-in?redirect=/pricing";
       } else {
-        alert(data.error || 'Erreur lors de la création du paiement');
+        alert(data.error || "Erreur lors de la création du paiement");
       }
     } catch (error) {
-      console.error('Erreur checkout:', error);
-      alert('Erreur lors de la création du paiement');
+      console.error("Erreur checkout:", error);
+      alert("Erreur lors de la création du paiement");
     }
   }
 
-  async function checkoutCredits(priceId: string, button: HTMLButtonElement) {
-    const card = button.closest('.rounded-xl');
-    const input = card?.querySelector('.credit-quantity') as HTMLInputElement;
+  async function checkoutCredits(priceId, button) {
+    const card = button.closest(".rounded-xl");
+    const input = card?.querySelector(".credit-quantity");
     const quantity = parseInt(input?.value) || 1;
 
     try {
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId, quantity }),
       });
 
@@ -378,35 +681,39 @@ import { SignedIn, SignedOut } from "@clerk/astro/components";
 
       if (data.url) {
         window.location.href = data.url;
+      } else if (data.error === "Non authentifié") {
+        window.location.href = "/sign-in?redirect=/pricing";
       } else {
-        alert(data.error || 'Erreur lors de la création du paiement');
+        alert(data.error || "Erreur lors de la création du paiement");
       }
     } catch (error) {
-      console.error('Erreur checkout:', error);
-      alert('Erreur lors de la création du paiement');
+      console.error("Erreur checkout:", error);
+      alert("Erreur lors de la création du paiement");
     }
   }
 
   // Gestion du bouton "Gérer mon abonnement"
-  document.getElementById('manage-subscription-btn')?.addEventListener('click', async () => {
-    try {
-      const response = await fetch('/api/stripe/create-portal', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
+  document
+    .getElementById("manage-subscription-btn")
+    ?.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/stripe/create-portal", {
+          method: "POST",
+        });
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (error) {
+        console.error("Erreur portail:", error);
       }
-    } catch (error) {
-      console.error('Erreur portail:', error);
-    }
-  });
+    });
 
   // Exposer les fonctions au scope global
-  (window as any).checkout = checkout;
-  (window as any).checkoutCredits = checkoutCredits;
-  (window as any).loadProducts = loadProducts;
+  window.checkout = checkout;
+  window.checkoutCredits = checkoutCredits;
+  window.loadProducts = loadProducts;
 
   // Charger les produits au démarrage
-  document.addEventListener('DOMContentLoaded', loadProducts);
+  document.addEventListener("DOMContentLoaded", loadProducts);
 </script>

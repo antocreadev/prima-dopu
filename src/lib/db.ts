@@ -362,7 +362,7 @@ export interface UserCredits {
 // Limites par plan
 export const PLAN_LIMITS = {
   free: { monthly: null, total: 3 }, // 3 générations au total, pas de reset mensuel
-  standard: { monthly: 20, total: null }, // 20/mois, illimité au total
+  standard: { monthly: 25, total: null }, // 25/mois, illimité au total
   pro: { monthly: 50, total: null }, // 50/mois, illimité au total
 } as const;
 

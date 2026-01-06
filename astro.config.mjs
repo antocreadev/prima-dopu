@@ -20,7 +20,9 @@ export default defineConfig({
       org: "primadopu",
       authToken: process.env.SENTRY_AUTH_TOKEN,
       sourceMapsUploadOptions: {
-        enabled: process.env.NODE_ENV === "production" && !!process.env.SENTRY_AUTH_TOKEN,
+        enabled:
+          process.env.NODE_ENV === "production" &&
+          !!process.env.SENTRY_AUTH_TOKEN,
       },
       bundleSizeOptimizations: {
         excludeDebugStatements: true,
