@@ -1,6 +1,5 @@
 ---
 import { SignedIn, SignedOut, UserButton } from "@clerk/astro/components";
-import { isFirstTimeUser } from "../lib/db";
 
 import "../styles/global.css";
 
@@ -22,19 +21,6 @@ const siteUrl = Astro.site || "https://primadopu.fr";
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 const ogImageURL = new URL("/og-image.png", siteUrl).toString();
 const logoURL = new URL("/logo-primadopu-texte.png", siteUrl).toString();
-
-// Rediriger vers /generate si l'utilisateur connecté n'a pas fait le tutoriel
-const auth = Astro.locals.auth();
-const userId = auth?.userId;
-const pagesExcluesRedirect = ['/generate', '/sign-in', '/sign-up', '/legal/terms', '/legal/privacy', '/legal/mentions', '/api'];
-const isExcludedPage = pagesExcluesRedirect.some(page => currentPath.startsWith(page));
-
-if (userId && !isExcludedPage) {
-  const isFirstTime = isFirstTimeUser(userId);
-  if (isFirstTime) {
-    return Astro.redirect('/generate');
-  }
-}
 ---
 
 <!doctype html>
