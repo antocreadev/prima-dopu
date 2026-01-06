@@ -20,7 +20,7 @@ const WEBHOOK_SECRET =
 
 export const POST: APIRoute = async ({ request }) => {
   console.log("🔔 Webhook endpoint appelé");
-  
+
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
 
@@ -148,13 +148,17 @@ export const POST: APIRoute = async ({ request }) => {
           const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
           const status = (subscription as any).status;
 
-          console.log(`🔍 Subscription update: periodEnd=${periodEnd}, cancel=${cancelAtPeriodEnd}, status=${status}`);
+          console.log(
+            `🔍 Subscription update: periodEnd=${periodEnd}, cancel=${cancelAtPeriodEnd}, status=${status}`
+          );
 
           // Mettre à jour l'abonnement
           upsertSubscription(sub.user_id, {
             status: status as any,
             cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
-            ...(periodEnd && { current_period_end: new Date(periodEnd * 1000).toISOString() }),
+            ...(periodEnd && {
+              current_period_end: new Date(periodEnd * 1000).toISOString(),
+            }),
           });
 
           console.log(`🔄 Abonnement mis à jour pour ${sub.user_id}`);
