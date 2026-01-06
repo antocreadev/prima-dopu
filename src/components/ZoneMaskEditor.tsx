@@ -8,7 +8,7 @@ interface ZoneMaskEditorProps {
   referenceImage?: string;
 }
 
-type DrawingTool = 'brush' | 'rectangle' | 'polygon' | 'eraser' | 'pan';
+type DrawingTool = 'brush' | 'polygon' | 'eraser' | 'pan';
 
 export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceImage }: ZoneMaskEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,6 +17,7 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
   const [brushSize, setBrushSize] = useState(30);
   const [isDrawingPolygon, setIsDrawingPolygon] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [history, setHistory] = useState<string[]>([]);
   const polygonPointsRef = useRef<{ x: number; y: number }[]>([]);
   const polygonCirclesRef = useRef<fabric.Circle[]>([]);
   const backgroundImageRef = useRef<fabric.FabricImage | null>(null);
@@ -112,18 +113,9 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
 
     // Configuration selon l'outil sélectionné
     if (selectedTool === 'brush') {
-      canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-      canvas.freeDrawingBrush.width = brushSize;
-      canvas.freeDrawingBrush.color = '#FFFFFF';
+      setupBrushTool();
     } else if (selectedTool === 'eraser') {
-      canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-      canvas.freeDrawingBrush.width = brushSize;
-      canvas.freeDrawingBrush.color = '#000000';
-    } else if (selectedTool === 'rectangle') {
-      canvas.isDrawingMode = false;
-      setupRectangleTool();
+      setupEraserTool();
     } else if (selectedTool === 'polygon') {
       canvas.isDrawingMode = false;
       setIsDrawingPolygon(true);
@@ -180,56 +172,69 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
     });
   };
 
-  const setupRectangleTool = () => {
+  const saveHistory = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
-    let isDrawing = false;
-    let startX = 0;
-    let startY = 0;
-    let rectangle: fabric.Rect | null = null;
+    const json = JSON.stringify(canvas.toJSON());
+    setHistory(prev => [...prev, json]);
+  };
+
+  const setupBrushTool = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    canvas.isDrawingMode = true;
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.width = brushSize;
+    canvas.freeDrawingBrush.color = 'rgba(255, 255, 255, 0.7)';
+
+    // Sauvegarder dans l'historique après chaque dessin
+    canvas.on('path:created', () => {
+      saveHistory();
+    });
+  };
+
+  const setupEraserTool = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    canvas.isDrawingMode = false;
+    canvas.selection = false;
 
     canvas.on('mouse:down', (opt) => {
       const pointer = canvas.getScenePoint(opt.e);
-      isDrawing = true;
-      startX = pointer.x;
-      startY = pointer.y;
-
-      rectangle = new fabric.Rect({
-        left: pointer.x,
-        top: pointer.y,
-        width: 0,
-        height: 0,
-        fill: '#FFFFFF',
-        opacity: 0.7,
-        stroke: '#FFFFFF',
-        strokeWidth: 2,
-        selectable: false,
-        evented: false,
-      });
+      const objects = canvas.getObjects();
       
-      canvas.add(rectangle);
+      // Trouver et supprimer les objets blancs sous le curseur
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        if (obj.containsPoint(pointer)) {
+          canvas.remove(obj);
+        }
+      }
       canvas.renderAll();
+      saveHistory();
     });
 
     canvas.on('mouse:move', (opt) => {
-      if (!isDrawing || !rectangle) return;
+      const e = opt.e as MouseEvent;
+      if (e.buttons !== 1) return; // Seulement si bouton souris pressé
       
       const pointer = canvas.getScenePoint(opt.e);
-
-      // Calculer position et dimensions à partir du coin
-      const left = Math.min(startX, pointer.x);
-      const top = Math.min(startY, pointer.y);
-      const width = Math.abs(pointer.x - startX);
-      const height = Math.abs(pointer.y - startY);
-
-      rectangle.set({ left, top, width, height });
+      const objects = canvas.getObjects();
+      
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        if (obj.containsPoint(pointer)) {
+          canvas.remove(obj);
+        }
+      }
       canvas.renderAll();
     });
 
     canvas.on('mouse:up', () => {
-      isDrawing = false;
-      rectangle = null;
+      saveHistory();
     });
   };
 
@@ -294,6 +299,9 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
     polygonPointsRef.current = [];
     setIsDrawingPolygon(false);
     
+    // Sauvegarder dans l'historique
+    saveHistory();
+    
     // Retourner au mode pinceau
     setSelectedTool('brush');
   };
@@ -307,6 +315,82 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
     objects.forEach(obj => canvas.remove(obj));
     
     canvas.renderAll();
+    saveHistory();
+  };
+
+  const undo = () => {
+    if (history.length === 0) return;
+    
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    // Retirer le dernier état
+    const newHistory = [...history];
+    newHistory.pop();
+    setHistory(newHistory);
+
+    // Charger l'état précédent
+    if (newHistory.length > 0) {
+      const previousState = newHistory[newHistory.length - 1];
+      canvas.loadFromJSON(previousState, () => {
+        canvas.renderAll();
+      });
+    } else {
+      // Si plus d'historique, tout effacer
+      const objects = canvas.getObjects().slice();
+      objects.forEach(obj => canvas.remove(obj));
+      canvas.renderAll();
+    }
+  };
+
+  const downloadDebugMask = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    // Sauvegarder l'état actuel
+    const bgImage = canvas.backgroundImage;
+    const currentZoom = canvas.getZoom();
+    const currentVpt = canvas.viewportTransform?.slice();
+    
+    // Sauvegarder les opacités originales et forcer opacité 1.0
+    const originalOpacities = canvas.getObjects().map(obj => obj.opacity);
+    canvas.getObjects().forEach(obj => {
+      obj.set({ opacity: 1.0 });
+    });
+    
+    // Réinitialiser le zoom et la position pour l'export
+    canvas.setZoom(1);
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    
+    // Retirer temporairement l'image de fond pour exporter seulement le masque
+    canvas.backgroundImage = undefined;
+    canvas.renderAll();
+
+    // Exporter le masque
+    const maskDataUrl = canvas.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: 1,
+    });
+
+    // Restaurer les opacités originales
+    canvas.getObjects().forEach((obj, i) => {
+      obj.set({ opacity: originalOpacities[i] });
+    });
+    
+    // Restaurer l'image de fond, le zoom et la position
+    canvas.backgroundImage = bgImage;
+    canvas.setZoom(currentZoom);
+    if (currentVpt && currentVpt.length === 6) {
+      canvas.setViewportTransform(currentVpt as [number, number, number, number, number, number]);
+    }
+    canvas.renderAll();
+
+    // Télécharger le masque
+    const link = document.createElement('a');
+    link.download = 'mask-debug.png';
+    link.href = maskDataUrl;
+    link.click();
   };
 
   const handleSave = () => {
@@ -317,6 +401,12 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
     const bgImage = canvas.backgroundImage;
     const currentZoom = canvas.getZoom();
     const currentVpt = canvas.viewportTransform?.slice();
+    
+    // Sauvegarder les opacités originales et forcer opacité 1.0
+    const originalOpacities = canvas.getObjects().map(obj => obj.opacity);
+    canvas.getObjects().forEach(obj => {
+      obj.set({ opacity: 1.0 });
+    });
     
     // Réinitialiser le zoom et la position pour l'export
     canvas.setZoom(1);
@@ -333,6 +423,11 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
       multiplier: 1,
     });
 
+    // Restaurer les opacités originales
+    canvas.getObjects().forEach((obj, i) => {
+      obj.set({ opacity: originalOpacities[i] });
+    });
+    
     // Restaurer l'image de fond, le zoom et la position
     canvas.backgroundImage = bgImage;
     canvas.setZoom(currentZoom);
@@ -378,16 +473,6 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
               🖌️ Pinceau
             </button>
             <button
-              onClick={() => setSelectedTool('rectangle')}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                selectedTool === 'rectangle'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              ⬜ Rectangle
-            </button>
-            <button
               onClick={() => setSelectedTool('polygon')}
               className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
                 selectedTool === 'polygon'
@@ -404,7 +489,7 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-200'
               }`}
-              title="Dessiner en noir pour préserver les zones"
+              title="Effacer les zones blanches dessinées"
             >
               🧹 Gomme
             </button>
@@ -418,6 +503,24 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
               title="Déplacer la vue"
             >
               ✋ Déplacer
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={undo}
+              disabled={history.length === 0}
+              className="px-3 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Retour en arrière"
+            >
+              ↶ Annuler
+            </button>
+            <button
+              onClick={downloadDebugMask}
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors text-sm"
+              title="Télécharger le masque pour debug"
+            >
+              🐛 Debug
             </button>
           </div>
 
@@ -449,7 +552,7 @@ export default function ZoneMaskEditor({ imageUrl, onSave, onCancel, referenceIm
               value={brushSize}
               onChange={(e) => setBrushSize(parseInt(e.target.value))}
               className="w-32"
-              disabled={selectedTool === 'rectangle' || selectedTool === 'polygon' || selectedTool === 'pan'}
+              disabled={selectedTool === 'polygon' || selectedTool === 'pan'}
             />
             <span className="text-sm text-gray-600">{brushSize}px</span>
           </div>
