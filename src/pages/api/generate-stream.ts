@@ -91,7 +91,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         : clerkPlanInfo.planName;
 
       // Passer les crédits bonus à canUserGenerate pour le compteur total
-      const creditCheck = canUserGenerate(userId, effectivePlanType, isAdmin, stripeCreditsBalance);
+      const creditCheck = canUserGenerate(
+        userId,
+        effectivePlanType,
+        isAdmin,
+        stripeCreditsBalance
+      );
 
       // Afficher les crédits bonus Stripe s'il y en a
       const creditsInfo =
@@ -296,7 +301,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             stripeCreditsBalance,
             () => useCredit(userId)
           );
-          
+
           if (creditResult.usedBonus) {
             await sendEvent("log", {
               icon: "💎",

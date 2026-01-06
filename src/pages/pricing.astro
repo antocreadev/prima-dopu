@@ -65,12 +65,6 @@ if (userId) {
                 </span>
               )}
             </p>
-            <button
-              id="manage-subscription-btn"
-              class="mt-3 text-sm text-orange-600 hover:text-orange-800 underline font-medium"
-            >
-              Gérer mon abonnement →
-            </button>
           </div>
         )
       }
@@ -145,6 +139,21 @@ if (userId) {
         Réessayer
       </button>
     </div>
+
+    <SignedIn>
+      {
+        currentPlan.isPaid && (
+          <div class="mb-8 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 text-center">
+            <button
+              id="manage-subscription-btn"
+              class="mt-3 text-sm text-orange-600 hover:text-orange-800 underline font-medium"
+            >
+              Gérer mon abonnement →
+            </button>
+          </div>
+        )
+      }
+    </SignedIn>
 
     <!-- FAQ -->
     <div class="bg-white rounded-2xl border border-slate-200 p-8">
@@ -672,7 +681,7 @@ if (userId) {
     const card = button.closest(".rounded-2xl");
     const input = card?.querySelector(".credit-quantity");
     let quantity = parseInt(input?.value) || 1;
-    
+
     // Valider la quantité (minimum 1)
     if (quantity < 1) quantity = 1;
 

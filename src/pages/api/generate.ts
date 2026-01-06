@@ -43,17 +43,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Les admins ont des générations illimitées
     const isAdmin = isAdminUser(userId);
-    
+
     // Récupérer les crédits bonus
     const bonusCredits = getCreditsBalance(userId);
-    
+
     // Passer les crédits bonus à canUserGenerate pour le compteur total
-    const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin, bonusCredits);
+    const creditCheck = canUserGenerate(
+      userId,
+      userPlanInfo.planType,
+      isAdmin,
+      bonusCredits
+    );
 
     console.log(
       `📊 Plan: ${userPlanInfo.planName} | Admin: ${isAdmin} | Crédits: ${
         creditCheck.used
-      }/${isAdmin ? "∞" : creditCheck.totalAvailable}${bonusCredits > 0 ? ` (+${bonusCredits} bonus)` : ""}`
+      }/${isAdmin ? "∞" : creditCheck.totalAvailable}${
+        bonusCredits > 0 ? ` (+${bonusCredits} bonus)` : ""
+      }`
     );
 
     if (!isAdmin && !creditCheck.canGenerate) {
@@ -208,7 +215,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           bonusCredits,
           () => useCredit(userId)
         );
-        console.log(`💳 Crédit consommé pour ${userId} (bonus: ${creditResult.usedBonus})`);
+        console.log(
+          `💳 Crédit consommé pour ${userId} (bonus: ${creditResult.usedBonus})`
+        );
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);

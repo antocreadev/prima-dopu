@@ -53,8 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const isSubscription = price.recurring !== null;
 
     console.log(`🛒 Checkout: priceId=${priceId}, quantity=${quantity}`);
-    console.log(`🛒 Product: id=${product?.id}, type=${product?.type}, name=${product?.name}`);
-    console.log(`🛒 isSubscription=${isSubscription}, recurring=${JSON.stringify(price.recurring)}`);
+    console.log(
+      `🛒 Product: id=${product?.id}, type=${product?.type}, name=${product?.name}`
+    );
+    console.log(
+      `🛒 isSubscription=${isSubscription}, recurring=${JSON.stringify(
+        price.recurring
+      )}`
+    );
 
     // Construire l'URL de base
     const baseUrl = new URL(request.url).origin;
@@ -83,17 +89,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (isSubscription) {
       // Vérifier si l'utilisateur a déjà un abonnement Stripe actif
       const existingSub = getSubscription(userId);
-      if (existingSub?.stripe_subscription_id && existingSub.status === "active") {
+      if (
+        existingSub?.stripe_subscription_id &&
+        existingSub.status === "active"
+      ) {
         // Annuler l'ancien abonnement Stripe avant d'en créer un nouveau
         // Ou rediriger vers le portail pour changer de plan
-        console.log(`🔄 Utilisateur ${userId} a déjà un abonnement actif, redirection vers changement de plan`);
-        
+        console.log(
+          `🔄 Utilisateur ${userId} a déjà un abonnement actif, redirection vers changement de plan`
+        );
+
         // Option: Annuler l'ancien et créer le nouveau
         try {
-          await stripe.subscriptions.cancel(existingSub.stripe_subscription_id, {
-            prorate: true, // Rembourser au prorata
-          });
-          console.log(`❌ Ancien abonnement ${existingSub.stripe_subscription_id} annulé`);
+          await stripe.subscriptions.cancel(
+            existingSub.stripe_subscription_id,
+            {
+              prorate: true, // Rembourser au prorata
+            }
+          );
+          console.log(
+            `❌ Ancien abonnement ${existingSub.stripe_subscription_id} annulé`
+          );
         } catch (cancelError: any) {
           console.error(`Erreur annulation abonnement:`, cancelError.message);
           // Si erreur, on continue quand même (l'abonnement était peut-être déjà annulé)

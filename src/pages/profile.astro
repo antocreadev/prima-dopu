@@ -26,7 +26,12 @@ const bonusCredits = getCreditsBalance(userId);
 const hasStripeSubscription = !!subscription?.stripe_subscription_id;
 
 // Passer les crédits bonus à getCreditStats
-const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin, bonusCredits);
+const creditStats = getCreditStats(
+  userId,
+  userPlanInfo.planType,
+  isAdmin,
+  bonusCredits
+);
 ---
 
 <Layout title="Profil">
@@ -244,14 +249,25 @@ const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin, bonus
                 <div class="mt-4 pt-4 border-t border-slate-100">
                   <details class="group">
                     <summary class="cursor-pointer text-sm text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2">
-                      <svg class="w-4 h-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      <svg
+                        class="w-4 h-4 transition-transform group-open:rotate-90"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 5l7 7-7 7"
+                        />
                       </svg>
                       Paramètres avancés
                     </summary>
                     <div class="mt-3 pl-6 space-y-3">
                       <p class="text-xs text-slate-500">
-                        Modifier votre moyen de paiement, télécharger vos factures ou gérer votre abonnement.
+                        Modifier votre moyen de paiement, télécharger vos
+                        factures ou gérer votre abonnement.
                       </p>
                       <button
                         id="manage-stripe-subscription"
@@ -323,12 +339,12 @@ const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin, bonus
       // Première confirmation
       const confirm1 = window.confirm(
         "Vous allez accéder au portail de facturation.\n\n" +
-        "Vous pourrez y modifier votre moyen de paiement et télécharger vos factures.\n\n" +
-        "Continuer ?"
+          "Vous pourrez y modifier votre moyen de paiement et télécharger vos factures.\n\n" +
+          "Continuer ?"
       );
-      
+
       if (!confirm1) return;
-      
+
       try {
         const response = await fetch("/api/stripe/create-portal", {
           method: "POST",

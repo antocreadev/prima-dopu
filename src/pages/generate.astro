@@ -27,8 +27,18 @@ const isAdmin = userPlanInfo.isAdmin === true;
 const bonusCredits = getCreditsBalance(userId);
 
 // Passer les crédits bonus aux fonctions
-const creditStats = getCreditStats(userId, userPlanInfo.planType, isAdmin, bonusCredits);
-const creditCheck = canUserGenerate(userId, userPlanInfo.planType, isAdmin, bonusCredits);
+const creditStats = getCreditStats(
+  userId,
+  userPlanInfo.planType,
+  isAdmin,
+  bonusCredits
+);
+const creditCheck = canUserGenerate(
+  userId,
+  userPlanInfo.planType,
+  isAdmin,
+  bonusCredits
+);
 
 // Rediriger si plus de crédits (sauf admin)
 if (!isAdmin && !creditCheck.canGenerate) {

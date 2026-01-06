@@ -29,12 +29,24 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     const subscription = getSubscription(userId);
 
     // Récupérer les crédits utilisés
-    const userCredits = db.prepare(`
+    const userCredits = db
+      .prepare(
+        `
       SELECT * FROM user_credits WHERE user_id = ?
-    `).get(userId) as { total_generations: number; monthly_generations: number; last_generation_month: string } | undefined;
+    `
+      )
+      .get(userId) as
+      | {
+          total_generations: number;
+          monthly_generations: number;
+          last_generation_month: string;
+        }
+      | undefined;
 
     // Récupérer les générations
-    const generations = db.prepare(`
+    const generations = db
+      .prepare(
+        `
       SELECT 
         g.*,
         (SELECT COUNT(*) FROM instructions WHERE generation_id = g.id) as instruction_count
@@ -42,7 +54,9 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
       WHERE g.user_id = ?
       ORDER BY g.created_at DESC
       LIMIT 50
-    `).all(userId) as Array<{
+    `
+      )
+      .all(userId) as Array<{
       id: string;
       user_id: string;
       original_image_path: string;
@@ -53,12 +67,16 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     }>;
 
     // Récupérer les références
-    const references = db.prepare(`
+    const references = db
+      .prepare(
+        `
       SELECT * FROM material_refs 
       WHERE user_id = ?
       ORDER BY created_at DESC
       LIMIT 50
-    `).all(userId) as Array<{
+    `
+      )
+      .all(userId) as Array<{
       id: string;
       name: string | null;
       image_path: string;
@@ -67,11 +85,15 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     }>;
 
     // Récupérer les achats de crédits
-    const purchases = db.prepare(`
+    const purchases = db
+      .prepare(
+        `
       SELECT * FROM credit_purchases 
       WHERE user_id = ?
       ORDER BY created_at DESC
-    `).all(userId) as Array<{
+    `
+      )
+      .all(userId) as Array<{
       id: string;
       credits_amount: number;
       price_paid: number;
@@ -81,23 +103,32 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     }>;
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         data: {
           userId,
-          subscription: subscription || { plan_type: "free", credits_balance: 0 },
-          credits: userCredits || { total_generations: 0, monthly_generations: 0 },
+          subscription: subscription || {
+            plan_type: "free",
+            credits_balance: 0,
+          },
+          credits: userCredits || {
+            total_generations: 0,
+            monthly_generations: 0,
+          },
           generations,
           references,
-          purchases
-        }
+          purchases,
+        },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("[ADMIN] Erreur get-user:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Erreur serveur" }),
+      JSON.stringify({
+        success: false,
+        error: error.message || "Erreur serveur",
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

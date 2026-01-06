@@ -465,7 +465,10 @@ export function canUserGenerate(
   } else {
     // Plans payants: vérifie le mensuel + bonus
     const monthlyLimit = limits.monthly || 0;
-    const monthlyRemaining = Math.max(0, monthlyLimit - credits.monthly_generations);
+    const monthlyRemaining = Math.max(
+      0,
+      monthlyLimit - credits.monthly_generations
+    );
     const totalAvailable = monthlyRemaining + bonusCredits;
     const canGenerate = totalAvailable > 0;
     return {
@@ -499,10 +502,44 @@ export function incrementUserCredits(userId: string): void {
 }
 
 /**
+ * Met à jour les crédits d'un utilisateur (admin seulement)
+ * Permet de modifier les générations mensuelles et totales
+ */
+export function updateUserCredits(
+  userId: string,
+  data: { monthly_generations?: number; total_generations?: number }
+): UserCredits {
+  // S'assurer que l'utilisateur existe
+  getUserCredits(userId);
+
+  const updates: string[] = [];
+  const values: any[] = [];
+
+  if (typeof data.monthly_generations === "number") {
+    updates.push("monthly_generations = ?");
+    values.push(Math.max(0, data.monthly_generations));
+  }
+
+  if (typeof data.total_generations === "number") {
+    updates.push("total_generations = ?");
+    values.push(Math.max(0, data.total_generations));
+  }
+
+  if (updates.length > 0) {
+    values.push(userId);
+    db.prepare(
+      `UPDATE user_credits SET ${updates.join(", ")} WHERE user_id = ?`
+    ).run(...values);
+  }
+
+  return getUserCredits(userId);
+}
+
+/**
  * Consomme un crédit pour une génération
  * Logique: utilise d'abord les crédits mensuels de l'abonnement,
  * puis les crédits bonus si le quota mensuel est épuisé
- * 
+ *
  * @param userId - ID de l'utilisateur
  * @param planType - Type de plan (free, standard, pro)
  * @param bonusCredits - Nombre de crédits bonus disponibles
@@ -535,10 +572,10 @@ export function consumeCredit(
         return { success: true, usedBonus: true };
       }
     }
-    return { 
-      success: false, 
-      usedBonus: false, 
-      reason: "Plus de crédits disponibles" 
+    return {
+      success: false,
+      usedBonus: false,
+      reason: "Plus de crédits disponibles",
     };
   } else {
     // Plans payants: vérifier le quota mensuel d'abord
@@ -557,10 +594,10 @@ export function consumeCredit(
         return { success: true, usedBonus: true };
       }
     }
-    return { 
-      success: false, 
-      usedBonus: false, 
-      reason: "Quota mensuel épuisé et pas de crédits bonus" 
+    return {
+      success: false,
+      usedBonus: false,
+      reason: "Quota mensuel épuisé et pas de crédits bonus",
     };
   }
 }

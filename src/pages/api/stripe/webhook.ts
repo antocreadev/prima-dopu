@@ -82,8 +82,12 @@ export const POST: APIRoute = async ({ request }) => {
         if (session.mode === "subscription") {
           // Abonnement créé - La création effective est gérée par invoice.payment_succeeded
           // Ici on log juste pour debug car l'abonnement sera créé/mis à jour par l'invoice
-          console.log(`📝 Checkout subscription complété pour ${userId}, subscription: ${session.subscription}`);
-          console.log(`📝 L'abonnement sera créé/mis à jour via invoice.payment_succeeded`);
+          console.log(
+            `📝 Checkout subscription complété pour ${userId}, subscription: ${session.subscription}`
+          );
+          console.log(
+            `📝 L'abonnement sera créé/mis à jour via invoice.payment_succeeded`
+          );
         } else if (session.mode === "payment") {
           // Achat de crédits
           const creditsToAdd = quantity;
@@ -126,11 +130,13 @@ export const POST: APIRoute = async ({ request }) => {
           // Détecter le changement de plan depuis le produit
           const productId = item?.price?.product as string;
           let planType = sub.plan_type;
-          
+
           if (productId) {
             try {
               const product = await stripe.products.retrieve(productId);
-              const productType = product.metadata?.type as ProductType | undefined;
+              const productType = product.metadata?.type as
+                | ProductType
+                | undefined;
               if (productType) {
                 planType = getPlanFromProductType(productType);
               }
@@ -156,7 +162,9 @@ export const POST: APIRoute = async ({ request }) => {
             }),
           });
 
-          console.log(`🔄 Abonnement mis à jour pour ${sub.user_id} (plan: ${planType})`);
+          console.log(
+            `🔄 Abonnement mis à jour pour ${sub.user_id} (plan: ${planType})`
+          );
         }
         break;
       }
