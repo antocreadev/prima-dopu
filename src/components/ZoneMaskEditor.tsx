@@ -36,6 +36,11 @@ export default function ZoneMaskEditor({
     lastX: 0,
     lastY: 0,
   });
+  const originalImageSizeRef = useRef<{ width: number; height: number; scale: number }>({
+    width: 0,
+    height: 0,
+    scale: 1,
+  });
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -68,6 +73,13 @@ export default function ZoneMaskEditor({
 
       const canvasWidth = img.width * scale;
       const canvasHeight = img.height * scale;
+
+      // Stocker les dimensions originales pour l'export
+      originalImageSizeRef.current = {
+        width: img.width,
+        height: img.height,
+        scale: scale,
+      };
 
       canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
 
@@ -353,7 +365,54 @@ export default function ZoneMaskEditor({
     }
   };
 
-  const downloadDebugMask = () => {
+  // Fonction pour normaliser le masque en noir/blanc pur (pas de gris)
+  const normalizeMask = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        const ctx = tempCanvas.getContext("2d")!;
+        
+        // Dessiner l'image
+        ctx.drawImage(img, 0, 0);
+        
+        // Récupérer les pixels
+        const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const data = imageData.data;
+        
+        // Convertir chaque pixel en noir ou blanc pur
+        // Si la luminosité > 10, c'est blanc, sinon noir
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const luminosity = (r + g + b) / 3;
+          
+          if (luminosity > 10) {
+            // Blanc pur
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+            data[i + 3] = 255;
+          } else {
+            // Noir pur
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+            data[i + 3] = 255;
+          }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        resolve(tempCanvas.toDataURL("image/png"));
+      };
+      img.src = dataUrl;
+    });
+  };
+
+  const downloadDebugMask = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
@@ -370,11 +429,15 @@ export default function ZoneMaskEditor({
     canvas.backgroundImage = undefined;
     canvas.renderAll();
 
-    // Exporter le masque
-    const maskDataUrl = canvas.toDataURL({
+    // Calculer le multiplier pour exporter à la taille originale de l'image
+    const { scale } = originalImageSizeRef.current;
+    const exportMultiplier = scale > 0 ? 1 / scale : 1;
+
+    // Exporter le masque brut à la taille originale de l'image
+    const rawMaskDataUrl = canvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier: 1,
+      multiplier: exportMultiplier,
     });
 
     // Restaurer l'image de fond, le zoom et la position
@@ -386,6 +449,9 @@ export default function ZoneMaskEditor({
       );
     }
     canvas.renderAll();
+
+    // Normaliser le masque en noir/blanc pur
+    const maskDataUrl = await normalizeMask(rawMaskDataUrl);
 
     // Télécharger le masque
     const link = document.createElement("a");
@@ -394,7 +460,7 @@ export default function ZoneMaskEditor({
     link.click();
   };
 
-  const handleSave = () => {
+  const downloadMaskedPreview = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
@@ -411,11 +477,15 @@ export default function ZoneMaskEditor({
     canvas.backgroundImage = undefined;
     canvas.renderAll();
 
-    // Exporter le masque (blanc sur noir)
-    const maskDataUrl = canvas.toDataURL({
+    // Calculer le multiplier pour exporter à la taille originale de l'image
+    const { scale } = originalImageSizeRef.current;
+    const exportMultiplier = scale > 0 ? 1 / scale : 1;
+
+    // Exporter le masque (blanc sur noir) à la taille originale de l'image
+    const rawMaskDataUrl = canvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier: 1,
+      multiplier: exportMultiplier,
     });
 
     // Restaurer l'image de fond, le zoom et la position
@@ -428,7 +498,87 @@ export default function ZoneMaskEditor({
     }
     canvas.renderAll();
 
-    onSave(maskDataUrl);
+    // Normaliser le masque en noir/blanc pur
+    const maskDataUrl = await normalizeMask(rawMaskDataUrl);
+
+    // Appeler l'API pour appliquer le masque
+    try {
+      // Convertir le dataURL du masque en blob
+      const maskBlob = await fetch(maskDataUrl).then(r => r.blob());
+      
+      // Récupérer l'image originale
+      const imageBlob = await fetch(imageUrl).then(r => r.blob());
+      
+      const formData = new FormData();
+      formData.append("image", imageBlob, "image.png");
+      formData.append("mask", maskBlob, "mask.png");
+      
+      const response = await fetch("/api/apply-mask", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("Erreur API");
+      }
+      
+      const resultBlob = await response.blob();
+      const resultUrl = URL.createObjectURL(resultBlob);
+      
+      // Télécharger le résultat
+      const link = document.createElement("a");
+      link.download = "masked-preview.png";
+      link.href = resultUrl;
+      link.click();
+      
+      URL.revokeObjectURL(resultUrl);
+    } catch (error) {
+      console.error("Erreur lors de l'application du masque:", error);
+      alert("Erreur lors de l'application du masque");
+    }
+  };
+
+  const handleSave = async () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    // Sauvegarder l'état actuel
+    const bgImage = canvas.backgroundImage;
+    const currentZoom = canvas.getZoom();
+    const currentVpt = canvas.viewportTransform?.slice();
+
+    // Réinitialiser le zoom et la position pour l'export
+    canvas.setZoom(1);
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+
+    // Retirer temporairement l'image de fond pour exporter seulement le masque
+    canvas.backgroundImage = undefined;
+    canvas.renderAll();
+
+    // Calculer le multiplier pour exporter à la taille originale de l'image
+    const { scale } = originalImageSizeRef.current;
+    const exportMultiplier = scale > 0 ? 1 / scale : 1;
+
+    // Exporter le masque brut à la taille originale de l'image
+    const rawMaskDataUrl = canvas.toDataURL({
+      format: "png",
+      quality: 1,
+      multiplier: exportMultiplier,
+    });
+
+    // Restaurer l'image de fond, le zoom et la position
+    canvas.backgroundImage = bgImage;
+    canvas.setZoom(currentZoom);
+    if (currentVpt && currentVpt.length === 6) {
+      canvas.setViewportTransform(
+        currentVpt as [number, number, number, number, number, number]
+      );
+    }
+    canvas.renderAll();
+
+    // Normaliser le masque en noir/blanc pur avant de sauvegarder
+    const normalizedMaskDataUrl = await normalizeMask(rawMaskDataUrl);
+    onSave(normalizedMaskDataUrl);
   };
 
   return (
@@ -516,9 +666,16 @@ export default function ZoneMaskEditor({
             <button
               onClick={downloadDebugMask}
               className="px-3 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors text-sm"
-              title="Télécharger le masque pour debug"
+              title="Télécharger le masque noir/blanc"
             >
-              🐛 Debug
+              🐛 Masque
+            </button>
+            <button
+              onClick={downloadMaskedPreview}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+              title="Voir le résultat avec le masque appliqué"
+            >
+              👁️ Aperçu
             </button>
           </div>
 
