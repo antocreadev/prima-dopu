@@ -352,6 +352,7 @@ const creditStats = getCreditStats(
     .getElementById("restart-tutorial")
     ?.addEventListener("click", () => {
       localStorage.removeItem("primadopu_tutorial_completed");
+      localStorage.setItem("primadopu_show_tutorial", "true");
       window.location.href = "/generate";
     });
 
