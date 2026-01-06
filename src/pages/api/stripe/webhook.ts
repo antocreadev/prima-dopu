@@ -80,36 +80,10 @@ export const POST: APIRoute = async ({ request }) => {
         );
 
         if (session.mode === "subscription") {
-          // Abonnement créé
-          const subscriptionId = session.subscription as string;
-          const subscription = await stripe.subscriptions.retrieve(
-            subscriptionId
-          );
-          const planType = productType
-            ? getPlanFromProductType(productType)
-            : "standard";
-
-          // Dans l'API Stripe 2025-12-15.clover, current_period est sur les items
-          const item = subscription.items.data[0];
-          const periodStart = (item as any)?.current_period_start;
-          const periodEnd = (item as any)?.current_period_end;
-          const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
-
-          upsertSubscription(userId, {
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: subscriptionId,
-            plan_type: planType,
-            status: "active",
-            current_period_start: periodStart
-              ? new Date(periodStart * 1000).toISOString()
-              : null,
-            current_period_end: periodEnd
-              ? new Date(periodEnd * 1000).toISOString()
-              : null,
-            cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
-          });
-
-          console.log(`📝 Abonnement ${planType} créé pour ${userId}`);
+          // Abonnement créé - La création effective est gérée par invoice.payment_succeeded
+          // Ici on log juste pour debug car l'abonnement sera créé/mis à jour par l'invoice
+          console.log(`📝 Checkout subscription complété pour ${userId}, subscription: ${session.subscription}`);
+          console.log(`📝 L'abonnement sera créé/mis à jour via invoice.payment_succeeded`);
         } else if (session.mode === "payment") {
           // Achat de crédits
           const creditsToAdd = quantity;
@@ -145,23 +119,44 @@ export const POST: APIRoute = async ({ request }) => {
           // Dans l'API Stripe 2025-12-15.clover, current_period_end est sur les items
           const item = subscription.items.data[0];
           const periodEnd = (item as any)?.current_period_end;
+          const periodStart = (item as any)?.current_period_start;
           const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end;
           const status = (subscription as any).status;
 
+          // Détecter le changement de plan depuis le produit
+          const productId = item?.price?.product as string;
+          let planType = sub.plan_type;
+          
+          if (productId) {
+            try {
+              const product = await stripe.products.retrieve(productId);
+              const productType = product.metadata?.type as ProductType | undefined;
+              if (productType) {
+                planType = getPlanFromProductType(productType);
+              }
+            } catch (e) {
+              console.error(`Erreur récupération produit: ${e}`);
+            }
+          }
+
           console.log(
-            `🔍 Subscription update: periodEnd=${periodEnd}, cancel=${cancelAtPeriodEnd}, status=${status}`
+            `🔍 Subscription update: planType=${planType}, periodEnd=${periodEnd}, cancel=${cancelAtPeriodEnd}, status=${status}`
           );
 
-          // Mettre à jour l'abonnement
+          // Mettre à jour l'abonnement avec le nouveau plan
           upsertSubscription(sub.user_id, {
+            plan_type: planType,
             status: status as any,
             cancel_at_period_end: cancelAtPeriodEnd ? 1 : 0,
             ...(periodEnd && {
               current_period_end: new Date(periodEnd * 1000).toISOString(),
             }),
+            ...(periodStart && {
+              current_period_start: new Date(periodStart * 1000).toISOString(),
+            }),
           });
 
-          console.log(`🔄 Abonnement mis à jour pour ${sub.user_id}`);
+          console.log(`🔄 Abonnement mis à jour pour ${sub.user_id} (plan: ${planType})`);
         }
         break;
       }
@@ -295,6 +290,8 @@ export const POST: APIRoute = async ({ request }) => {
 
       // ==========================================
       // PAYMENT INTENT RÉUSSI (achat de crédits one-time)
+      // Note: Les crédits sont déjà ajoutés via checkout.session.completed
+      // Ce handler est gardé pour debug uniquement
       // ==========================================
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
@@ -303,36 +300,12 @@ export const POST: APIRoute = async ({ request }) => {
         const productType = paymentIntent.metadata?.productType;
 
         console.log(
-          `🔍 PaymentIntent metadata:`,
+          `🔍 PaymentIntent reçu (ignoré - déjà traité par checkout.session.completed):`,
           JSON.stringify(paymentIntent.metadata)
         );
 
-        // Seulement traiter les achats de crédits (pas les abonnements)
-        if (
-          userId &&
-          (productType === "credit_with_sub" || productType === "credit_no_sub")
-        ) {
-          const creditsToAdd = quantity;
-
-          // Vérifier si pas déjà traité via checkout.session.completed
-          // On utilise l'ID du payment_intent pour éviter les doublons
-
-          // Enregistrer l'achat
-          createCreditPurchase(userId, {
-            stripe_payment_intent_id: paymentIntent.id,
-            credits_amount: creditsToAdd,
-            price_paid: paymentIntent.amount || 0,
-            currency: paymentIntent.currency || "eur",
-            status: "completed",
-          });
-
-          // Ajouter les crédits
-          const newBalance = addCredits(userId, creditsToAdd);
-
-          console.log(
-            `💰 ${creditsToAdd} crédits ajoutés via PaymentIntent pour ${userId} (nouveau solde: ${newBalance})`
-          );
-        }
+        // NE PAS ajouter de crédits ici - c'est fait dans checkout.session.completed
+        // Cet événement arrive APRÈS checkout.session.completed et causerait un doublon
         break;
       }
 
