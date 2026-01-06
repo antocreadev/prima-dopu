@@ -58,19 +58,19 @@ const { isFirstTime } = Astro.props;
     </div>
   </div>
 
-  <!-- Overlay bloquant -->
+  <!-- Overlay bloquant avec trou découpé -->
   <div 
     id="tutorial-overlay"
     class="fixed inset-0 pointer-events-auto"
-    style="z-index: 99998; background: rgba(0,0,0,0.7);"
+    style="z-index: 99998; background: rgba(0,0,0,0.8);"
   >
   </div>
 
-  <!-- Highlight autour de l'élément (trou dans l'overlay) - COMPLÈTEMENT TRANSPARENT -->
+  <!-- Bordure autour de l'élément ciblé (juste la bordure, pas d'overlay) -->
   <div 
     id="tutorial-highlight"
-    class="fixed pointer-events-none rounded-lg"
-    style="z-index: 99999; box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); transition: all 0.3s ease; border: 3px solid rgba(99, 102, 241, 0.8);"
+    class="fixed pointer-events-none rounded-xl"
+    style="z-index: 99999; border: 4px solid #818cf8; background: transparent;"
   >
   </div>
 
@@ -183,13 +183,14 @@ const { isFirstTime } = Astro.props;
 
 <style>
   @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 0.8); }
-    50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 1); }
-    100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.75); border-color: rgba(99, 102, 241, 0.8); }
+    0% { border-color: #818cf8; }
+    50% { border-color: #c7d2fe; }
+    100% { border-color: #818cf8; }
   }
   
   #tutorial-highlight {
-    animation: pulse-ring 2s infinite;
+    animation: pulse-ring 1.5s ease-in-out infinite;
+    background: transparent !important;
   }
   
   /* Ajouter un padding au body quand le tutoriel est actif */
@@ -473,17 +474,44 @@ const { isFirstTime } = Astro.props;
       if (!target) return;
 
       const rect = target.getBoundingClientRect();
-      const padding = 8;
+      const padding = 12;
+      
+      // Calculer les coordonnées du trou
+      const holeTop = rect.top - padding;
+      const holeLeft = rect.left - padding;
+      const holeWidth = rect.width + padding * 2;
+      const holeHeight = rect.height + padding * 2;
+      const holeRight = holeLeft + holeWidth;
+      const holeBottom = holeTop + holeHeight;
+      
+      // Créer un clip-path polygon qui fait un trou dans l'overlay
+      // Le polygon dessine l'extérieur (écran entier) puis l'intérieur (trou) en sens inverse
+      const clipPath = `polygon(
+        0% 0%, 
+        0% 100%, 
+        ${holeLeft}px 100%, 
+        ${holeLeft}px ${holeTop}px, 
+        ${holeRight}px ${holeTop}px, 
+        ${holeRight}px ${holeBottom}px, 
+        ${holeLeft}px ${holeBottom}px, 
+        ${holeLeft}px 100%, 
+        100% 100%, 
+        100% 0%
+      )`;
+      
+      this.overlay.style.clipPath = clipPath;
 
-      this.highlight.style.top = `${rect.top - padding}px`;
-      this.highlight.style.left = `${rect.left - padding}px`;
-      this.highlight.style.width = `${rect.width + padding * 2}px`;
-      this.highlight.style.height = `${rect.height + padding * 2}px`;
+      // Positionner la bordure highlight
+      this.highlight.style.top = `${holeTop}px`;
+      this.highlight.style.left = `${holeLeft}px`;
+      this.highlight.style.width = `${holeWidth}px`;
+      this.highlight.style.height = `${holeHeight}px`;
 
-      this.clickzone.style.top = `${rect.top - padding}px`;
-      this.clickzone.style.left = `${rect.left - padding}px`;
-      this.clickzone.style.width = `${rect.width + padding * 2}px`;
-      this.clickzone.style.height = `${rect.height + padding * 2}px`;
+      // Positionner la zone cliquable
+      this.clickzone.style.top = `${holeTop}px`;
+      this.clickzone.style.left = `${holeLeft}px`;
+      this.clickzone.style.width = `${holeWidth}px`;
+      this.clickzone.style.height = `${holeHeight}px`;
 
       this.positionTooltip(rect);
 
