@@ -72,6 +72,24 @@ try {
   // La colonne existe déjà
 }
 
+// Migration: ajouter mask_image_path si la colonne n'existe pas
+try {
+  db.exec(
+    `ALTER TABLE instructions ADD COLUMN mask_image_path TEXT`
+  );
+} catch {
+  // La colonne existe déjà
+}
+
+// Migration: créer l'index pour mask_image_path
+try {
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_instructions_mask ON instructions(mask_image_path)`
+  );
+} catch {
+  // L'index existe déjà
+}
+
 export default db;
 
 // Types
@@ -106,6 +124,7 @@ export interface Instruction {
   generation_id: string;
   location: string;
   reference_id: string;
+  mask_image_path?: string;
 }
 
 // Fonctions pour les dossiers
@@ -310,18 +329,20 @@ export function deleteGeneration(id: string, userId: string): boolean {
 export function createInstruction(
   generationId: string,
   location: string,
-  referenceId: string
+  referenceId: string,
+  maskImagePath?: string
 ): Instruction {
   const id = crypto.randomUUID();
   const stmt = db.prepare(`
-    INSERT INTO instructions (id, generation_id, location, reference_id) VALUES (?, ?, ?, ?)
+    INSERT INTO instructions (id, generation_id, location, reference_id, mask_image_path) VALUES (?, ?, ?, ?, ?)
   `);
-  stmt.run(id, generationId, location, referenceId);
+  stmt.run(id, generationId, location, referenceId, maskImagePath || null);
   return {
     id,
     generation_id: generationId,
     location,
     reference_id: referenceId,
+    mask_image_path: maskImagePath,
   };
 }
 
@@ -341,6 +362,7 @@ export function getGenerationInstructions(
     generation_id: row.generation_id,
     location: row.location,
     reference_id: row.reference_id,
+    mask_image_path: row.mask_image_path,
     reference: {
       id: row.ref_id,
       user_id: row.ref_user_id,

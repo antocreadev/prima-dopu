@@ -146,6 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         referenceName?: string;
         modificationType?: ModificationType;
         isNew?: boolean;
+        hasMask?: boolean;
       }>;
 
       await sendEvent("log", {
@@ -161,6 +162,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
         let referenceId = instr.referenceId;
         let referencePath = "";
         let referenceName = "";
+        let maskImagePath: string | undefined;
+
+        // Gérer le masque si présent
+        if (instr.hasMask) {
+          const maskFile = formData.get(`mask_${i}`) as File;
+          if (maskFile) {
+            await sendEvent("log", {
+              icon: "🖌️",
+              message: `Masque détecté pour instruction ${i + 1}`,
+            });
+            maskImagePath = await saveImage(maskFile, userId, "references");
+            await sendEvent("log", {
+              icon: "💾",
+              message: `Masque sauvegardé`,
+            });
+          }
+        }
 
         if (instr.isNew) {
           const newRefFile = formData.get(`newRef_${i}`) as File;
@@ -210,12 +228,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         if (referenceId && referencePath) {
-          createInstruction(generation.id, instr.location, referenceId);
+          createInstruction(generation.id, instr.location, referenceId, maskImagePath);
 
           const instruction: GenerationInstruction = {
             location: instr.location,
             referenceImagePath: referencePath,
             referenceName: referenceName,
+            maskImagePath: maskImagePath,
           };
 
           if (instr.modificationType) {
@@ -225,7 +244,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           geminiInstructions.push(instruction);
           await sendEvent("log", {
             icon: "✓",
-            message: `[${i + 1}] "${instr.location}" → ${referenceName}`,
+            message: `[${i + 1}] "${instr.location}" → ${referenceName}${maskImagePath ? " (avec masque)" : ""}`,
             type: "success",
           });
         }

@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
 import ShareButtons from "../components/ShareButtons.astro";
 import OnboardingTutorial from "../components/OnboardingTutorial.astro";
+import ZoneMaskEditor from "../components/ZoneMaskEditor.tsx";
 import {
   getUserReferences,
   getUserFolders,
@@ -557,7 +558,9 @@ folders.forEach((f) => {
           <h2 class="text-xl font-semibold mb-4">Ajouter une instruction</h2>
 
           <div class="mb-4">
-            <label class="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2">
+            <label
+              class="flex items-center gap-1.5 text-sm font-medium text-slate-700 mb-2"
+            >
               Zone à modifier *
               <button
                 type="button"
@@ -565,17 +568,43 @@ folders.forEach((f) => {
                 class="text-slate-400 hover:text-indigo-600 transition-colors"
                 title="Voir les conseils"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
                 </svg>
               </button>
             </label>
-            <input
-              type="text"
-              id="instructionLocation"
-              placeholder="Ex: tout le sol, mur de droite, tous les murs..."
-              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="instructionLocation"
+                placeholder="Ex: tout le sol, mur de droite, tous les murs..."
+                class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                id="openMaskEditorBtn"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm whitespace-nowrap"
+                title="Délimiter la zone avec précision"
+              >
+                🖌️ Délimiter
+              </button>
+            </div>
+            <div id="maskIndicator" class="mt-2 text-xs text-green-600 items-center gap-1 hidden">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              Zone délimitée avec précision
+            </div>
 
             <!-- Suggestions rapides -->
             <div class="mt-2 flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
@@ -633,29 +662,44 @@ folders.forEach((f) => {
             </div>
 
             <!-- Conseils (cachés par défaut) - Affichage en notification -->
-            <div id="tipsSection" class="fixed top-4 right-4 z-50 hidden max-w-sm animate-fadeIn">
-              <div class="bg-white border-l-4 border-amber-400 shadow-xl rounded-lg p-4">
+            <div
+              id="tipsSection"
+              class="fixed top-4 right-4 z-50 hidden max-w-sm animate-fadeIn"
+            >
+              <div
+                class="bg-white border-l-4 border-amber-400 shadow-xl rounded-lg p-4"
+              >
                 <div class="flex items-start gap-3">
                   <div class="flex-shrink-0">
-                    <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    <svg
+                      class="w-5 h-5 text-amber-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clip-rule="evenodd"></path>
                     </svg>
                   </div>
                   <div class="flex-1">
                     <p class="font-medium mb-2 text-amber-800 text-sm">
                       💡 Conseils pour de meilleurs résultats
                     </p>
-                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600">
+                    <ul
+                      class="list-disc list-inside space-y-1 text-xs text-slate-600"
+                    >
                       <li>
-                        <strong>Soyez précis</strong> : "mur de droite" plutôt que "mur"
+                        <strong>Soyez précis</strong> : "mur de droite" plutôt que
+                        "mur"
                       </li>
                       <li>
                         <strong>Une zone par instruction</strong> : créez une instruction
                         par zone
                       </li>
                       <li>
-                        <strong>Pour le sol</strong> : précisez "pose horizontale" ou "pose
-                        verticale" si souhaité
+                        <strong>Pour le sol</strong> : précisez "pose horizontale"
+                        ou "pose verticale" si souhaité
                       </li>
                     </ul>
                   </div>
@@ -664,8 +708,17 @@ folders.forEach((f) => {
                     id="closeTipsBtn"
                     class="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                   </button>
                 </div>
@@ -875,6 +928,9 @@ folders.forEach((f) => {
           class="max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl cursor-default"
         />
       </div>
+
+      <!-- Zone Mask Editor -->
+      <div id="maskEditorContainer"></div>
     </div>
   </SignedIn>
 </Layout>
@@ -888,6 +944,7 @@ folders.forEach((f) => {
     referenceName?: string;
     isNew?: boolean;
     newFile?: File;
+    maskDataUrl?: string;
   }
 
   let currentStep = 1;
@@ -895,6 +952,8 @@ folders.forEach((f) => {
   let instructions: Instruction[] = [];
   let useLibrary = true;
   let newReferenceFile: File | null = null;
+  let showMaskEditor = false;
+  let currentMaskDataUrl: string | null = null;
 
   // Éléments DOM
   const step1 = document.getElementById("step1")!;
@@ -953,6 +1012,9 @@ folders.forEach((f) => {
   const errorMessage = document.getElementById("errorMessage")!;
   const newGenerationBtn = document.getElementById("newGenerationBtn")!;
   const retryBtn = document.getElementById("retryBtn")!;
+  const openMaskEditorBtn = document.getElementById("openMaskEditorBtn")!;
+  const maskIndicator = document.getElementById("maskIndicator")!;
+  const maskEditorContainer = document.getElementById("maskEditorContainer")!;
 
   // Indicateurs
   const step1Indicator = document.getElementById("step1Indicator")!;
@@ -1148,6 +1210,8 @@ folders.forEach((f) => {
     instructionLocation.value = "";
     newReferenceName.value = "";
     newReferenceFile = null;
+    currentMaskDataUrl = null;
+    maskIndicator.classList.add("hidden");
     newRefPlaceholder.classList.remove("hidden");
     newRefPreview.classList.add("hidden");
     document
@@ -1164,7 +1228,7 @@ folders.forEach((f) => {
     newReferenceUpload.classList.add("hidden");
     instructionModal.classList.remove("hidden");
     instructionModal.classList.add("flex");
-    
+
     // Cacher les conseils par défaut à l'ouverture
     const tipsSection = document.getElementById("tipsSection");
     if (tipsSection) tipsSection.classList.add("hidden");
@@ -1183,18 +1247,67 @@ folders.forEach((f) => {
   const toggleTipsBtn = document.getElementById("toggleTipsBtn");
   const tipsSection = document.getElementById("tipsSection");
   const closeTipsBtn = document.getElementById("closeTipsBtn");
-  
+
   if (toggleTipsBtn && tipsSection) {
     toggleTipsBtn.addEventListener("click", () => {
       tipsSection.classList.toggle("hidden");
     });
   }
-  
+
   if (closeTipsBtn && tipsSection) {
     closeTipsBtn.addEventListener("click", () => {
       tipsSection.classList.add("hidden");
     });
   }
+
+  // Gestionnaire pour l'éditeur de masque
+  openMaskEditorBtn.addEventListener("click", async () => {
+    if (!selectedImage) {
+      alert("Veuillez d'abord sélectionner une image");
+      return;
+    }
+
+    // Créer l'URL de l'image originale
+    const imageUrl = URL.createObjectURL(selectedImage);
+
+    // Obtenir la référence sélectionnée pour l'aperçu
+    let referenceImageUrl: string | undefined;
+    if (useLibrary) {
+      const selectedRadio = document.querySelector(
+        'input[name="selectedReference"]:checked'
+      ) as HTMLInputElement;
+      if (selectedRadio) {
+        const refPath = selectedRadio.value;
+        referenceImageUrl = getImageUrl(refPath);
+      }
+    } else if (newReferenceFile) {
+      referenceImageUrl = URL.createObjectURL(newReferenceFile);
+    }
+
+    // Dynamiquement importer et rendre le composant ZoneMaskEditor
+    const { default: ZoneMaskEditor } = await import(
+      "../components/ZoneMaskEditor.tsx"
+    );
+    const { createRoot } = await import("react-dom/client");
+    const { createElement } = await import("react");
+
+    const root = createRoot(maskEditorContainer);
+    root.render(
+      createElement(ZoneMaskEditor, {
+        imageUrl,
+        referenceImage: referenceImageUrl,
+        onSave: (maskDataUrl: string) => {
+          currentMaskDataUrl = maskDataUrl;
+          maskIndicator.classList.remove("hidden");
+          maskIndicator.classList.add("flex");
+          root.unmount();
+        },
+        onCancel: () => {
+          root.unmount();
+        },
+      })
+    );
+  });
 
   useLibraryBtn.addEventListener("click", () => {
     useLibrary = true;
@@ -1309,6 +1422,7 @@ folders.forEach((f) => {
         referenceId: selected.value,
         referencePath: selected.dataset.path || "",
         referenceName: selected.dataset.name || undefined,
+        maskDataUrl: currentMaskDataUrl || undefined,
       });
     } else {
       if (!newReferenceFile) {
@@ -1322,6 +1436,7 @@ folders.forEach((f) => {
         referenceName: newReferenceName.value.trim() || undefined,
         isNew: true,
         newFile: newReferenceFile,
+        maskDataUrl: currentMaskDataUrl || undefined,
       });
     }
 
@@ -1509,6 +1624,7 @@ folders.forEach((f) => {
             referenceId: i.referenceId,
             referenceName: i.referenceName,
             isNew: i.isNew,
+            hasMask: !!i.maskDataUrl,
           }))
         )
       );
@@ -1519,6 +1635,17 @@ folders.forEach((f) => {
           formData.append(`newRef_${idx}`, instr.newFile);
         }
       });
+
+      // Ajouter les masques
+      for (let idx = 0; idx < instructions.length; idx++) {
+        const instr = instructions[idx];
+        if (instr.maskDataUrl) {
+          // Convertir dataURL en Blob
+          const response = await fetch(instr.maskDataUrl);
+          const blob = await response.blob();
+          formData.append(`mask_${idx}`, blob, `mask_${idx}.png`);
+        }
+      }
 
       // Utiliser fetch avec streaming pour le SSE
       const response = await fetch("/api/generate-stream", {
