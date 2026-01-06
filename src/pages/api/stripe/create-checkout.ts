@@ -17,7 +17,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { priceId, quantity = 1 } = await request.json();
+    let { priceId, quantity = 1 } = await request.json();
+
+    // Valider la quantité (minimum 1)
+    quantity = Math.max(1, parseInt(quantity) || 1);
 
     if (!priceId) {
       return new Response(JSON.stringify({ error: "priceId requis" }), {

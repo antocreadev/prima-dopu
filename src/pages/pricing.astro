@@ -587,7 +587,6 @@ if (userId) {
         <input 
           type="number" 
           min="1" 
-          max="100" 
           value="5" 
           class="credit-quantity w-20 px-2 py-2 border border-slate-300 rounded-lg text-center font-semibold text-lg"
           data-price-id="${price.id}"
@@ -621,18 +620,22 @@ if (userId) {
     const qtyBtns = card.querySelectorAll(".qty-btn");
 
     const updateTotal = () => {
-      const qty = parseInt(input.value) || 1;
+      let qty = parseInt(input.value) || 1;
+      // Forcer la quantité minimum à 1
+      if (qty < 1) qty = 1;
+      input.value = qty.toString();
       const total = (price.amount * qty) / 100;
       totalEl.textContent = `${total.toFixed(2)}€`;
     };
 
     input?.addEventListener("input", updateTotal);
+    input?.addEventListener("blur", updateTotal); // Valider aussi quand on quitte le champ
 
     qtyBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
         const action = btn.dataset.action;
         let qty = parseInt(input.value) || 1;
-        if (action === "increase" && qty < 100) qty++;
+        if (action === "increase") qty++;
         if (action === "decrease" && qty > 1) qty--;
         input.value = qty.toString();
         updateTotal();
@@ -666,9 +669,12 @@ if (userId) {
   }
 
   async function checkoutCredits(priceId, button) {
-    const card = button.closest(".rounded-xl");
+    const card = button.closest(".rounded-2xl");
     const input = card?.querySelector(".credit-quantity");
-    const quantity = parseInt(input?.value) || 1;
+    let quantity = parseInt(input?.value) || 1;
+    
+    // Valider la quantité (minimum 1)
+    if (quantity < 1) quantity = 1;
 
     try {
       const response = await fetch("/api/stripe/create-checkout", {
