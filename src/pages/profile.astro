@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
 import { getCreditStats, getUserCredits, type PlanType } from "../lib/db";
-import { getUserPlanFromAuth } from "../lib/plans";
+import { getUserPlan } from "../lib/plans";
 import { getSubscription, getCreditsBalance } from "../lib/subscriptions";
 
 const auth = Astro.locals.auth();
@@ -16,7 +16,7 @@ if (!userId) {
 const user = await Astro.locals.currentUser();
 
 // Déterminer le plan de l'utilisateur
-const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
+const userPlanInfo = getUserPlan(userId);
 const isAdmin = userPlanInfo.isAdmin === true;
 const credits = getUserCredits(userId);
 

@@ -9,7 +9,7 @@ import {
   canUserGenerate,
   type PlanType,
 } from "../lib/db";
-import { getUserPlanFromAuth } from "../lib/plans";
+import { getUserPlan } from "../lib/plans";
 import { getCreditsBalance } from "../lib/subscriptions";
 
 const auth = Astro.locals.auth();
@@ -20,7 +20,7 @@ if (!userId) {
 }
 
 // Déterminer le plan de l'utilisateur
-const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
+const userPlanInfo = getUserPlan(userId);
 const isAdmin = userPlanInfo.isAdmin === true;
 
 // Récupérer les crédits bonus (supplémentaires achetés)

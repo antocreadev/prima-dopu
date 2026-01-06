@@ -15,7 +15,7 @@ import {
   type GenerationInstruction,
   type ModificationType,
 } from "../../lib/gemini";
-import { getUserPlanFromAuth, isAdminUser } from "../../lib/plans";
+import { getUserPlan, isAdminUser } from "../../lib/plans";
 import { getCreditsBalance, useCredit } from "../../lib/subscriptions";
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -38,8 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log(`👤 User: ${userId}`);
 
     // Vérifier le plan de l'utilisateur et ses crédits
-    const authObj = locals.auth();
-    const userPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
+    const userPlanInfo = getUserPlan(userId);
 
     // Les admins ont des générations illimitées
     const isAdmin = isAdminUser(userId);

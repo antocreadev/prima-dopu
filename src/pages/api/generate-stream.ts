@@ -14,9 +14,8 @@ import {
   type GenerationInstruction,
   type ModificationType,
 } from "../../lib/gemini";
-import { getUserPlanFromAuth, isAdminUser } from "../../lib/plans";
+import { getUserPlan, isAdminUser } from "../../lib/plans";
 import {
-  getUserPlanInfo,
   getCreditsBalance,
   useCredit,
 } from "../../lib/subscriptions";
@@ -71,40 +70,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Utilisateur: ${userId.substring(0, 10)}...`,
       });
 
-      // Vérifier le plan de l'utilisateur (hybride Clerk + Stripe)
+      // Vérifier le plan de l'utilisateur
       const isAdmin = isAdminUser(userId);
 
-      // D'abord vérifier avec le nouveau système Stripe
-      const stripePlanInfo = getUserPlanInfo(userId, isAdmin);
-      const stripeCreditsBalance = getCreditsBalance(userId);
-
-      // Ensuite vérifier avec l'ancien système Clerk (pour transition)
-      const authObj = locals.auth();
-      const clerkPlanInfo = getUserPlanFromAuth(authObj.has as any, userId);
-
-      // Utiliser le plan le plus avantageux entre Clerk et Stripe
-      const effectivePlanType = stripePlanInfo.isPaid
-        ? stripePlanInfo.planType
-        : clerkPlanInfo.planType;
-      const effectivePlanName = stripePlanInfo.isPaid
-        ? stripePlanInfo.planName
-        : clerkPlanInfo.planName;
+      // Récupérer le plan Stripe et les crédits bonus
+      const userPlanInfo = getUserPlan(userId);
+      const creditsBalance = getCreditsBalance(userId);
 
       // Passer les crédits bonus à canUserGenerate pour le compteur total
       const creditCheck = canUserGenerate(
         userId,
-        effectivePlanType,
+        userPlanInfo.planType,
         isAdmin,
-        stripeCreditsBalance
+        creditsBalance
       );
 
-      // Afficher les crédits bonus Stripe s'il y en a
+      // Afficher les crédits bonus s'il y en a
       const creditsInfo =
-        stripeCreditsBalance > 0 ? ` + ${stripeCreditsBalance} bonus` : "";
+        creditsBalance > 0 ? ` + ${creditsBalance} bonus` : "";
 
       await sendEvent("log", {
         icon: "📊",
-        message: `Plan: ${effectivePlanName} | Crédits: ${creditCheck.used}/${
+        message: `Plan: ${userPlanInfo.planName} | Crédits: ${creditCheck.used}/${
           isAdmin ? "∞" : creditCheck.totalAvailable
         }${creditsInfo}${isAdmin ? " (Admin)" : ""}`,
       });
@@ -297,8 +284,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (!isAdmin) {
           const creditResult = consumeCredit(
             userId,
-            effectivePlanType,
-            stripeCreditsBalance,
+            userPlanInfo.planType,
+            creditsBalance,
             () => useCredit(userId)
           );
 

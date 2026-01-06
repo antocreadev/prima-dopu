@@ -3,7 +3,7 @@ import { getSubscription, type Subscription } from "./subscriptions";
 
 /**
  * Utilitaire pour déterminer le plan d'un utilisateur
- * basé sur les abonnements Stripe OU les features/plans Clerk Billing
+ * basé sur les abonnements Stripe
  */
 
 // IDs des utilisateurs admin (générations illimitées)
@@ -26,7 +26,6 @@ export function isAdminUser(userId: string): boolean {
 export interface UserPlanInfo {
   planType: PlanType;
   planName: string;
-  planKey: string; // Clé Clerk
   monthlyLimit: number | null;
   totalLimit: number | null;
   isPaid: boolean;
@@ -37,56 +36,42 @@ export interface UserPlanInfo {
 export const ADMIN_PLAN: UserPlanInfo = {
   planType: "pro",
   planName: "Admin",
-  planKey: "admin",
   monthlyLimit: null, // Illimité
   totalLimit: null, // Illimité
   isPaid: true,
   isAdmin: true,
 };
 
-// Mapping des plans Clerk vers notre système
-// Clés Clerk: free_user, abonnement_50, abonnement_100
-export const CLERK_PLAN_MAPPING: Record<string, UserPlanInfo> = {
-  abonnement_100: {
+// Définition des plans
+export const PLANS: Record<PlanType, UserPlanInfo> = {
+  pro: {
     planType: "pro",
-    planName: "Pro",
-    planKey: "abonnement_100",
+    planName: "Pro (50 projets/mois)",
     monthlyLimit: 50,
     totalLimit: null,
     isPaid: true,
   },
-  abonnement_50: {
+  standard: {
     planType: "standard",
-    planName: "Standard",
-    planKey: "abonnement_50",
+    planName: "Standard (25 projets/mois)",
     monthlyLimit: 25,
     totalLimit: null,
     isPaid: true,
   },
-  free_user: {
+  free: {
     planType: "free",
     planName: "Gratuit",
-    planKey: "free_user",
     monthlyLimit: null,
     totalLimit: 3,
     isPaid: false,
   },
 };
 
-// Alias pour compatibilité
-export const PLAN_BY_TYPE: Record<PlanType, UserPlanInfo> = {
-  pro: CLERK_PLAN_MAPPING.abonnement_100,
-  standard: CLERK_PLAN_MAPPING.abonnement_50,
-  free: CLERK_PLAN_MAPPING.free_user,
-};
+// Plan gratuit par défaut
+export const FREE_PLAN = PLANS.free;
 
 /**
- * Type pour la fonction has() de Clerk
- */
-type HasFunction = (params: Record<string, unknown>) => boolean;
-
-/**
- * Mapping du plan_type Stripe vers notre système
+ * Récupère le plan d'un utilisateur depuis son abonnement Stripe
  */
 function getStripeSubscriptionPlan(
   subscription: Subscription
@@ -107,23 +92,9 @@ function getStripeSubscriptionPlan(
   // Mapper le plan_type vers notre système
   switch (subscription.plan_type) {
     case "pro":
-      return {
-        planType: "pro",
-        planName: "Pro (50 projets/mois)",
-        planKey: "stripe_pro",
-        monthlyLimit: 50,
-        totalLimit: null,
-        isPaid: true,
-      };
+      return PLANS.pro;
     case "standard":
-      return {
-        planType: "standard",
-        planName: "Standard (25 projets/mois)",
-        planKey: "stripe_standard",
-        monthlyLimit: 25,
-        totalLimit: null,
-        isPaid: true,
-      };
+      return PLANS.standard;
     default:
       return null;
   }
@@ -132,19 +103,16 @@ function getStripeSubscriptionPlan(
 /**
  * Détermine le plan d'un utilisateur en vérifiant:
  * 1. Si admin (illimité)
- * 2. Abonnement Stripe actif (prioritaire)
- * 3. Plan Clerk (fallback/legacy)
+ * 2. Abonnement Stripe actif
+ * 3. Plan gratuit par défaut
  */
-export function getUserPlanFromAuth(
-  has: HasFunction | undefined,
-  userId?: string | null
-): UserPlanInfo {
+export function getUserPlan(userId?: string | null): UserPlanInfo {
   // 1. Vérifier si l'utilisateur est admin
   if (userId && isAdminUser(userId)) {
     return ADMIN_PLAN;
   }
 
-  // 2. Vérifier l'abonnement Stripe (prioritaire)
+  // 2. Vérifier l'abonnement Stripe
   if (userId) {
     try {
       const stripeSubscription = getSubscription(userId);
@@ -159,31 +127,13 @@ export function getUserPlanFromAuth(
     }
   }
 
-  // 3. Fallback vers Clerk (legacy)
-  if (!has) {
-    return CLERK_PLAN_MAPPING.free_user;
-  }
-
-  // Vérifier dans l'ordre de priorité (du plus élevé au plus bas)
-  try {
-    if (has({ plan: "abonnement_100" })) {
-      return CLERK_PLAN_MAPPING.abonnement_100;
-    }
-
-    if (has({ plan: "abonnement_50" })) {
-      return CLERK_PLAN_MAPPING.abonnement_50;
-    }
-  } catch {
-    // Si has() échoue (Billing pas encore configuré), retourner le plan gratuit
-  }
-
-  // Par défaut, plan gratuit
-  return CLERK_PLAN_MAPPING.free_user;
+  // 3. Par défaut, plan gratuit
+  return FREE_PLAN;
 }
 
 /**
  * Obtenir les infos du plan par son type
  */
 export function getPlanInfo(planType: PlanType): UserPlanInfo {
-  return PLAN_BY_TYPE[planType] || CLERK_PLAN_MAPPING.free_user;
+  return PLANS[planType] || FREE_PLAN;
 }

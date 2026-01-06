@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
-import { getUserPlanFromAuth } from "../lib/plans";
+import { getUserPlan } from "../lib/plans";
 import { getSubscription, getCreditsBalance } from "../lib/subscriptions";
 
 const auth = Astro.locals.auth();
@@ -16,7 +16,7 @@ let currentPlan = {
 };
 
 if (userId) {
-  const userPlanInfo = getUserPlanFromAuth(auth.has as any, userId);
+  const userPlanInfo = getUserPlan(userId);
   const subscription = getSubscription(userId);
   const creditsBalance = getCreditsBalance(userId);
 
