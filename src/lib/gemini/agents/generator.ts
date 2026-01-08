@@ -73,24 +73,44 @@ export async function generateWithNanoBanana(
     });
   }
 
-  // Ajouter les masques combinés s'ils existent
-  // Ces images montrent la référence appliquée dans la zone du masque
-  let maskCount = 0;
-  if (combinedMaskImages && combinedMaskImages.length > 0) {
-    for (const combinedMask of combinedMaskImages) {
-      if (combinedMask) {
-        contents.push({
-          inlineData: { mimeType: combinedMask.mimeType, data: combinedMask.base64 },
-        });
-        maskCount++;
-      }
-    }
-    if (maskCount > 0) {
-      console.log(`   🎭 ${maskCount} masque(s) combiné(s) ajouté(s)`);
-    }
+  // Ajouter le masque fusionné annoté s'il existe
+  // C'est UNE SEULE image qui montre:
+  // - L'image originale comme fond
+  // - Les zones de masque remplies avec les textures de référence correspondantes
+  // - Des numéros dans des cercles colorés au centre de chaque zone
+  // - Des flèches et labels indiquant quelle référence appliquer où
+  // - Des contours colorés autour de chaque zone
+  let hasMask = false;
+  if (combinedMaskImages && combinedMaskImages.length > 0 && combinedMaskImages[0]) {
+    const annotatedMask = combinedMaskImages[0];
+    contents.push({
+      inlineData: { mimeType: annotatedMask.mimeType, data: annotatedMask.base64 },
+    });
+    hasMask = true;
+    console.log(`   🎭 Masque fusionné annoté ajouté (guide visuel des zones)`);
+    
+    // Ajouter une explication textuelle du masque pour Gemini
+    contents.push({
+      text: `
+
+📌 GUIDE VISUEL DES MODIFICATIONS (image précédente):
+L'image annotée ci-dessus te montre EXACTEMENT où et quoi appliquer:
+- Chaque zone numérotée (1, 2, 3...) correspond à une instruction
+- Les contours colorés délimitent PRÉCISÉMENT les zones à modifier
+- À l'intérieur de chaque zone, tu vois déjà un aperçu de la texture/matériau à appliquer
+- Les labels indiquent le nom de la référence et l'instruction
+
+🎯 UTILISE CE GUIDE pour:
+1. Identifier les zones EXACTES à modifier (suivre les contours colorés)
+2. Voir quel matériau/texture appliquer dans chaque zone (déjà visible dans le masque)
+3. Comprendre la correspondance zone ↔ référence ↔ instruction
+
+⚠️ IMPORTANT: Les zones NON colorées/numérotées doivent rester IDENTIQUES à l'image originale.
+`
+    });
   }
 
-  console.log(`   🖼️  ${1 + referenceImages.length + maskCount} images envoyées`);
+  console.log(`   🖼️  ${1 + referenceImages.length + (hasMask ? 1 : 0)} images envoyées`);
 
   // Configuration de l'API
   const apiConfig: any = {

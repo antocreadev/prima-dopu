@@ -237,14 +237,15 @@ export async function generateBeforeAfterWithProgress(
     log(
       "✓",
       `Référence ${i + 1}: ${(refImage.base64.length / 1024).toFixed(0)} KB`
-    );
+  );
   }
 
   // Charger les masques s'ils existent
   const maskImages: (PreparedImage | null)[] = [];
-  const combinedMaskImages: (PreparedImage | null)[] = [];
   let hasMasks = false;
+  let mergedAnnotatedMask: PreparedImage | null = null;
 
+  // D'abord, collecter tous les masques
   for (let i = 0; i < instructions.length; i++) {
     const instr = instructions[i];
     if (instr.maskImagePath) {
@@ -253,33 +254,49 @@ export async function generateBeforeAfterWithProgress(
         const maskImage = await prepareImageForAPI(instr.maskImagePath);
         maskImages.push(maskImage);
         hasMasks = true;
-
-        // Créer le masque combiné (référence dans la zone du masque)
-        const { createCombinedMaskImage } = await import("./utils/image");
-        const combinedMask = await createCombinedMaskImage(
-          originalImage,
-          maskImage,
-          referenceImages[i]
-        );
-        combinedMaskImages.push(combinedMask);
-        
-        // Stocker dans l'instruction pour utilisation ultérieure
-        instructions[i].combinedMaskBase64 = combinedMask.base64;
-        
-        log("✓", `Masque combiné ${i + 1}: ${(combinedMask.base64.length / 1024).toFixed(0)} KB`);
       } catch (error) {
         console.warn(`⚠️ Impossible de charger le masque ${i + 1}:`, error);
         maskImages.push(null);
-        combinedMaskImages.push(null);
       }
     } else {
       maskImages.push(null);
-      combinedMaskImages.push(null);
+    }
+  }
+
+  // Créer UN SEUL masque fusionné et annoté avec toutes les zones
+  if (hasMasks) {
+    const { createMergedAnnotatedMask } = await import("./utils/image");
+    
+    // Collecter les zones valides
+    const zones: Array<{
+      maskImage: PreparedImage;
+      referenceImage: PreparedImage;
+      referenceName: string;
+      instruction: string;
+      referenceIndex: number;
+    }> = [];
+    for (let i = 0; i < instructions.length; i++) {
+      const mask = maskImages[i];
+      if (mask) {
+        zones.push({
+          maskImage: mask,
+          referenceImage: referenceImages[i],
+          referenceName: instructions[i].referenceName || `Référence ${i + 1}`,
+          instruction: instructions[i].location,
+          referenceIndex: i,
+        });
+      }
+    }
+
+    if (zones.length > 0) {
+      log("🔀", `Fusion de ${zones.length} masque(s) en un seul avec annotations...`);
+      mergedAnnotatedMask = await createMergedAnnotatedMask(originalImage, zones);
+      log("✅", `Masque unique annoté créé: ${(mergedAnnotatedMask.base64.length / 1024).toFixed(0)} KB`);
     }
   }
 
   if (hasMasks) {
-    log("🎯", `${maskImages.filter(m => m !== null).length} masque(s) chargé(s) et combiné(s)`);
+    log("🎯", `${maskImages.filter(m => m !== null).length} masque(s) fusionné(s) en 1 image annotée`);
   }
 
   setStep("upload", "done");
@@ -374,14 +391,14 @@ export async function generateBeforeAfterWithProgress(
 
       log("📝", `Envoi du prompt (${prompt.length} caractères)...`);
 
-      // Passer les masques combinés si disponibles
+      // Passer le masque fusionné annoté unique si disponible
       const result = await generateWithNanoBanana(
         originalImage,
         referenceImages,
         prompt,
         outputDir,
         generationId,
-        hasMasks ? combinedMaskImages : undefined
+        mergedAnnotatedMask ? [mergedAnnotatedMask] : undefined
       );
 
       const duration = Date.now() - startTime;
@@ -394,23 +411,18 @@ export async function generateBeforeAfterWithProgress(
         log("🧠", `Mode Thinking: ${result.thoughtCount} image(s) intermédiaire(s)`);
       }
 
-      // Sauvegarder les masques combinés pour debug si présents
+      // Sauvegarder le masque fusionné pour debug si présent
       const combinedMaskPaths: string[] = [];
-      if (hasMasks && combinedMaskImages) {
+      if (mergedAnnotatedMask) {
         const { saveBuffer } = await import("../storage");
-        for (let maskIdx = 0; maskIdx < combinedMaskImages.length; maskIdx++) {
-          const combinedMask = combinedMaskImages[maskIdx];
-          if (combinedMask) {
-            try {
-              const maskFileName = `combined_mask_${generationId}_${maskIdx}.png`;
-              const maskBuffer = Buffer.from(combinedMask.base64, "base64");
-              const maskPath = await saveBuffer(maskBuffer, maskFileName, "generated");
-              combinedMaskPaths.push(maskPath);
-              log("🎭", `Masque combiné ${maskIdx + 1} sauvegardé pour debug`);
-            } catch (e) {
-              console.warn(`Impossible de sauvegarder le masque combiné ${maskIdx}:`, e);
-            }
-          }
+        try {
+          const maskFileName = `merged_annotated_mask_${generationId}.png`;
+          const maskBuffer = Buffer.from(mergedAnnotatedMask.base64, "base64");
+          const maskPath = await saveBuffer(maskBuffer, maskFileName, "generated");
+          combinedMaskPaths.push(maskPath);
+          log("🎭", `Masque fusionné annoté sauvegardé pour debug`);
+        } catch (e) {
+          console.warn(`Impossible de sauvegarder le masque fusionné:`, e);
         }
       }
 
