@@ -326,6 +326,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           type: "success",
         });
 
+        // Log des masques combinés si présents
+        if (result.combinedMaskPaths && result.combinedMaskPaths.length > 0) {
+          await sendEvent("log", {
+            icon: "🎭",
+            message: `${result.combinedMaskPaths.length} masque(s) combiné(s) disponible(s)`,
+          });
+        }
+
         await sendEvent("complete", {
           success: true,
           generationId: generation.id,
@@ -334,6 +342,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           description: result.description,
           attempts: result.attempts,
           duration: parseFloat(duration),
+          combinedMaskPaths: result.combinedMaskPaths,
         });
       } catch (geminiError: any) {
         updateGeneration(generation.id, { status: "failed" });

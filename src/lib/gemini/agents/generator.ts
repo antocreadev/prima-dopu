@@ -24,13 +24,20 @@ export interface GeneratorResult {
 
 /**
  * Agent Générateur - Génère l'image avec Nano Banana Pro
+ * @param originalImage - Image originale
+ * @param referenceImages - Images de référence (matériaux/objets)
+ * @param prompt - Prompt de génération
+ * @param outputDir - Répertoire de sortie
+ * @param generationId - ID de la génération
+ * @param combinedMaskImages - Masques combinés optionnels (référence dans zone sélectionnée)
  */
 export async function generateWithNanoBanana(
   originalImage: PreparedImage,
   referenceImages: PreparedImage[],
   prompt: string,
   outputDir: string,
-  generationId: string
+  generationId: string,
+  combinedMaskImages?: (PreparedImage | null)[]
 ): Promise<GeneratorResult> {
   console.log(
     "   🎨 Agent Générateur: Appel à Nano Banana Pro (gemini-3-pro-image-preview)..."
@@ -59,13 +66,31 @@ export async function generateWithNanoBanana(
     },
   ];
 
+  // Ajouter les images de référence
   for (const refImage of referenceImages) {
     contents.push({
       inlineData: { mimeType: refImage.mimeType, data: refImage.base64 },
     });
   }
 
-  console.log(`   🖼️  ${1 + referenceImages.length} images envoyées`);
+  // Ajouter les masques combinés s'ils existent
+  // Ces images montrent la référence appliquée dans la zone du masque
+  let maskCount = 0;
+  if (combinedMaskImages && combinedMaskImages.length > 0) {
+    for (const combinedMask of combinedMaskImages) {
+      if (combinedMask) {
+        contents.push({
+          inlineData: { mimeType: combinedMask.mimeType, data: combinedMask.base64 },
+        });
+        maskCount++;
+      }
+    }
+    if (maskCount > 0) {
+      console.log(`   🎭 ${maskCount} masque(s) combiné(s) ajouté(s)`);
+    }
+  }
+
+  console.log(`   🖼️  ${1 + referenceImages.length + maskCount} images envoyées`);
 
   // Configuration de l'API
   const apiConfig: any = {

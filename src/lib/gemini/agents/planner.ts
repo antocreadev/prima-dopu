@@ -120,7 +120,9 @@ Réponds UNIQUEMENT avec ce JSON (sans markdown, sans backticks):
 export async function planModificationsWithAgent(
   analysis: ImageAnalysis,
   instructions: GenerationInstruction[],
-  referenceImages: PreparedImage[]
+  referenceImages: PreparedImage[],
+  originalImage?: PreparedImage,
+  maskImages?: (PreparedImage | null)[]
 ): Promise<ModificationPlan> {
   console.log("   📋 Agent Planificateur: Analyse intelligente des modifications...");
 
@@ -133,6 +135,45 @@ export async function planModificationsWithAgent(
     referenceAnalyses.push(refAnalysis);
   }
 
+  // 1b. Analyser les masques si présents
+  console.log("\n   🎭 Étape 1b: Analyse des masques...");
+  const maskAnalyses: (import("./mask-analyzer").MaskAnalysisResult | null)[] = [];
+  
+  if (maskImages && originalImage) {
+    const { analyzeMaskZone } = await import("./mask-analyzer");
+    
+    for (let i = 0; i < instructions.length; i++) {
+      const mask = maskImages[i];
+      if (mask) {
+        console.log(`   🎭 Analyse masque ${i + 1}: "${instructions[i].location}"`);
+        const maskAnalysis = await analyzeMaskZone(
+          originalImage,
+          mask,
+          instructions[i].location,
+          analysis
+        );
+        maskAnalyses.push(maskAnalysis);
+        
+        // Mettre à jour l'instruction avec l'analyse du masque
+        instructions[i].maskAnalysis = {
+          zoneDescription: maskAnalysis.zoneDescription,
+          elementType: maskAnalysis.elementType,
+          elementsInMask: maskAnalysis.elementsInMask,
+          position: maskAnalysis.position,
+          coveragePercent: maskAnalysis.coveragePercent,
+          isPartial: maskAnalysis.isPartial,
+          instructionCorrections: maskAnalysis.instructionCorrections,
+        };
+        instructions[i].improvedLocation = maskAnalysis.improvedInstruction;
+        
+        console.log(`      ✓ Zone: ${maskAnalysis.zoneDescription}`);
+        console.log(`      ✓ Instruction améliorée: "${maskAnalysis.improvedInstruction}"`);
+      } else {
+        maskAnalyses.push(null);
+      }
+    }
+  }
+
   // 2. Parser chaque instruction de manière intelligente
   console.log("\n   🧠 Étape 2: Compréhension intelligente des instructions...");
   const enrichedInstructions: EnrichedInstruction[] = [];
@@ -140,13 +181,29 @@ export async function planModificationsWithAgent(
   for (let i = 0; i < instructions.length; i++) {
     const instr = instructions[i];
     const refAnalysis = referenceAnalyses[i];
+    const maskAnalysis = maskAnalyses[i];
     
-    console.log(`   💬 Parsing instruction ${i + 1}: "${instr.location}"`);
+    // Utiliser l'instruction améliorée par le masque si disponible
+    const instructionToUse = instr.improvedLocation || instr.location;
+    console.log(`   💬 Parsing instruction ${i + 1}: "${instructionToUse}"`);
     
     const enriched = await parseInstructionIntelligently(
-      instr.location,
-      refAnalysis
+      instructionToUse,
+      refAnalysis,
+      maskAnalysis || undefined
     );
+    
+    // Enrichir avec les infos du masque si disponibles
+    if (maskAnalysis) {
+      enriched.zoneConstraints = {
+        ...enriched.zoneConstraints,
+        side: maskAnalysis.position.horizontal === "full-width" ? undefined :
+              maskAnalysis.position.horizontal as "left" | "right" | "center",
+        area: maskAnalysis.isPartial ? "partial" : "full",
+        description: maskAnalysis.zoneDescription,
+      };
+      enriched.targetZone = maskAnalysis.zoneDescription;
+    }
     
     enrichedInstructions.push(enriched);
     
@@ -178,7 +235,8 @@ export async function planModificationsWithAgent(
         ? "➕"
         : "🎨";
     const qtyInfo = task.quantity ? ` (x${task.quantity})` : "";
-    console.log(`      ${emoji} ${task.actionType}: ${targetName}${qtyInfo} → ${task.targetMaterial}`);
+    const maskInfo = task.hasMask ? " 🎭" : "";
+    console.log(`      ${emoji} ${task.actionType}: ${targetName}${qtyInfo}${maskInfo} → ${task.targetMaterial}`);
   }
 
   // 4. Construire le prompt optimisé
@@ -198,17 +256,34 @@ export async function planModificationsWithAgent(
   };
 }
 
+
 /**
  * Parse une instruction de manière intelligente avec l'IA
  */
 async function parseInstructionIntelligently(
   instructionText: string,
-  refAnalysis: ReferenceAnalysis
+  refAnalysis: ReferenceAnalysis,
+  maskAnalysis?: import("./mask-analyzer").MaskAnalysisResult
 ): Promise<EnrichedInstruction> {
+  // Si on a une analyse de masque, enrichir le prompt avec ces infos
+  let additionalContext = "";
+  if (maskAnalysis) {
+    additionalContext = `
+CONTEXTE MASQUE (zone délimitée par l'utilisateur):
+- Zone identifiée: ${maskAnalysis.zoneDescription}
+- Position: ${maskAnalysis.position.horizontal} / ${maskAnalysis.position.vertical}
+- Couverture: ${maskAnalysis.coveragePercent}%
+- Partiel: ${maskAnalysis.isPartial ? "OUI" : "NON"}
+- Éléments dans le masque: ${maskAnalysis.elementsInMask.join(", ")}
+
+⚠️ UTILISE CES INFORMATIONS pour préciser la zone et corriger l'instruction si nécessaire!`;
+  }
+  
   const prompt = INSTRUCTION_PARSER_PROMPT
     .replace("{instruction}", instructionText)
     .replace("{referenceType}", refAnalysis?.type || "unknown")
-    .replace("{referenceCategory}", refAnalysis?.category || "unknown");
+    .replace("{referenceCategory}", refAnalysis?.category || "unknown")
+    + additionalContext;
 
   try {
     const response = await ai.models.generateContent({
@@ -364,6 +439,10 @@ function buildTasksFromEnrichedInstructions(
     // Construire la description de positionnement détaillée
     const positionDescription = buildPositionDescription(enriched);
 
+    // Vérifier si un masque est présent pour cette instruction
+    const hasMask = !!instruction.maskImagePath;
+    const maskAnalysis = instruction.maskAnalysis;
+
     tasks.push({
       priority: i,
       targetSurface: targetZone.surface,
@@ -371,7 +450,7 @@ function buildTasksFromEnrichedInstructions(
       targetZone: enriched.targetZone,
       targetMaterial: instruction.referenceName || refAnalysis?.category || "référence",
       referenceIndex: i,
-      specificInstructions: enriched.originalText,
+      specificInstructions: instruction.improvedLocation || enriched.originalText,
       actionType,
       referenceAnalysis: refAnalysis,
       elementCategory: targetZone.surface?.category || targetZone.object?.category,
@@ -383,6 +462,9 @@ function buildTasksFromEnrichedInstructions(
         description: positionDescription,
       },
       enrichedInstruction: enriched,
+      hasMask,
+      maskAnalysis,
+      combinedMaskBase64: instruction.combinedMaskBase64,
     });
   }
 

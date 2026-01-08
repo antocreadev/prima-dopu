@@ -97,3 +97,92 @@ export async function prepareImageForAPI(
     sizeBytes: buffer.length,
   };
 }
+
+/**
+ * Crée un masque combiné où la zone blanche du masque contient la référence
+ * et la zone noire contient l'image originale
+ */
+export async function createCombinedMaskImage(
+  originalImage: PreparedImage,
+  maskImage: PreparedImage,
+  referenceImage: PreparedImage
+): Promise<PreparedImage> {
+  console.log("   🎭 Création du masque combiné...");
+
+  try {
+    // Décoder les images depuis base64
+    const originalBuffer = Buffer.from(originalImage.base64, "base64");
+    const maskBuffer = Buffer.from(maskImage.base64, "base64");
+    const referenceBuffer = Buffer.from(referenceImage.base64, "base64");
+
+    // Obtenir les dimensions de l'image originale
+    const originalMetadata = await sharp(originalBuffer).metadata();
+    const { width, height } = originalMetadata;
+
+    if (!width || !height) {
+      throw new Error("Impossible de lire les dimensions de l'image");
+    }
+
+    // Redimensionner le masque aux dimensions de l'image originale
+    const maskResized = await sharp(maskBuffer)
+      .resize(width, height, { fit: "fill" })
+      .greyscale()
+      .raw()
+      .toBuffer();
+
+    // Redimensionner la référence aux dimensions de l'image originale
+    const referenceResized = await sharp(referenceBuffer)
+      .resize(width, height, { fit: "cover", position: "center" })
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+
+    // Charger l'image originale en RGBA
+    const originalRGBA = await sharp(originalBuffer)
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+
+    // Créer le masque combiné :
+    // Zone BLANCHE = RÉFÉRENCE (montrer ce qui sera appliqué)
+    // Zone NOIRE = IMAGE ORIGINALE (contexte)
+    const combinedBuffer = Buffer.alloc(width * height * 4);
+
+    for (let i = 0; i < width * height; i++) {
+      const imgIdx = i * 4;
+      const maskValue = maskResized[i];
+
+      if (maskValue > 127) {
+        // Zone blanche = RÉFÉRENCE
+        combinedBuffer[imgIdx] = referenceResized[imgIdx];
+        combinedBuffer[imgIdx + 1] = referenceResized[imgIdx + 1];
+        combinedBuffer[imgIdx + 2] = referenceResized[imgIdx + 2];
+        combinedBuffer[imgIdx + 3] = 255;
+      } else {
+        // Zone noire = IMAGE ORIGINALE
+        combinedBuffer[imgIdx] = originalRGBA[imgIdx];
+        combinedBuffer[imgIdx + 1] = originalRGBA[imgIdx + 1];
+        combinedBuffer[imgIdx + 2] = originalRGBA[imgIdx + 2];
+        combinedBuffer[imgIdx + 3] = 255;
+      }
+    }
+
+    // Convertir en PNG
+    const finalBuffer = await sharp(combinedBuffer, {
+      raw: { width, height, channels: 4 },
+    })
+      .png()
+      .toBuffer();
+
+    console.log(`   ✓ Masque combiné créé: ${(finalBuffer.length / 1024).toFixed(0)} KB`);
+
+    return {
+      base64: finalBuffer.toString("base64"),
+      mimeType: "image/png",
+      sizeBytes: finalBuffer.length,
+    };
+  } catch (error) {
+    console.error("   ❌ Erreur création masque combiné:", error);
+    throw error;
+  }
+}

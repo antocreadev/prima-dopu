@@ -240,6 +240,48 @@ export async function generateBeforeAfterWithProgress(
     );
   }
 
+  // Charger les masques s'ils existent
+  const maskImages: (PreparedImage | null)[] = [];
+  const combinedMaskImages: (PreparedImage | null)[] = [];
+  let hasMasks = false;
+
+  for (let i = 0; i < instructions.length; i++) {
+    const instr = instructions[i];
+    if (instr.maskImagePath) {
+      try {
+        log("🎭", `Chargement masque ${i + 1}...`);
+        const maskImage = await prepareImageForAPI(instr.maskImagePath);
+        maskImages.push(maskImage);
+        hasMasks = true;
+
+        // Créer le masque combiné (référence dans la zone du masque)
+        const { createCombinedMaskImage } = await import("./utils/image");
+        const combinedMask = await createCombinedMaskImage(
+          originalImage,
+          maskImage,
+          referenceImages[i]
+        );
+        combinedMaskImages.push(combinedMask);
+        
+        // Stocker dans l'instruction pour utilisation ultérieure
+        instructions[i].combinedMaskBase64 = combinedMask.base64;
+        
+        log("✓", `Masque combiné ${i + 1}: ${(combinedMask.base64.length / 1024).toFixed(0)} KB`);
+      } catch (error) {
+        console.warn(`⚠️ Impossible de charger le masque ${i + 1}:`, error);
+        maskImages.push(null);
+        combinedMaskImages.push(null);
+      }
+    } else {
+      maskImages.push(null);
+      combinedMaskImages.push(null);
+    }
+  }
+
+  if (hasMasks) {
+    log("🎯", `${maskImages.filter(m => m !== null).length} masque(s) chargé(s) et combiné(s)`);
+  }
+
   setStep("upload", "done");
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -277,10 +319,13 @@ export async function generateBeforeAfterWithProgress(
   log("📊", "PHASE 2: Planification et mapping des éléments");
   log("🗺️", "Analyse des références et création du plan...");
 
+  // Passer les masques au planner si disponibles
   const plan = await planModificationsWithAgent(
     analysis,
     instructions,
-    referenceImages
+    referenceImages,
+    hasMasks ? originalImage : undefined,
+    hasMasks ? maskImages : undefined
   );
 
   log("✓", `Plan créé: ${plan.tasks?.length || 0} tâche(s) de modification`);
@@ -329,12 +374,14 @@ export async function generateBeforeAfterWithProgress(
 
       log("📝", `Envoi du prompt (${prompt.length} caractères)...`);
 
+      // Passer les masques combinés si disponibles
       const result = await generateWithNanoBanana(
         originalImage,
         referenceImages,
         prompt,
         outputDir,
-        generationId
+        generationId,
+        hasMasks ? combinedMaskImages : undefined
       );
 
       const duration = Date.now() - startTime;
@@ -347,12 +394,33 @@ export async function generateBeforeAfterWithProgress(
         log("🧠", `Mode Thinking: ${result.thoughtCount} image(s) intermédiaire(s)`);
       }
 
+      // Sauvegarder les masques combinés pour debug si présents
+      const combinedMaskPaths: string[] = [];
+      if (hasMasks && combinedMaskImages) {
+        const { saveBuffer } = await import("../storage");
+        for (let maskIdx = 0; maskIdx < combinedMaskImages.length; maskIdx++) {
+          const combinedMask = combinedMaskImages[maskIdx];
+          if (combinedMask) {
+            try {
+              const maskFileName = `combined_mask_${generationId}_${maskIdx}.png`;
+              const maskBuffer = Buffer.from(combinedMask.base64, "base64");
+              const maskPath = await saveBuffer(maskBuffer, maskFileName, "generated");
+              combinedMaskPaths.push(maskPath);
+              log("🎭", `Masque combiné ${maskIdx + 1} sauvegardé pour debug`);
+            } catch (e) {
+              console.warn(`Impossible de sauvegarder le masque combiné ${maskIdx}:`, e);
+            }
+          }
+        }
+      }
+
       return {
         imagePath: result.imagePath,
         description: result.description,
         attempts: attempt,
         analysisDetails: analysis,
         duration,
+        combinedMaskPaths: combinedMaskPaths.length > 0 ? combinedMaskPaths : undefined,
       };
     } catch (error) {
       lastError = error as Error;

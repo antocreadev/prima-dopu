@@ -252,6 +252,10 @@ export function buildOptimizedPrompt(
         refAnalysis?.category ||
         "matériau de référence";
 
+      // Vérifier si un masque est présent pour cette référence
+      const hasMaskForRef = surfaceTasks.some(t => t.hasMask);
+      const maskAnalysisForRef = surfaceTasks.find(t => t.maskAnalysis)?.maskAnalysis;
+
       const surfaceDescriptions = surfaceTasks
         .map((t) => {
           if (t.targetSurface) {
@@ -264,20 +268,38 @@ export function buildOptimizedPrompt(
         .filter(Boolean)
         .join("\n");
 
+      // Informations sur le masque si présent
+      const maskInfo = hasMaskForRef && maskAnalysisForRef
+        ? `
+### 🎭 ZONE DÉLIMITÉE PAR MASQUE (CRITIQUE - RESPECTER ABSOLUMENT)
+⚠️ Un MASQUE COMBINÉ a été fourni montrant EXACTEMENT où appliquer ce matériau.
+- **Zone identifiée**: ${maskAnalysisForRef.zoneDescription}
+- **Position**: ${maskAnalysisForRef.position.horizontal} / ${maskAnalysisForRef.position.vertical}
+- **Couverture**: ${maskAnalysisForRef.coveragePercent}% de l'image
+- **Zone partielle**: ${maskAnalysisForRef.isPartial ? "OUI - appliquer QUE sur cette zone" : "NON - zone complète"}
+
+� **INSTRUCTIONS MASQUE**:
+1. REGARDER l'image du MASQUE COMBINÉ (montre le matériau dans la zone cible)
+2. APPLIQUER le matériau UNIQUEMENT dans cette zone précise
+3. NE PAS déborder en dehors de la zone masquée
+4. La zone autour du masque = CONSERVER L'ASPECT ORIGINAL
+`
+        : "";
+
       modificationBlocks.push(`
 ### SURFACE ${refIndex + 1}: Appliquer "${materialName}"
 **Image de référence**: IMAGE ${refIndex + 2}
 **Type**: ${refAnalysis?.type || "matériau"} | **Style**: ${refAnalysis?.style || "non spécifié"}
 **Couleur principale**: ${refAnalysis?.mainColor || "non spécifiée"} | **Finition**: ${refAnalysis?.finish || "non spécifiée"}
 ${refAnalysis?.pattern ? `**Motif**: ${refAnalysis.pattern}` : ""}
-
+${maskInfo}
 **Surfaces ciblées**:
 ${surfaceDescriptions}
 
 **Instructions d'application**:
 1. Examiner attentivement l'IMAGE ${refIndex + 2} pour comprendre: texture, couleur, motifs, reflets
-2. APPLIQUER ce matériau sur 100% de chaque surface listée ci-dessus
-3. AUCUNE trace de l'ancien matériau ne doit rester visible
+2. ${hasMaskForRef ? "APPLIQUER ce matériau UNIQUEMENT dans la zone délimitée par le masque" : "APPLIQUER ce matériau sur 100% de chaque surface listée ci-dessus"}
+3. AUCUNE trace de l'ancien matériau ne doit rester visible${hasMaskForRef ? " (dans la zone masquée)" : ""}
 4. Adapter les ombres et reflets à l'éclairage de la scène
 5. Respecter l'échelle du motif/texture selon la perspective`);
     });
@@ -367,18 +389,38 @@ ${tipsText ? `\n**Conseils d'intégration**:\n${tipsText}` : ""}`);
         ? `**⚠️ COUVERTURE**: PARTIELLE - seulement une section, PAS la totalité`
         : "";
 
+      // Informations sur le masque si présent
+      const maskInfo = task.hasMask && task.maskAnalysis
+        ? `
+### 🎭 ZONE DÉLIMITÉE PAR MASQUE (CRITIQUE - RESPECTER ABSOLUMENT)
+⚠️ Un MASQUE COMBINÉ a été fourni montrant EXACTEMENT où placer cet élément.
+- **Zone identifiée**: ${task.maskAnalysis.zoneDescription}
+- **Type d'élément**: ${task.maskAnalysis.elementType}
+- **Position**: ${task.maskAnalysis.position.horizontal} / ${task.maskAnalysis.position.vertical}
+- **Couverture**: ${task.maskAnalysis.coveragePercent}% de l'image
+- **Zone partielle**: ${task.maskAnalysis.isPartial ? "OUI - ne couvrir QUE cette zone" : "NON - zone complète"}
+
+� **INSTRUCTIONS MASQUE**:
+1. REGARDER l'image du MASQUE COMBINÉ fournie (montre la référence dans la zone cible)
+2. APPLIQUER l'élément UNIQUEMENT dans cette zone précise
+3. NE PAS déborder en dehors de la zone masquée
+4. La zone noire autour = CONSERVER INTACT
+5. La zone avec la référence visible = C'EST LÀ qu'il faut appliquer
+`
+        : "";
+
       modificationBlocks.push(`
 ### AJOUT: Insérer "${elementName}"
 **Image de référence**: IMAGE ${task.referenceIndex + 2}
 **Type**: ${refAnalysis?.type || "élément"}
 **Instruction originale**: "${task.specificInstructions}"
-
+${maskInfo}
 ${quantityInfo ? `${quantityInfo}\n` : ""}${sideInfo ? `${sideInfo}\n` : ""}${areaInfo ? `${areaInfo}\n` : ""}${positionInfo ? `${positionInfo}\n` : ""}
 **Style**: ${refAnalysis?.style || "non spécifié"} | **Dimensions**: ${refAnalysis?.dimensions || "à adapter"}
 
 **Instructions d'insertion CRITIQUES**:
 1. Examiner l'élément dans l'IMAGE ${task.referenceIndex + 2}
-2. ${task.quantity ? `PLACER EXACTEMENT ${task.quantity} éléments` : "Insérer l'élément"} à la position spécifiée
+2. ${task.quantity ? `PLACER EXACTEMENT ${task.quantity} éléments` : "Insérer l'élément"} à la position spécifiée${task.hasMask ? " (voir MASQUE COMBINÉ)" : ""}
 3. ${task.positionConstraints?.side ? `POSITIONNER uniquement sur le côté ${task.positionConstraints.side === "right" ? "DROIT" : task.positionConstraints.side === "left" ? "GAUCHE" : task.positionConstraints.side.toUpperCase()} de la zone` : "Choisir un emplacement approprié"}
 4. ${task.positionConstraints?.area === "partial" ? "NE PAS couvrir toute la surface - seulement une PARTIE" : "Intégrer naturellement dans l'espace"}
 5. ADAPTER la taille et perspective à la scène existante

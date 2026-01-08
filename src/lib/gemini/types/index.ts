@@ -25,8 +25,12 @@ export interface GenerationInstruction {
   location: string;
   /** Chemin vers l'image de référence */
   referenceImagePath: string;
-  /** Chemin vers l'image de masque (optionnel) */
+  /** Chemin vers l'image de masque noir/blanc (optionnel) */
   maskImagePath?: string;
+  /** Chemin vers le masque combiné (référence dans la zone) - généré côté serveur */
+  combinedMaskPath?: string;
+  /** Données du masque combiné en base64 (pour envoi à l'IA) */
+  combinedMaskBase64?: string;
   /** Nom donné à la référence par l'utilisateur */
   referenceName?: string;
   /** Type de modification demandée */
@@ -35,6 +39,33 @@ export interface GenerationInstruction {
   additionalDetails?: string;
   /** Catégorie de l'élément cible (optionnel, détecté automatiquement) */
   targetCategory?: ElementCategory;
+  /** Analyse du masque par l'IA */
+  maskAnalysis?: MaskAnalysisInfo;
+  /** Instruction améliorée basée sur l'analyse du masque */
+  improvedLocation?: string;
+}
+
+/**
+ * Informations sur l'analyse du masque
+ */
+export interface MaskAnalysisInfo {
+  /** Description de la zone délimitée par le masque */
+  zoneDescription: string;
+  /** Type d'élément couvert */
+  elementType: "surface" | "object" | "area" | "multiple";
+  /** Éléments identifiés dans le masque */
+  elementsInMask: string[];
+  /** Position dans l'image */
+  position: {
+    horizontal: "left" | "center" | "right" | "full-width";
+    vertical: "top" | "middle" | "bottom" | "full-height";
+  };
+  /** Pourcentage de couverture */
+  coveragePercent: number;
+  /** Zone partielle ou totale */
+  isPartial: boolean;
+  /** Corrections suggérées */
+  instructionCorrections: string[];
 }
 
 /**
@@ -63,6 +94,8 @@ export interface GenerationResult {
   analysisDetails?: ImageAnalysis;
   /** Durée totale de génération en ms */
   duration?: number;
+  /** Chemins vers les masques combinés (pour debug) */
+  combinedMaskPaths?: string[];
 }
 
 // ============================================================================
@@ -373,6 +406,12 @@ export interface ModificationTask {
   positionConstraints?: PositionConstraints;
   /** Instruction enrichie associée */
   enrichedInstruction?: EnrichedInstruction;
+  /** Indique si un masque est associé à cette tâche */
+  hasMask?: boolean;
+  /** Analyse du masque associé */
+  maskAnalysis?: MaskAnalysisInfo;
+  /** Image du masque combiné en base64 */
+  combinedMaskBase64?: string;
 }
 
 // ============================================================================
