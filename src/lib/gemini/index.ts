@@ -12,6 +12,14 @@ import { analyzeImageWithAgent } from "./agents/analyzer";
 import { planModificationsWithAgent } from "./agents/planner";
 import { generateWithNanoBanana } from "./agents/generator";
 import { buildSimplifiedRetryPrompt } from "./prompts/builder";
+import {
+  generateWithInpainting,
+  buildInpaintingPromptFromContext,
+  canUseInpainting,
+  type InpaintingResult,
+  type InpaintingContext,
+} from "./agents/inpainting";
+import { analyzeReferenceImage } from "./agents/reference-analyzer";
 
 // Re-export des types
 export * from "./types";
@@ -76,6 +84,9 @@ export async function generateBeforeAfter(
   );
 
   const referenceImages: PreparedImage[] = [];
+  const maskImages: (PreparedImage | null)[] = [];
+  const hasAnyMask = instructions.some((instr) => canUseInpainting(instr));
+  
   for (let i = 0; i < instructions.length; i++) {
     const refImage = await prepareImageForAPI(
       instructions[i].referenceImagePath
@@ -86,6 +97,21 @@ export async function generateBeforeAfter(
         0
       )} KB`
     );
+    
+    // Charger le masque si disponible
+    if (instructions[i].maskImagePath) {
+      const maskImage = await prepareImageForAPI(instructions[i].maskImagePath!);
+      maskImages.push(maskImage);
+      console.log(
+        `   🎭 Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(0)} KB`
+      );
+    } else {
+      maskImages.push(null);
+    }
+  }
+
+  if (hasAnyMask) {
+    console.log("\n🖌️ Mode INPAINTING activé (masques détectés)");
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -111,10 +137,14 @@ export async function generateBeforeAfter(
   );
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PHASE 3: GÉNÉRATION AVEC RETRY
+  // PHASE 3: GÉNÉRATION (INPAINTING OU GEMINI CLASSIQUE)
   // ═══════════════════════════════════════════════════════════════════════
 
-  console.log("\n🎨 PHASE 3: Génération photoréaliste");
+  if (hasAnyMask) {
+    console.log("\n🖌️ PHASE 3: INPAINTING avec Imagen 3 (Vertex AI)");
+  } else {
+    console.log("\n🎨 PHASE 3: Génération photoréaliste");
+  }
   console.log("─".repeat(50));
 
   let lastError: Error | null = null;
@@ -123,6 +153,96 @@ export async function generateBeforeAfter(
     console.log(`\n🔄 Tentative ${attempt}/${GENERATION_CONFIG.maxRetries}`);
 
     try {
+      // ─────────────────────────────────────────────────────────────────────
+      // MODE INPAINTING (avec masques)
+      // ─────────────────────────────────────────────────────────────────────
+      if (hasAnyMask) {
+        let currentImage = originalImage;
+        let finalImagePath = "";
+        let finalDescription = "";
+        
+        for (let i = 0; i < instructions.length; i++) {
+          const instr = instructions[i];
+          const mask = maskImages[i];
+          const refImage = referenceImages[i];
+          
+          if (!mask) {
+            console.log(`   ⏭️ Instruction ${i + 1}: pas de masque, ignorée`);
+            continue;
+          }
+          
+          console.log(`   🎯 Inpainting instruction ${i + 1}: "${instr.location}"`);
+          
+          // Récupérer la tâche correspondante du plan
+          const task = plan.tasks.find((t) => t.referenceIndex === i);
+          
+          // Récupérer l'analyse de référence (déjà faite dans le planner)
+          const refAnalysis = task?.referenceAnalysis;
+          
+          // Construire le prompt COMPLET avec tout le contexte
+          const inpaintContext: InpaintingContext = {
+            userInstruction: instr.location,
+            referenceAnalysis: refAnalysis,
+            task: task,
+            imageAnalysis: analysis,
+          };
+          
+          const inpaintPrompt = buildInpaintingPromptFromContext(inpaintContext);
+          
+          console.log("\n" + "─".repeat(50));
+          console.log("📝 PROMPT INPAINTING COMPLET:");
+          console.log("─".repeat(50));
+          console.log(inpaintPrompt);
+          console.log("─".repeat(50) + "\n");
+          
+          // Appeler l'API Imagen 3 (la description de la référence est dans le prompt)
+          const inpaintResult = await generateWithInpainting(
+            currentImage,
+            mask,
+            inpaintPrompt,
+            `${generationId}_step${i}`,
+            {
+              maskDilation: 0.02,
+              editSteps: 50,
+              sampleCount: 1,
+              editMode: "EDIT_MODE_INPAINT_INSERTION",
+            }
+          );
+          
+          finalImagePath = inpaintResult.imagePath;
+          finalDescription = `Zone "${instr.location}" modifiée avec ${refAnalysis?.category || "référence"}`;
+          
+          // Pour les prochaines itérations, utiliser l'image modifiée
+          if (i < instructions.length - 1) {
+            currentImage = await prepareImageForAPI(finalImagePath);
+          }
+        }
+        
+        if (!finalImagePath) {
+          throw new Error("Aucune image générée par inpainting");
+        }
+        
+        const duration = Date.now() - startTime;
+        
+        console.log("\n" + "═".repeat(70));
+        console.log("✅ INPAINTING RÉUSSI!");
+        console.log(`   📁 ${finalImagePath}`);
+        console.log(`   ⏱️  Durée: ${(duration / 1000).toFixed(1)}s`);
+        console.log(`   🔢 Tentatives: ${attempt}`);
+        console.log("═".repeat(70) + "\n");
+        
+        return {
+          imagePath: finalImagePath,
+          description: finalDescription,
+          attempts: attempt,
+          analysisDetails: analysis,
+          duration,
+        };
+      }
+      
+      // ─────────────────────────────────────────────────────────────────────
+      // MODE CLASSIQUE (sans masques)
+      // ─────────────────────────────────────────────────────────────────────
       // Premier essai: prompt complet. Retries: prompt simplifié
       const prompt =
         attempt === 1
@@ -229,6 +349,11 @@ export async function generateBeforeAfterWithProgress(
   log("✓", `Original: ${(originalImage.base64.length / 1024).toFixed(0)} KB`);
 
   const referenceImages: PreparedImage[] = [];
+  const maskImages: (PreparedImage | null)[] = [];
+  
+  // Vérifier si des masques sont disponibles pour l'inpainting
+  const hasAnyMask = instructions.some((instr) => canUseInpainting(instr));
+  
   for (let i = 0; i < instructions.length; i++) {
     const refImage = await prepareImageForAPI(
       instructions[i].referenceImagePath
@@ -238,6 +363,22 @@ export async function generateBeforeAfterWithProgress(
       "✓",
       `Référence ${i + 1}: ${(refImage.base64.length / 1024).toFixed(0)} KB`
     );
+    
+    // Charger le masque si disponible
+    if (instructions[i].maskImagePath) {
+      const maskImage = await prepareImageForAPI(instructions[i].maskImagePath!);
+      maskImages.push(maskImage);
+      log(
+        "🎭",
+        `Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(0)} KB`
+      );
+    } else {
+      maskImages.push(null);
+    }
+  }
+
+  if (hasAnyMask) {
+    log("🖌️", "Mode INPAINTING activé (masques détectés)");
   }
 
   setStep("upload", "done");
@@ -309,12 +450,21 @@ export async function generateBeforeAfterWithProgress(
   setStep("plan", "done");
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PHASE 3: GÉNÉRATION AVEC RETRY
+  // PHASE 3: GÉNÉRATION (INPAINTING OU GEMINI CLASSIQUE)
   // ═══════════════════════════════════════════════════════════════════════
 
   setStep("generate", "loading");
-  log("🎨", "PHASE 3: Génération photoréaliste avec Gemini");
-  log("🖼️", "Contraintes: cadrage identique, insertion réaliste, ombres cohérentes");
+  
+  // Déterminer le mode de génération
+  const useInpainting = hasAnyMask;
+  
+  if (useInpainting) {
+    log("🖌️", "PHASE 3: INPAINTING avec Imagen 3 (Vertex AI)");
+    log("🎭", "Utilisation des masques pour une édition précise");
+  } else {
+    log("🎨", "PHASE 3: Génération photoréaliste avec Gemini");
+    log("🖼️", "Contraintes: cadrage identique, insertion réaliste, ombres cohérentes");
+  }
 
   let lastError: Error | null = null;
 
@@ -322,6 +472,96 @@ export async function generateBeforeAfterWithProgress(
     log("🔄", `Tentative ${attempt}/${GENERATION_CONFIG.maxRetries}`);
 
     try {
+      // ─────────────────────────────────────────────────────────────────────
+      // MODE INPAINTING (avec masques)
+      // ─────────────────────────────────────────────────────────────────────
+      if (useInpainting) {
+        // Pour l'inpainting, on traite chaque instruction avec masque séquentiellement
+        let currentImage = originalImage;
+        let finalImagePath = "";
+        let finalDescription = "";
+        
+        for (let i = 0; i < instructions.length; i++) {
+          const instr = instructions[i];
+          const mask = maskImages[i];
+          const refImage = referenceImages[i];
+          
+          if (!mask) {
+            log("⏭️", `Instruction ${i + 1}: pas de masque, ignorée pour inpainting`);
+            continue;
+          }
+          
+          log("🎯", `Inpainting instruction ${i + 1}: "${instr.location}"`);
+          
+          // Récupérer la tâche correspondante du plan (contient l'analyse de référence)
+          const task = plan.tasks?.find((t) => t.referenceIndex === i);
+          
+          // Récupérer l'analyse de référence (déjà faite dans le planner)
+          const refAnalysis = task?.referenceAnalysis;
+          
+          // Construire le prompt COMPLET avec tout le contexte
+          const inpaintContext: InpaintingContext = {
+            userInstruction: instr.location,
+            referenceAnalysis: refAnalysis,
+            task: task,
+            imageAnalysis: analysis,
+          };
+          
+          const inpaintPrompt = buildInpaintingPromptFromContext(inpaintContext);
+          
+          log("📝", `Prompt inpainting construit (${inpaintPrompt.length} chars)`);
+          console.log("\n" + "─".repeat(50));
+          console.log("📝 PROMPT INPAINTING COMPLET:");
+          console.log("─".repeat(50));
+          console.log(inpaintPrompt);
+          console.log("─".repeat(50) + "\n");
+          
+          // Appeler l'API Imagen 3 (la description de la référence est dans le prompt)
+          const inpaintResult = await generateWithInpainting(
+            currentImage,
+            mask,
+            inpaintPrompt,
+            `${generationId}_step${i}`,
+            {
+              maskDilation: 0.02,
+              editSteps: 50,
+              sampleCount: 1,
+              editMode: "EDIT_MODE_INPAINT_INSERTION",
+            }
+          );
+          
+          finalImagePath = inpaintResult.imagePath;
+          finalDescription = `Zone "${instr.location}" modifiée avec ${refAnalysis?.category || instr.referenceName || "référence"}`;
+          
+          // Pour les prochaines itérations, utiliser l'image modifiée
+          if (i < instructions.length - 1) {
+            currentImage = await prepareImageForAPI(finalImagePath);
+          }
+          
+          log("✅", `Inpainting ${i + 1} terminé`);
+        }
+        
+        if (!finalImagePath) {
+          throw new Error("Aucune image générée par inpainting");
+        }
+        
+        const duration = Date.now() - startTime;
+        setStep("generate", "done");
+        log("✅", `INPAINTING RÉUSSI en ${(duration / 1000).toFixed(1)}s!`);
+        log("📁", `Image sauvegardée: ${finalImagePath}`);
+        
+        return {
+          imagePath: finalImagePath,
+          description: finalDescription,
+          attempts: attempt,
+          analysisDetails: analysis,
+          duration,
+        };
+      }
+      
+      // ─────────────────────────────────────────────────────────────────────
+      // MODE CLASSIQUE (sans masques - Gemini génératif)
+      // ─────────────────────────────────────────────────────────────────────
       const prompt =
         attempt === 1
           ? plan.globalPrompt
