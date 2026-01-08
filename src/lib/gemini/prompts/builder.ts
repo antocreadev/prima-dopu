@@ -343,20 +343,48 @@ ${tipsText ? `\n**Conseils d'intégration**:\n${tipsText}` : ""}`);
         ? tips.map((tip) => `   - ${tip}`).join("\n")
         : "";
 
+      // Construire les informations de quantité et position
+      const quantityInfo = task.quantity 
+        ? `**⚠️ QUANTITÉ PRÉCISE**: EXACTEMENT ${task.quantity} élément(s) - ${task.quantityText || ""}`
+        : task.quantityText 
+          ? `**Quantité**: ${task.quantityText}`
+          : "";
+
+      const positionInfo = task.positionConstraints
+        ? `**⚠️ ZONE PRÉCISE**: ${task.positionConstraints.description}`
+        : "";
+
+      const sideInfo = task.positionConstraints?.side
+        ? `**⚠️ POSITIONNEMENT**: Côté ${
+            task.positionConstraints.side === "right" ? "DROIT" :
+            task.positionConstraints.side === "left" ? "GAUCHE" :
+            task.positionConstraints.side === "center" ? "CENTRE" :
+            task.positionConstraints.side === "top" ? "HAUT" : "BAS"
+          } UNIQUEMENT - NE PAS couvrir tout l'espace`
+        : "";
+
+      const areaInfo = task.positionConstraints?.area === "partial"
+        ? `**⚠️ COUVERTURE**: PARTIELLE - seulement une section, PAS la totalité`
+        : "";
+
       modificationBlocks.push(`
 ### AJOUT: Insérer "${elementName}"
 **Image de référence**: IMAGE ${task.referenceIndex + 2}
 **Type**: ${refAnalysis?.type || "élément"}
-**Position demandée**: ${instruction.location}
+**Instruction originale**: "${task.specificInstructions}"
+
+${quantityInfo ? `${quantityInfo}\n` : ""}${sideInfo ? `${sideInfo}\n` : ""}${areaInfo ? `${areaInfo}\n` : ""}${positionInfo ? `${positionInfo}\n` : ""}
 **Style**: ${refAnalysis?.style || "non spécifié"} | **Dimensions**: ${refAnalysis?.dimensions || "à adapter"}
 
-**Instructions d'insertion**:
+**Instructions d'insertion CRITIQUES**:
 1. Examiner l'élément dans l'IMAGE ${task.referenceIndex + 2}
-2. L'INSÉRER à la position indiquée: "${instruction.location}"
-3. ADAPTER la taille et perspective à la scène existante
-4. CRÉER des ombres réalistes cohérentes avec l'éclairage
-5. INTÉGRER chromatiquement avec l'ambiance de la pièce
-6. L'élément doit sembler APPARTENIR à la scène originale
+2. ${task.quantity ? `PLACER EXACTEMENT ${task.quantity} éléments` : "Insérer l'élément"} à la position spécifiée
+3. ${task.positionConstraints?.side ? `POSITIONNER uniquement sur le côté ${task.positionConstraints.side === "right" ? "DROIT" : task.positionConstraints.side === "left" ? "GAUCHE" : task.positionConstraints.side.toUpperCase()} de la zone` : "Choisir un emplacement approprié"}
+4. ${task.positionConstraints?.area === "partial" ? "NE PAS couvrir toute la surface - seulement une PARTIE" : "Intégrer naturellement dans l'espace"}
+5. ADAPTER la taille et perspective à la scène existante
+6. CRÉER des ombres réalistes cohérentes avec l'éclairage
+7. INTÉGRER chromatiquement avec l'ambiance de la pièce
+8. L'élément doit sembler APPARTENIR à la scène originale
 ${tipsText ? `\n**Conseils d'intégration**:\n${tipsText}` : ""}`);
     }
   }

@@ -13,7 +13,8 @@ import {
   generateBeforeAfterWithProgress,
   type GenerationInstruction,
   type ModificationType,
-} from "../../lib/gemini";
+  type ProgressEvent,
+} from "../../lib/gemini/index";
 import { getUserPlan, isAdminUser } from "../../lib/plans";
 import { getCreditsBalance, useCredit } from "../../lib/subscriptions";
 
@@ -271,13 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       // Callback de progression pour Gemini
-      const onProgress = (event: {
-        type: "log" | "step" | "error";
-        icon?: string;
-        message?: string;
-        step?: string;
-        status?: "pending" | "loading" | "done" | "error";
-      }) => {
+      const onProgress = (event: ProgressEvent) => {
         if (event.type === "step") {
           sendEvent("step", {
             step: event.step,
@@ -287,6 +282,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           sendEvent("log", { icon: event.icon, message: event.message });
         } else if (event.type === "error") {
           sendEvent("error", { message: event.message });
+        } else if (event.type === "warning") {
+          sendEvent("log", { icon: "⚠️", message: event.message });
         }
       };
 

@@ -14,7 +14,7 @@ import {
   generateBeforeAfter,
   type GenerationInstruction,
   type ModificationType,
-} from "../../lib/gemini";
+} from "../../lib/gemini/index";
 import { getUserPlan, isAdminUser } from "../../lib/plans";
 import { getCreditsBalance, useCredit } from "../../lib/subscriptions";
 

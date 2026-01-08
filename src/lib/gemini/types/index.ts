@@ -25,6 +25,8 @@ export interface GenerationInstruction {
   location: string;
   /** Chemin vers l'image de référence */
   referenceImagePath: string;
+  /** Chemin vers l'image de masque (optionnel) */
+  maskImagePath?: string;
   /** Nom donné à la référence par l'utilisateur */
   referenceName?: string;
   /** Type de modification demandée */
@@ -291,6 +293,50 @@ export interface ModificationPlan {
   globalPrompt: string;
   /** Avertissements ou notes */
   warnings?: string[];
+  /** Instructions enrichies avec compréhension du langage naturel */
+  enrichedInstructions?: EnrichedInstruction[];
+}
+
+/**
+ * Instruction enrichie après parsing intelligent
+ */
+export interface EnrichedInstruction {
+  /** Texte original de l'instruction */
+  originalText: string;
+  /** Action identifiée */
+  action: "add" | "replace" | "apply_texture" | "remove" | "modify";
+  /** Quantité demandée */
+  quantity: number | "all" | "some" | "partial";
+  /** Texte de quantité (ex: "3 panneaux solaires") */
+  quantityText: string;
+  /** Élément cible identifié */
+  targetElement: string;
+  /** Zone cible identifiée */
+  targetZone: string;
+  /** Contraintes de zone */
+  zoneConstraints: {
+    side?: "left" | "right" | "center" | "top" | "bottom";
+    area?: "partial" | "full" | "specific";
+    description: string;
+  };
+  /** Style demandé */
+  style?: string;
+  /** Couleur demandée */
+  color?: string;
+  /** Notes additionnelles */
+  additionalNotes: string[];
+}
+
+/**
+ * Contraintes de positionnement
+ */
+export interface PositionConstraints {
+  /** Côté ciblé */
+  side?: "left" | "right" | "center" | "top" | "bottom";
+  /** Type de zone */
+  area?: "partial" | "full" | "specific";
+  /** Description textuelle */
+  description: string;
 }
 
 /**
@@ -303,6 +349,8 @@ export interface ModificationTask {
   targetSurface?: SurfaceInfo;
   /** Objet cible (pour les remplacements d'objet) */
   targetObject?: ObjectInfo;
+  /** Zone cible textuelle (si pas de surface/objet précis) */
+  targetZone?: string;
   /** Nouveau matériau/élément à appliquer */
   targetMaterial: string;
   /** Index de l'image de référence */
@@ -317,6 +365,14 @@ export interface ModificationTask {
   elementCategory?: ElementCategory;
   /** Confidence de la correspondance (0-1) */
   matchConfidence?: number;
+  /** Quantité d'éléments à ajouter/modifier */
+  quantity?: number;
+  /** Texte de quantité */
+  quantityText?: string;
+  /** Contraintes de positionnement */
+  positionConstraints?: PositionConstraints;
+  /** Instruction enrichie associée */
+  enrichedInstruction?: EnrichedInstruction;
 }
 
 // ============================================================================
