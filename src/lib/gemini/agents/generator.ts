@@ -54,10 +54,17 @@ export async function generateWithNanoBanana(
   console.log(prompt);
   console.log("─".repeat(70) + "\n");
 
-  // Construire le contenu selon la documentation Nano Banana Pro
-  // L'ordre est important: prompt texte d'abord, puis les images
+  // Construire le contenu avec des labels EXPLICITES pour chaque image
   const contents: any[] = [
     { text: prompt },
+    { text: `
+
+═══════════════════════════════════════════════════════════════════════
+🏠 IMAGE 1 - IMAGE ORIGINALE À MODIFIER (image suivante)
+═══════════════════════════════════════════════════════════════════════
+C'est l'image de base que tu dois transformer. 
+CONSERVE son cadrage, sa perspective et tous les éléments non concernés par les modifications.
+` },
     {
       inlineData: {
         mimeType: originalImage.mimeType,
@@ -66,49 +73,97 @@ export async function generateWithNanoBanana(
     },
   ];
 
-  // Ajouter les images de référence
-  for (const refImage of referenceImages) {
-    contents.push({
-      inlineData: { mimeType: refImage.mimeType, data: refImage.base64 },
-    });
-  }
-
-  // Ajouter le masque fusionné annoté s'il existe
-  // C'est UNE SEULE image qui montre:
-  // - L'image originale comme fond
-  // - Les zones de masque remplies avec les textures de référence correspondantes
-  // - Des numéros dans des cercles colorés au centre de chaque zone
-  // - Des flèches et labels indiquant quelle référence appliquer où
-  // - Des contours colorés autour de chaque zone
-  let hasMask = false;
-  if (combinedMaskImages && combinedMaskImages.length > 0 && combinedMaskImages[0]) {
-    const annotatedMask = combinedMaskImages[0];
-    contents.push({
-      inlineData: { mimeType: annotatedMask.mimeType, data: annotatedMask.base64 },
-    });
-    hasMask = true;
-    console.log(`   🎭 Masque fusionné annoté ajouté (guide visuel des zones)`);
-    
-    // Ajouter une explication textuelle du masque pour Gemini
+  // Ajouter les images de référence avec labels explicites
+  if (referenceImages.length > 0) {
     contents.push({
       text: `
 
-📌 GUIDE VISUEL DES MODIFICATIONS (image précédente):
-L'image annotée ci-dessus te montre EXACTEMENT où et quoi appliquer:
-- Chaque zone numérotée (1, 2, 3...) correspond à une instruction
-- Les contours colorés délimitent PRÉCISÉMENT les zones à modifier
-- À l'intérieur de chaque zone, tu vois déjà un aperçu de la texture/matériau à appliquer
-- Les labels indiquent le nom de la référence et l'instruction
-
-🎯 UTILISE CE GUIDE pour:
-1. Identifier les zones EXACTES à modifier (suivre les contours colorés)
-2. Voir quel matériau/texture appliquer dans chaque zone (déjà visible dans le masque)
-3. Comprendre la correspondance zone ↔ référence ↔ instruction
-
-⚠️ IMPORTANT: Les zones NON colorées/numérotées doivent rester IDENTIQUES à l'image originale.
+═══════════════════════════════════════════════════════════════════════
+🎨 IMAGES DE RÉFÉRENCE (${referenceImages.length} image(s) suivante(s))
+═══════════════════════════════════════════════════════════════════════
+Ces images montrent les matériaux, textures ou objets à utiliser pour les modifications.
+Chaque référence est numérotée et correspond à une zone du masque.
 `
     });
+    
+    for (let i = 0; i < referenceImages.length; i++) {
+      const refImage = referenceImages[i];
+      contents.push({
+        text: `
+📌 RÉFÉRENCE ${i + 1}/${referenceImages.length} (image suivante):
+Cette texture/matériau doit être appliqué dans la ZONE ${i + 1} du masque annoté.
+`
+      });
+      contents.push({
+        inlineData: { mimeType: refImage.mimeType, data: refImage.base64 },
+      });
+    }
   }
+
+  // Ajouter le masque fusionné annoté s'il existe
+  let hasMask = false;
+  if (combinedMaskImages && combinedMaskImages.length > 0 && combinedMaskImages[0]) {
+    const annotatedMask = combinedMaskImages[0];
+    
+    contents.push({
+      text: `
+
+═══════════════════════════════════════════════════════════════════════
+🎭 MASQUE DE GUIDAGE ANNOTÉ (image suivante) - TRÈS IMPORTANT !
+═══════════════════════════════════════════════════════════════════════
+L'image suivante est un GUIDE VISUEL qui te montre EXACTEMENT :
+• OÙ appliquer chaque modification (zones délimitées par des contours colorés)
+• QUOI appliquer (la texture/matériau est déjà visible à l'intérieur de chaque zone)
+• QUELLE RÉFÉRENCE utiliser (numéros 1, 2, 3... correspondent aux références ci-dessus)
+
+⚠️ RÈGLES STRICTES À RESPECTER:
+1. Modifie UNIQUEMENT les zones colorées/numérotées du masque
+2. Applique la texture/référence correspondant au numéro de la zone
+3. Garde TOUT LE RESTE de l'image IDENTIQUE à l'originale
+4. Respecte les contours EXACTS des zones délimitées
+`
+    });
+    
+    contents.push({
+      inlineData: { mimeType: annotatedMask.mimeType, data: annotatedMask.base64 },
+    });
+    
+    contents.push({
+      text: `
+☝️ L'image CI-DESSUS est le MASQUE ANNOTÉ. Voici la correspondance:
+${referenceImages.map((_, i) => `  • Zone ${i + 1} (numéro ${i + 1} dans un cercle) → Applique la RÉFÉRENCE ${i + 1}`).join('\n')}
+
+Les parties NON masquées (sans numéro ni contour coloré) doivent rester STRICTEMENT IDENTIQUES à l'image originale.
+═══════════════════════════════════════════════════════════════════════
+`
+    });
+    
+    hasMask = true;
+    console.log(`   🎭 Masque fusionné annoté ajouté avec labels explicites`);
+  }
+
+  // Instruction finale de rappel
+  contents.push({
+    text: `
+
+🎯 RÉCAPITULATIF DE TA MISSION:
+═══════════════════════════════════════════════════════════════════════
+1. Prends l'IMAGE ORIGINALE (image 1) comme base
+2. Consulte les IMAGES DE RÉFÉRENCE pour voir les matériaux/textures à utiliser
+3. Regarde le MASQUE ANNOTÉ pour savoir EXACTEMENT où appliquer chaque référence:
+${referenceImages.map((_, i) => `   - Zone ${i + 1} → Référence ${i + 1}`).join('\n')}
+4. Génère UNE SEULE image finale avec toutes les modifications appliquées
+5. CONSERVE le cadrage, la perspective et la luminosité de l'original
+
+🚫 INTERDIT: 
+- Zoomer ou dézoomer
+- Recadrer l'image
+- Changer l'angle de vue
+- Modifier les zones NON masquées
+- Inventer des modifications non demandées
+═══════════════════════════════════════════════════════════════════════
+`
+  });
 
   // ═══════════════════════════════════════════════════════════════════════
   // LOG FINAL DE TOUT CE QUI EST ENVOYÉ À L'IA
