@@ -86,7 +86,6 @@ export interface GenerationInstruction {
   referenceName?: string;
   modificationType?: ModificationType;
   additionalDetails?: string;
-  maskImagePath?: string;
 }
 
 export interface GenerationResult {
@@ -1081,8 +1080,7 @@ async function generateWithNanoBanana(
   referenceImages: { base64: string; mimeType: string }[],
   prompt: string,
   outputDir: string,
-  generationId: string,
-  maskImages?: { base64: string; mimeType: string }[]
+  generationId: string
 ): Promise<{ imagePath: string; description: string }> {
   console.log(
     "   🎨 Agent Générateur: Appel à Nano Banana Pro (gemini-3-pro-image-preview)..."
@@ -1091,10 +1089,6 @@ async function generateWithNanoBanana(
   console.log(
     `   🖼️  Config: ${IMAGE_CONFIG.imageSize} @ ${IMAGE_CONFIG.aspectRatio}`
   );
-
-  if (maskImages && maskImages.length > 0) {
-    console.log(`   🖌️  ${maskImages.length} masque(s) de zone fourni(s)`);
-  }
 
   // Afficher le prompt complet pour debug
   console.log("\n" + "─".repeat(70));
@@ -1123,7 +1117,7 @@ async function generateWithNanoBanana(
 
   console.log(`   🖼️  ${1 + referenceImages.length} images envoyées`);
 
-  // Configuration de l'API avec support des masques
+  // Configuration de l'API
   const apiConfig: any = {
     responseModalities: ["TEXT", "IMAGE"],
     imageConfig: {
@@ -1131,20 +1125,6 @@ async function generateWithNanoBanana(
       imageSize: IMAGE_CONFIG.imageSize,
     },
   };
-
-  // Ajouter les masques si présents (inpainting)
-  if (maskImages && maskImages.length > 0) {
-    // Si on a un seul masque, on l'utilise directement
-    // Si plusieurs, on peut les combiner ou utiliser le premier (à améliorer)
-    const maskImage = maskImages[0];
-    apiConfig.imageConfig.mask = {
-      inlineData: {
-        mimeType: maskImage.mimeType,
-        data: maskImage.base64,
-      },
-    };
-    console.log("   🖌️  Masque appliqué pour inpainting ciblé");
-  }
 
   // Appel avec configuration avancée Nano Banana Pro
   const response = await ai.models.generateContent({
@@ -1236,9 +1216,6 @@ export async function generateBeforeAfter(
     console.log(`      └─ Emplacement: "${instr.location}"`);
     console.log(`      └─ Nom: ${instr.referenceName || "(sans nom)"}`);
     console.log(`      └─ Image: ${instr.referenceImagePath}`);
-    if (instr.maskImagePath) {
-      console.log(`      └─ Masque: ${instr.maskImagePath}`);
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1262,22 +1239,6 @@ export async function generateBeforeAfter(
         0
       )} KB`
     );
-  }
-
-  // Charger les masques si présents
-  const maskImages: { base64: string; mimeType: string }[] = [];
-  for (let i = 0; i < instructions.length; i++) {
-    if (instructions[i].maskImagePath) {
-      const maskImage = await prepareImageForAPI(
-        instructions[i].maskImagePath!
-      );
-      maskImages.push(maskImage);
-      console.log(
-        `   ✓ Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(
-          0
-        )} KB`
-      );
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1326,8 +1287,7 @@ export async function generateBeforeAfter(
         referenceImages,
         prompt,
         outputDir,
-        generationId,
-        maskImages.length > 0 ? maskImages : undefined
+        generationId
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -1436,21 +1396,6 @@ export async function generateBeforeAfterWithProgress(
     );
   }
 
-  // Charger les masques si présents
-  const maskImages: { base64: string; mimeType: string }[] = [];
-  for (let i = 0; i < instructions.length; i++) {
-    if (instructions[i].maskImagePath) {
-      const maskImage = await prepareImageForAPI(
-        instructions[i].maskImagePath!
-      );
-      maskImages.push(maskImage);
-      log(
-        "🖌️",
-        `Masque ${i + 1}: ${(maskImage.base64.length / 1024).toFixed(0)} KB`
-      );
-    }
-  }
-
   setStep("upload", "done");
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1525,8 +1470,7 @@ export async function generateBeforeAfterWithProgress(
         referenceImages,
         prompt,
         outputDir,
-        generationId,
-        maskImages.length > 0 ? maskImages : undefined
+        generationId
       );
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
