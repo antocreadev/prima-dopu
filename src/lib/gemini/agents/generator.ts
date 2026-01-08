@@ -110,7 +110,46 @@ L'image annotée ci-dessus te montre EXACTEMENT où et quoi appliquer:
     });
   }
 
-  console.log(`   🖼️  ${1 + referenceImages.length + (hasMask ? 1 : 0)} images envoyées`);
+  // ═══════════════════════════════════════════════════════════════════════
+  // LOG FINAL DE TOUT CE QUI EST ENVOYÉ À L'IA
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log("\n" + "═".repeat(70));
+  console.log("📤 RÉCAPITULATIF FINAL - ENVOI À GEMINI");
+  console.log("═".repeat(70));
+  console.log(`🤖 Modèle: ${MODELS.generator}`);
+  console.log(`📐 Config: ${IMAGE_CONFIG.imageSize} @ ${IMAGE_CONFIG.aspectRatio}`);
+  console.log("");
+  
+  // Compter et lister les éléments
+  let contentIndex = 0;
+  for (const content of contents) {
+    contentIndex++;
+    if (content.text) {
+      const textPreview = content.text.length > 100 
+        ? content.text.substring(0, 100) + "..." 
+        : content.text;
+      console.log(`📝 [${contentIndex}] TEXTE (${content.text.length} chars): "${textPreview.replace(/\n/g, ' ')}"`);
+    } else if (content.inlineData) {
+      const sizeKB = (content.inlineData.data.length * 0.75 / 1024).toFixed(0);
+      const type = content.inlineData.mimeType;
+      
+      // Identifier le type d'image
+      let imageType = "Image";
+      if (contentIndex === 2) imageType = "🏠 IMAGE ORIGINALE";
+      else if (contentIndex <= 2 + referenceImages.length) imageType = `🎨 RÉFÉRENCE ${contentIndex - 2}`;
+      else if (hasMask && contentIndex === 2 + referenceImages.length + 1) imageType = "🎭 MASQUE FUSIONNÉ ANNOTÉ";
+      
+      console.log(`🖼️  [${contentIndex}] ${imageType} (${type}, ~${sizeKB} KB)`);
+    }
+  }
+  
+  console.log("");
+  console.log(`📊 TOTAL: ${contents.length} éléments`);
+  console.log(`   • 1 image originale`);
+  console.log(`   • ${referenceImages.length} image(s) de référence`);
+  console.log(`   • ${hasMask ? "1 masque fusionné annoté" : "0 masque"}`);
+  console.log(`   • ${contents.filter(c => c.text).length} bloc(s) de texte`);
+  console.log("═".repeat(70) + "\n");
 
   // Configuration de l'API
   const apiConfig: any = {

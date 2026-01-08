@@ -404,8 +404,7 @@ ${tipsText ? `\n**Conseils d'intégration**:\n${tipsText}` : ""}`);
 1. REGARDER l'image du MASQUE COMBINÉ fournie (montre la référence dans la zone cible)
 2. APPLIQUER l'élément UNIQUEMENT dans cette zone précise
 3. NE PAS déborder en dehors de la zone masquée
-4. La zone noire autour = CONSERVER INTACT
-5. La zone avec la référence visible = C'EST LÀ qu'il faut appliquer
+4. La zone avec la référence visible = C'EST LÀ qu'il faut appliquer
 `
         : "";
 
