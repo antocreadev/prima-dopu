@@ -280,6 +280,42 @@ const creditStats = getCreditStats(
                 </div>
               )
             }
+
+            <!-- Paramètres avancés - Suppression de compte -->
+            <div class="mt-4 pt-4 border-t border-slate-100">
+              <details class="group">
+                <summary class="cursor-pointer text-sm text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2">
+                  <svg
+                    class="w-4 h-4 transition-transform group-open:rotate-90"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                  Zone de danger
+                </summary>
+                <div class="mt-3 pl-6 space-y-3">
+                  <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-xs text-red-600 mb-2">
+                      ⚠️ <strong>Attention :</strong> La suppression de votre compte est irréversible. 
+                      Toutes vos données, générations et références seront définitivement supprimées.
+                    </p>
+                    <button
+                      id="delete-account-btn"
+                      class="text-xs text-red-600 hover:text-red-800 underline transition-colors font-medium"
+                    >
+                      Supprimer définitivement mon compte
+                    </button>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
 
           <div class="border-t border-slate-200 pt-4">
@@ -347,7 +383,7 @@ const creditStats = getCreditStats(
 
           <!-- Déconnexion -->
           <div class="border-t border-slate-200 pt-4">
-            <SignOutButton redirectUrl="/">
+            <SignOutButton redirectUrl="/" asChild>
               <button
                 class="flex items-center gap-3 p-4 w-full bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-left cursor-pointer"
               >
@@ -372,6 +408,86 @@ const creditStats = getCreditStats(
     localStorage.setItem("primadopu_show_tutorial", "true");
     window.location.href = "/generate";
   });
+
+  // Suppression du compte avec plusieurs validations
+  document
+    .getElementById("delete-account-btn")
+    ?.addEventListener("click", async () => {
+      // Première confirmation
+      const confirm1 = window.confirm(
+        "⚠️ ATTENTION - SUPPRESSION DE COMPTE ⚠️\n\n" +
+          "Vous êtes sur le point de supprimer définitivement votre compte.\n\n" +
+          "Cette action est IRRÉVERSIBLE et entraînera :\n" +
+          "• La suppression de toutes vos générations\n" +
+          "• La suppression de votre bibliothèque de références\n" +
+          "• La perte de vos crédits restants\n" +
+          "• L'annulation de votre abonnement\n\n" +
+          "Voulez-vous vraiment continuer ?"
+      );
+
+      if (!confirm1) return;
+
+      // Deuxième confirmation avec saisie
+      const confirmText = window.prompt(
+        "Pour confirmer la suppression, tapez SUPPRIMER en majuscules :"
+      );
+
+      if (confirmText !== "SUPPRIMER") {
+        if (confirmText !== null) {
+          alert("Le texte saisi ne correspond pas. Suppression annulée.");
+        }
+        return;
+      }
+
+      // Troisième et dernière confirmation
+      const confirm3 = window.confirm(
+        "🚨 DERNIÈRE CONFIRMATION 🚨\n\n" +
+          "Votre compte sera supprimé DÉFINITIVEMENT.\n\n" +
+          "Êtes-vous absolument certain de vouloir continuer ?"
+      );
+
+      if (!confirm3) return;
+
+      // Procéder à la suppression
+      try {
+        const deleteBtn = document.getElementById("delete-account-btn");
+        if (deleteBtn) {
+          deleteBtn.textContent = "Suppression en cours...";
+          deleteBtn.setAttribute("disabled", "true");
+        }
+
+        const response = await fetch("/api/user/delete-account", {
+          method: "POST",
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          alert("Votre compte a été supprimé avec succès. Vous allez être redirigé.");
+          // Nettoyer la session côté client avant la redirection
+          // Supprimer les cookies Clerk manuellement
+          document.cookie.split(";").forEach((c) => {
+            const name = c.split("=")[0].trim();
+            if (name.startsWith("__clerk") || name.startsWith("__session")) {
+              document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+            }
+          });
+          // Forcer un rechargement complet pour nettoyer l'état
+          window.location.replace("/");
+        } else {
+          throw new Error(data.error || "Erreur lors de la suppression");
+        }
+      } catch (error) {
+        console.error("Erreur suppression:", error);
+        alert("Une erreur est survenue lors de la suppression du compte. Veuillez réessayer.");
+        
+        const deleteBtn = document.getElementById("delete-account-btn");
+        if (deleteBtn) {
+          deleteBtn.textContent = "Supprimer définitivement mon compte";
+          deleteBtn.removeAttribute("disabled");
+        }
+      }
+    });
 
   // Gérer l'abonnement Stripe avec confirmation
   document
