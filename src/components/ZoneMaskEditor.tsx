@@ -1,6 +1,18 @@
 // @refresh reset
 import { useState, useEffect, useRef } from "react";
 import * as fabric from "fabric";
+import {
+  Paintbrush,
+  Pentagon,
+  Eraser,
+  Hand,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
+  Trash2,
+  Check,
+  X,
+} from "lucide-react";
 
 interface ZoneMaskEditorProps {
   imageUrl: string;
@@ -36,7 +48,11 @@ export default function ZoneMaskEditor({
     lastX: 0,
     lastY: 0,
   });
-  const originalImageSizeRef = useRef<{ width: number; height: number; scale: number }>({
+  const originalImageSizeRef = useRef<{
+    width: number;
+    height: number;
+    scale: number;
+  }>({
     width: 0,
     height: 0,
     scale: 1,
@@ -45,14 +61,32 @@ export default function ZoneMaskEditor({
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Initialize Fabric.js canvas
+    // Initialize Fabric.js canvas with touch support
     const canvas = new fabric.Canvas(canvasRef.current, {
       isDrawingMode: false,
       selection: false,
+      allowTouchScrolling: false, // Empêcher le scroll par défaut sur touch
     });
 
     canvas.backgroundColor = "#000000";
     fabricCanvasRef.current = canvas;
+
+    // Empêcher le scroll de la page quand on touche le canvas
+    const canvasElement = canvasRef.current;
+    const upperCanvas = canvas.upperCanvasEl;
+
+    const preventScroll = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+
+    if (upperCanvas) {
+      upperCanvas.addEventListener("touchstart", preventScroll, {
+        passive: false,
+      });
+      upperCanvas.addEventListener("touchmove", preventScroll, {
+        passive: false,
+      });
+    }
 
     // Load the original image
     fabric.FabricImage.fromURL(imageUrl, {
@@ -103,6 +137,11 @@ export default function ZoneMaskEditor({
 
     // Cleanup
     return () => {
+      // Retirer les event listeners touch
+      if (upperCanvas) {
+        upperCanvas.removeEventListener("touchstart", preventScroll);
+        upperCanvas.removeEventListener("touchmove", preventScroll);
+      }
       canvas.dispose();
     };
   }, [imageUrl]);
@@ -163,28 +202,42 @@ export default function ZoneMaskEditor({
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
+    // Helper pour obtenir les coordonnées (souris ou touch)
+    const getClientCoords = (e: MouseEvent | TouchEvent) => {
+      if ("touches" in e && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      if ("changedTouches" in e && e.changedTouches.length > 0) {
+        return {
+          x: e.changedTouches[0].clientX,
+          y: e.changedTouches[0].clientY,
+        };
+      }
+      return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+    };
+
     canvas.on("mouse:down", (opt) => {
-      const e = opt.e as MouseEvent;
+      const coords = getClientCoords(opt.e as MouseEvent | TouchEvent);
       panningRef.current.isDragging = true;
-      panningRef.current.lastX = e.clientX;
-      panningRef.current.lastY = e.clientY;
+      panningRef.current.lastX = coords.x;
+      panningRef.current.lastY = coords.y;
     });
 
     canvas.on("mouse:move", (opt) => {
       if (!panningRef.current.isDragging) return;
 
-      const e = opt.e as MouseEvent;
+      const coords = getClientCoords(opt.e as MouseEvent | TouchEvent);
       const vpt = canvas.viewportTransform;
       if (!vpt) return;
 
-      const deltaX = e.clientX - panningRef.current.lastX;
-      const deltaY = e.clientY - panningRef.current.lastY;
+      const deltaX = coords.x - panningRef.current.lastX;
+      const deltaY = coords.y - panningRef.current.lastY;
 
       vpt[4] += deltaX;
       vpt[5] += deltaY;
 
-      panningRef.current.lastX = e.clientX;
-      panningRef.current.lastY = e.clientY;
+      panningRef.current.lastX = coords.x;
+      panningRef.current.lastY = coords.y;
 
       canvas.requestRenderAll();
     });
@@ -374,14 +427,19 @@ export default function ZoneMaskEditor({
         tempCanvas.width = img.width;
         tempCanvas.height = img.height;
         const ctx = tempCanvas.getContext("2d")!;
-        
+
         // Dessiner l'image
         ctx.drawImage(img, 0, 0);
-        
+
         // Récupérer les pixels
-        const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const imageData = ctx.getImageData(
+          0,
+          0,
+          tempCanvas.width,
+          tempCanvas.height
+        );
         const data = imageData.data;
-        
+
         // Convertir chaque pixel en noir ou blanc pur
         // Si la luminosité > 10, c'est blanc, sinon noir
         for (let i = 0; i < data.length; i += 4) {
@@ -389,7 +447,7 @@ export default function ZoneMaskEditor({
           const g = data[i + 1];
           const b = data[i + 2];
           const luminosity = (r + g + b) / 3;
-          
+
           if (luminosity > 10) {
             // Blanc pur
             data[i] = 255;
@@ -404,7 +462,7 @@ export default function ZoneMaskEditor({
             data[i + 3] = 255;
           }
         }
-        
+
         ctx.putImageData(imageData, 0, 0);
         resolve(tempCanvas.toDataURL("image/png"));
       };
@@ -504,33 +562,33 @@ export default function ZoneMaskEditor({
     // Appeler l'API pour appliquer le masque
     try {
       // Convertir le dataURL du masque en blob
-      const maskBlob = await fetch(maskDataUrl).then(r => r.blob());
-      
+      const maskBlob = await fetch(maskDataUrl).then((r) => r.blob());
+
       // Récupérer l'image originale
-      const imageBlob = await fetch(imageUrl).then(r => r.blob());
-      
+      const imageBlob = await fetch(imageUrl).then((r) => r.blob());
+
       const formData = new FormData();
       formData.append("image", imageBlob, "image.png");
       formData.append("mask", maskBlob, "mask.png");
-      
+
       const response = await fetch("/api/apply-mask", {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error("Erreur API");
       }
-      
+
       const resultBlob = await response.blob();
       const resultUrl = URL.createObjectURL(resultBlob);
-      
+
       // Télécharger le résultat
       const link = document.createElement("a");
       link.download = "masked-preview.png";
       link.href = resultUrl;
       link.click();
-      
+
       URL.revokeObjectURL(resultUrl);
     } catch (error) {
       console.error("Erreur lors de l'application du masque:", error);
@@ -582,178 +640,177 @@ export default function ZoneMaskEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-2xl p-6 max-w-[95vw] w-full mx-4 max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-2xl p-4 sm:p-6 max-w-[98vw] sm:max-w-[95vw] w-full max-h-[98vh] sm:max-h-[95vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Délimiter la zone de modification
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
+              Délimiter la zone
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Dessinez en blanc la zone où appliquer la référence
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+              Dessinez en blanc la zone à modifier
             </p>
           </div>
-          {referenceImage && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Référence :</span>
-              <img
-                src={referenceImage}
-                alt="Référence"
-                className="h-16 w-16 object-cover rounded border"
-              />
-            </div>
-          )}
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-4 mb-4 p-4 bg-gray-100 rounded-lg flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Outils :</span>
-            <button
-              onClick={() => setSelectedTool("brush")}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                selectedTool === "brush"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              🖌️ Pinceau
-            </button>
-            <button
-              onClick={() => setSelectedTool("polygon")}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                selectedTool === "polygon"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              ⬡ Polygone
-            </button>
-            <button
-              onClick={() => setSelectedTool("eraser")}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                selectedTool === "eraser"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-              }`}
-              title="Effacer les zones blanches dessinées"
-            >
-              🧹 Gomme
-            </button>
-            <button
-              onClick={() => setSelectedTool("pan")}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                selectedTool === "pan"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-              }`}
-              title="Déplacer la vue"
-            >
-              ✋ Déplacer
-            </button>
+        <div className="flex flex-col gap-3 mb-4 p-3 sm:p-4 bg-gray-100 rounded-lg">
+          {/* Ligne 1: Outils principaux */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                onClick={() => setSelectedTool("brush")}
+                className={`p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-1.5 ${
+                  selectedTool === "brush"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+                title="Pinceau"
+              >
+                <Paintbrush className="w-4 h-4" />
+                <span className="hidden sm:inline">Pinceau</span>
+              </button>
+              <button
+                onClick={() => setSelectedTool("polygon")}
+                className={`p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-1.5 ${
+                  selectedTool === "polygon"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+                title="Polygone"
+              >
+                <Pentagon className="w-4 h-4" />
+                <span className="hidden sm:inline">Polygone</span>
+              </button>
+              <button
+                onClick={() => setSelectedTool("eraser")}
+                className={`p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-1.5 ${
+                  selectedTool === "eraser"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+                title="Gomme - Effacer les zones blanches"
+              >
+                <Eraser className="w-4 h-4" />
+                <span className="hidden sm:inline">Gomme</span>
+              </button>
+              <button
+                onClick={() => setSelectedTool("pan")}
+                className={`p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-1.5 ${
+                  selectedTool === "pan"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+                title="Déplacer la vue"
+              >
+                <Hand className="w-4 h-4" />
+                <span className="hidden sm:inline">Déplacer</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                onClick={undo}
+                disabled={history.length === 0}
+                className="p-2 sm:px-3 sm:py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                title="Annuler"
+              >
+                <Undo2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Annuler</span>
+              </button>
+              <button
+                onClick={clearCanvas}
+                className="p-2 sm:px-3 sm:py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors text-sm flex items-center gap-1.5"
+                title="Effacer tout"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Effacer</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={undo}
-              disabled={history.length === 0}
-              className="px-3 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Retour en arrière"
-            >
-              ↶ Annuler
-            </button>
-            <button
-              onClick={downloadDebugMask}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors text-sm"
-              title="Télécharger le masque noir/blanc"
-            >
-              🐛 Masque
-            </button>
-            <button
-              onClick={downloadMaskedPreview}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
-              title="Voir le résultat avec le masque appliqué"
-            >
-              👁️ Aperçu
-            </button>
+          {/* Ligne 2: Contrôles secondaires */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {/* Zoom */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 hidden sm:inline">
+                Zoom :
+              </span>
+              <button
+                onClick={() => handleZoom(-0.25)}
+                className="p-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50"
+                disabled={zoomLevel <= 0.5}
+                title="Dézoomer"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="text-xs sm:text-sm text-gray-600 min-w-[3rem] text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                onClick={() => handleZoom(0.25)}
+                className="p-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm disabled:opacity-50"
+                disabled={zoomLevel >= 3}
+                title="Zoomer"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Taille du pinceau */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-700">
+                Taille :
+              </span>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={brushSize}
+                onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                className="w-20 sm:w-32"
+                disabled={selectedTool === "polygon" || selectedTool === "pan"}
+              />
+              <span className="text-xs sm:text-sm text-gray-600 min-w-[2.5rem]">
+                {brushSize}px
+              </span>
+            </div>
+
+            {/* Terminer polygone - affiché seulement si en mode polygone */}
+            {isDrawingPolygon && (
+              <button
+                onClick={finishPolygon}
+                className="px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Terminer le polygone</span>
+              </button>
+            )}
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Zoom :</span>
-            <button
-              onClick={() => handleZoom(-0.25)}
-              className="px-3 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
-              disabled={zoomLevel <= 0.5}
-            >
-              ➖
-            </button>
-            <span className="text-sm text-gray-600 min-w-15 text-center">
-              {Math.round(zoomLevel * 100)}%
-            </span>
-            <button
-              onClick={() => handleZoom(0.25)}
-              className="px-3 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
-              disabled={zoomLevel >= 3}
-            >
-              ➕
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Taille :</span>
-            <input
-              type="range"
-              min="5"
-              max="100"
-              value={brushSize}
-              onChange={(e) => setBrushSize(parseInt(e.target.value))}
-              className="w-32"
-              disabled={selectedTool === "polygon" || selectedTool === "pan"}
-            />
-            <span className="text-sm text-gray-600">{brushSize}px</span>
-          </div>
-
-          {isDrawingPolygon && (
-            <button
-              onClick={finishPolygon}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              ✓ Terminer polygone ({polygonPointsRef.current.length} points)
-            </button>
-          )}
-
-          <button
-            onClick={clearCanvas}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors ml-auto"
-          >
-            🗑️ Effacer tout
-          </button>
         </div>
 
         {/* Canvas Container */}
-        <div className="flex items-center justify-center bg-gray-900 rounded-lg p-4 mb-4 overflow-auto max-h-[60vh]">
+        <div className="flex items-center justify-center bg-gray-900 rounded-lg p-2 sm:p-4 mb-4 overflow-auto max-h-[50vh] sm:max-h-[60vh]">
           <canvas ref={canvasRef} className="border border-gray-700 rounded" />
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            💡 Astuce : Les zones en blanc seront modifiées, le noir sera
-            préservé
-          </div>
-          <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={onCancel}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
             >
-              Annuler
+              <X className="w-4 h-4" />
+              <span>Annuler</span>
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
             >
-              Valider le masque
+              <Check className="w-4 h-4" />
+              <span>Valider</span>
             </button>
           </div>
         </div>

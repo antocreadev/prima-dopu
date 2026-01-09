@@ -269,6 +269,33 @@ export function getUserGenerations(userId: string): Generation[] {
 }
 
 /**
+ * Récupère les générations d'un utilisateur avec pagination
+ */
+export function getUserGenerationsPaginated(
+  userId: string,
+  page: number = 1,
+  limit: number = 10
+): { generations: Generation[]; totalItems: number; totalPages: number } {
+  const offset = (page - 1) * limit;
+
+  // Compter le nombre total
+  const countResult = db
+    .prepare("SELECT COUNT(*) as count FROM generations WHERE user_id = ?")
+    .get(userId) as { count: number };
+
+  const totalItems = countResult.count;
+  const totalPages = Math.ceil(totalItems / limit);
+
+  // Récupérer les générations paginées
+  const stmt = db.prepare(
+    "SELECT * FROM generations WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+  );
+  const generations = stmt.all(userId, limit, offset) as Generation[];
+
+  return { generations, totalItems, totalPages };
+}
+
+/**
  * Vérifie si l'utilisateur n'a jamais fait de génération (pour le tutoriel)
  */
 export function isFirstTimeUser(userId: string): boolean {

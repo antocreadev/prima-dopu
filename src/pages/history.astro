@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { SignedIn, SignedOut } from "@clerk/astro/components";
-import { getUserGenerations, getGenerationInstructions, deleteGeneration } from "../lib/db";
+import { getUserGenerationsPaginated, getGenerationInstructions, deleteGeneration } from "../lib/db";
 import { deleteImage } from "../lib/storage";
 import ShareButtons from "../components/ShareButtons.astro";
 
@@ -11,6 +11,11 @@ const userId = auth.userId;
 if (!userId) {
   return Astro.redirect("/");
 }
+
+// Pagination
+const ITEMS_PER_PAGE = 10;
+const url = new URL(Astro.request.url);
+const currentPage = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
 
 // Fonction helper pour construire l'URL d'image
 function getImageUrl(path: string): string {
@@ -42,7 +47,10 @@ if (Astro.request.method === "POST") {
   return Astro.redirect("/history");
 }
 
-const generations = getUserGenerations(userId);
+// Récupérer les générations paginées directement depuis la DB
+const { generations, totalItems, totalPages } = getUserGenerationsPaginated(userId, currentPage, ITEMS_PER_PAGE);
+const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+const endIndex = startIndex + generations.length;
 
 // Récupérer les instructions pour chaque génération
 const generationsWithInstructions = generations.map(gen => ({
@@ -199,6 +207,119 @@ const generationsWithInstructions = generations.map(gen => ({
               </div>
             </div>
           ))}
+
+          <!-- Pagination -->
+          {totalPages > 1 && (
+            <div class="flex items-center justify-center gap-1 sm:gap-2 mt-8 pb-4 flex-wrap">
+              {/* Bouton précédent */}
+              {currentPage > 1 ? (
+                <a
+                  href={`/history?page=${currentPage - 1}`}
+                  class="p-2 sm:px-4 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                  <span class="hidden sm:inline">Précédent</span>
+                </a>
+              ) : (
+                <span class="p-2 sm:px-4 sm:py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 cursor-not-allowed flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                  <span class="hidden sm:inline">Précédent</span>
+                </span>
+              )}
+
+              {/* Numéros de page - version smart */}
+              <div class="flex items-center gap-1">
+                {/* Toujours afficher la page 1 */}
+                {currentPage === 1 ? (
+                  <span class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg font-medium text-sm">
+                    1
+                  </span>
+                ) : (
+                  <a
+                    href="/history?page=1"
+                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    1
+                  </a>
+                )}
+
+                {/* Ellipse avant si nécessaire */}
+                {currentPage > 3 && (
+                  <span class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-slate-400 text-sm">...</span>
+                )}
+
+                {/* Pages autour de la page courante */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => page !== 1 && page !== totalPages && page >= currentPage - 1 && page <= currentPage + 1)
+                  .map((page) => (
+                    page === currentPage ? (
+                      <span class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg font-medium text-sm">
+                        {page}
+                      </span>
+                    ) : (
+                      <a
+                        href={`/history?page=${page}`}
+                        class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                      >
+                        {page}
+                      </a>
+                    )
+                  ))}
+
+                {/* Ellipse après si nécessaire */}
+                {currentPage < totalPages - 2 && (
+                  <span class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-slate-400 text-sm">...</span>
+                )}
+
+                {/* Toujours afficher la dernière page (si > 1) */}
+                {totalPages > 1 && (
+                  currentPage === totalPages ? (
+                    <span class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg font-medium text-sm">
+                      {totalPages}
+                    </span>
+                  ) : (
+                    <a
+                      href={`/history?page=${totalPages}`}
+                      class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                    >
+                      {totalPages}
+                    </a>
+                  )
+                )}
+              </div>
+
+              {/* Bouton suivant */}
+              {currentPage < totalPages ? (
+                <a
+                  href={`/history?page=${currentPage + 1}`}
+                  class="p-2 sm:px-4 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1"
+                >
+                  <span class="hidden sm:inline">Suivant</span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </a>
+              ) : (
+                <span class="p-2 sm:px-4 sm:py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 cursor-not-allowed flex items-center gap-1">
+                  <span class="hidden sm:inline">Suivant</span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Info pagination */}
+          {totalPages > 1 && (
+            <p class="text-center text-sm text-slate-500">
+              Affichage {startIndex + 1} - {Math.min(endIndex, totalItems)} sur {totalItems} générations
+            </p>
+          )}
         </div>
       )}
 

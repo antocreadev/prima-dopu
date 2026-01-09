@@ -517,7 +517,7 @@ folders.forEach((f) => {
           </div>
 
           <!-- Section masques combinés (debug) -->
-          <div id="combinedMasksSection" class="hidden mt-4 mb-6">
+          <!-- <div id="combinedMasksSection" class="hidden mt-4 mb-6">
             <button
               type="button"
               id="toggleCombinedMasksBtn"
@@ -530,11 +530,10 @@ folders.forEach((f) => {
               </svg>
             </button>
             <div id="combinedMasksContainer" class="hidden mt-3 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <!-- Les masques combinés seront ajoutés dynamiquement ici -->
             </div>
-          </div>
+          </div> -->
 
-          <div class="flex justify-between">
+          <div class="flex justify-between gap-2">
             <a
               href="/history"
               class="px-6 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
@@ -611,12 +610,18 @@ folders.forEach((f) => {
               <button
                 type="button"
                 id="openMaskEditorBtn"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm whitespace-nowrap"
-                title="Délimiter la zone avec précision"
+                class="px-3 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm whitespace-nowrap flex items-center gap-1.5"
+                title="Délimiter la zone avec précision (optionnel)"
               >
-                🖌️ Délimiter
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+                <span class="hidden sm:inline">Délimiter</span>
               </button>
             </div>
+            <p class="mt-1.5 text-xs text-slate-400">
+              💡 La délimitation est optionnelle mais améliore la précision
+            </p>
             <div
               id="maskIndicator"
               class="mt-2 text-xs text-green-600 items-center gap-1 hidden"
@@ -890,7 +895,7 @@ folders.forEach((f) => {
               </div>
               <div class="mt-2">
                 <label class="block text-xs text-slate-500 mb-1"
-                  >Nom et description (aide l'IA à comprendre)</label
+                  >Nom et description</label
                 >
                 <input
                   type="text"

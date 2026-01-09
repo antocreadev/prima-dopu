@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { SignedIn, SignedOut } from "@clerk/astro/components";
+import { SignedIn, SignedOut, SignOutButton } from "@clerk/astro/components";
 import { getCreditStats, getUserCredits, type PlanType } from "../lib/db";
 import { getUserPlan } from "../lib/plans";
 import { getSubscription, getCreditsBalance } from "../lib/subscriptions";
@@ -343,6 +343,21 @@ const creditStats = getCreditStats(
                 </p>
               </div>
             </button>
+          </div>
+
+          <!-- Déconnexion -->
+          <div class="border-t border-slate-200 pt-4">
+            <SignOutButton redirectUrl="/">
+              <button
+                class="flex items-center gap-3 p-4 w-full bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-left cursor-pointer"
+              >
+                <span class="text-2xl">🚪</span>
+                <div>
+                  <span class="font-medium text-red-800">Se déconnecter</span>
+                  <p class="text-sm text-red-600">Fermer votre session</p>
+                </div>
+              </button>
+            </SignOutButton>
           </div>
         </div>
       </div>
