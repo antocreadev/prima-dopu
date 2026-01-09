@@ -1676,26 +1676,24 @@ folders.forEach((f) => {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let currentEvent = ""; // Garder l'événement en cours entre les chunks
 
       if (!reader) {
         throw new Error("Le streaming n'est pas supporté");
       }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        let currentEvent = "";
+      // Fonction pour traiter les lignes du buffer
+      const processLines = (lines: string[]) => {
         for (const line of lines) {
+          console.log("[SSE] Line:", line);
+          
           if (line.startsWith("event: ")) {
-            currentEvent = line.substring(7);
+            currentEvent = line.substring(7).trim();
+            console.log("[SSE] Event set to:", currentEvent);
           } else if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.substring(6));
+              console.log("[SSE] Processing event:", currentEvent, "data:", data);
 
               if (currentEvent === "log") {
                 addLog(data.icon || "📝", data.message, data.type);
@@ -1708,71 +1706,107 @@ folders.forEach((f) => {
                 }
                 throw new Error(data.message);
               } else if (currentEvent === "complete") {
-                stopTimer();
-                // Marquer toutes les étapes comme terminées
-                [
-                  "step-upload",
-                  "step-analyze",
-                  "step-plan",
-                  "step-generate",
-                ].forEach((id) => updateGenerationStep(id, "done"));
+                console.log("[SSE] COMPLETE event received!");
+                try {
+                  stopTimer();
+                  console.log("[SSE] Timer stopped");
+                  
+                  // Marquer toutes les étapes comme terminées
+                  [
+                    "step-upload",
+                    "step-analyze",
+                    "step-plan",
+                    "step-generate",
+                  ].forEach((id) => updateGenerationStep(id, "done"));
+                  console.log("[SSE] Steps updated");
 
-                // Nettoyer les chemins (enlever le / initial si présent)
-                const cleanPath = (path: string) =>
-                  path.startsWith("/") ? path.slice(1) : path;
+                  // Nettoyer les chemins (enlever le / initial si présent)
+                  const cleanPath = (path: string) =>
+                    path.startsWith("/") ? path.slice(1) : path;
 
-                resultBeforeImg.src = `/api/images/${cleanPath(data.originalImage)}`;
+                  console.log("[SSE] Setting before image:", data.originalImage);
+                  resultBeforeImg.src = `/api/images/${cleanPath(data.originalImage)}`;
 
-                let generatedImageUrl = "";
-                if (data.generatedImage) {
-                  generatedImageUrl = `/api/images/${cleanPath(data.generatedImage)}`;
-                  resultAfterImg.src = generatedImageUrl;
-                  resultAfterImg.classList.remove("hidden");
-                  resultDescription.classList.add("hidden");
-                } else if (data.description) {
-                  resultDescription.innerHTML = `<p class="whitespace-pre-wrap">${data.description}</p>`;
-                  resultDescription.classList.remove("hidden");
-                  resultAfterImg.classList.add("hidden");
+                  let generatedImageUrl = "";
+                  if (data.generatedImage) {
+                    generatedImageUrl = `/api/images/${cleanPath(data.generatedImage)}`;
+                    console.log("[SSE] Setting after image:", generatedImageUrl);
+                    resultAfterImg.src = generatedImageUrl;
+                    resultAfterImg.classList.remove("hidden");
+                    resultDescription.classList.add("hidden");
+                  } else if (data.description) {
+                    resultDescription.innerHTML = `<p class="whitespace-pre-wrap">${data.description}</p>`;
+                    resultDescription.classList.remove("hidden");
+                    resultAfterImg.classList.add("hidden");
+                  }
+
+                  // Créer les boutons de partage
+                  console.log("[SSE] Creating share buttons");
+                  createShareButtons(generatedImageUrl || resultBeforeImg.src);
+
+                  // Afficher les masques combinés si disponibles
+                  console.log("[SSE] Processing combined masks");
+                  const combinedMasksSection = document.getElementById("combinedMasksSection") as HTMLDivElement;
+                  const combinedMasksContainer = document.getElementById("combinedMasksContainer") as HTMLDivElement;
+                  
+                  if (data.combinedMaskPaths && data.combinedMaskPaths.length > 0 && combinedMasksContainer) {
+                    combinedMasksContainer.innerHTML = "";
+                    data.combinedMaskPaths.forEach((maskPath: string, index: number) => {
+                      const maskUrl = `/api/images/${cleanPath(maskPath)}`;
+                      const maskCard = document.createElement("div");
+                      maskCard.className = "border border-slate-200 rounded-lg p-3 bg-slate-50";
+                      maskCard.innerHTML = `
+                        <p class="text-xs text-slate-500 mb-2">Masque combiné ${index + 1}</p>
+                        <img src="${maskUrl}" alt="Masque combiné ${index + 1}" class="w-full rounded cursor-pointer hover:opacity-90 transition-opacity lightbox-trigger" />
+                        <a href="${maskUrl}" download="masque-combine-${index + 1}.png" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                          </svg>
+                          Télécharger
+                        </a>
+                      `;
+                      combinedMasksContainer.appendChild(maskCard);
+                    });
+                    if (combinedMasksSection) combinedMasksSection.classList.remove("hidden");
+                  } else {
+                    if (combinedMasksSection) combinedMasksSection.classList.add("hidden");
+                  }
+
+                  console.log("[SSE] Showing result state");
+                  generatingState.classList.add("hidden");
+                  resultState.classList.remove("hidden");
+                  console.log("[SSE] COMPLETE processing finished!");
+                } catch (completeError) {
+                  console.error("[SSE] Error in complete handler:", completeError);
                 }
-
-                // Créer les boutons de partage
-                createShareButtons(generatedImageUrl || resultBeforeImg.src);
-
-                // Afficher les masques combinés si disponibles
-                const combinedMasksSection = document.getElementById("combinedMasksSection") as HTMLDivElement;
-                const combinedMasksContainer = document.getElementById("combinedMasksContainer") as HTMLDivElement;
-                
-                if (data.combinedMaskPaths && data.combinedMaskPaths.length > 0) {
-                  combinedMasksContainer.innerHTML = "";
-                  data.combinedMaskPaths.forEach((maskPath: string, index: number) => {
-                    const maskUrl = `/api/images/${cleanPath(maskPath)}`;
-                    const maskCard = document.createElement("div");
-                    maskCard.className = "border border-slate-200 rounded-lg p-3 bg-slate-50";
-                    maskCard.innerHTML = `
-                      <p class="text-xs text-slate-500 mb-2">Masque combiné ${index + 1}</p>
-                      <img src="${maskUrl}" alt="Masque combiné ${index + 1}" class="w-full rounded cursor-pointer hover:opacity-90 transition-opacity lightbox-trigger" />
-                      <a href="${maskUrl}" download="masque-combine-${index + 1}.png" class="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        Télécharger
-                      </a>
-                    `;
-                    combinedMasksContainer.appendChild(maskCard);
-                  });
-                  combinedMasksSection.classList.remove("hidden");
-                } else {
-                  combinedMasksSection.classList.add("hidden");
-                }
-
-                generatingState.classList.add("hidden");
-                resultState.classList.remove("hidden");
               }
             } catch (e) {
-              // Ignorer les erreurs de parsing JSON
+              console.error("[SSE] Parse error:", e);
             }
           }
         }
+      };
+
+      // Lire le stream
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log("[SSE] Stream done, buffer remaining:", buffer);
+          // Traiter le reste du buffer quand le stream est terminé
+          if (buffer.trim()) {
+            const finalLines = buffer.split("\n");
+            console.log("[SSE] Processing final lines:", finalLines);
+            processLines(finalLines);
+          }
+          console.log("[SSE] Stream processing complete");
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        processLines(lines);
       }
     } catch (error: any) {
       console.error("Erreur:", error);
