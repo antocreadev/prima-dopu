@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getImageBuffer } from "../../../lib/storage";
+import { isAdminUser } from "../../../lib/plans";
 
 export const GET: APIRoute = async ({ params, locals }) => {
   const imagePath = params.path;
@@ -30,8 +31,11 @@ export const GET: APIRoute = async ({ params, locals }) => {
       return new Response("Non authentifié", { status: 401 });
     }
 
-    // Vérifier que l'utilisateur a accès à cette image
-    if (pathParts.length >= 2) {
+    // Les admins ont accès à toutes les images (pour le debug)
+    const isAdmin = isAdminUser(userId);
+
+    // Vérifier que l'utilisateur a accès à cette image (sauf admin)
+    if (!isAdmin && pathParts.length >= 2) {
       const filename = pathParts[pathParts.length - 1];
       const fileUserIdMatch = filename.match(/^(user_[^-]+)/);
       if (fileUserIdMatch) {
