@@ -1736,8 +1736,7 @@ folders.forEach((f) => {
         method: "POST",
         body: formData,
         signal: controller.signal,
-        // Keepalive pour maintenir la connexion sur mobile
-        keepalive: true,
+        // Note: keepalive incompatible avec gros payloads, on l'enlève
       });
 
       clearTimeout(timeoutId);
