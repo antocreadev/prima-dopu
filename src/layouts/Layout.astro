@@ -11,8 +11,8 @@ interface Props {
 }
 
 const {
-  title = "PrimaDopu - Visualisation Avant/Après par IA | Home Staging Virtuel",
-  description = "Créez des visuels avant/après professionnels en moins de 3 minutes. L'outil IA n°1 en France pour architectes, décorateurs d'intérieur, agences immobilières et artisans du bâtiment. Transformez vos projets de rénovation avec notre intelligence artificielle.",
+  title = "PrimaDopu - Visualisation Avant/Après par IA",
+  description = "Créez des visuels avant/après pro en 3 min. Rénovation, home staging, déco. L'outil IA pour architectes et décorateurs.",
   keywords = "primadopu, prima dopu, visualisation avant après, home staging virtuel, IA décoration intérieur, outil architecte IA, rénovation virtuelle, simulation aménagement, transformation intérieur IA, projet rénovation maison, décoration pièce IA, avant après travaux, visite virtuelle immobilier, staging immobilier, design intérieur IA, aménagement espace, relooking maison virtuel, visualisation projet rénovation, outil décorateur professionnel, simulation travaux maison, home design IA France",
   disableStickyHeader = false,
 } = Astro.props;
@@ -131,7 +131,10 @@ const user = await Astro.locals.currentUser();
           "@type": "Country",
           "name": "France"
         },
-        "sameAs": []
+        "sameAs": [
+          "https://www.instagram.com/primadopu/",
+          "https://www.facebook.com/profile.php?id=61586567542846"
+        ]
       }
     </script>
 
@@ -225,17 +228,67 @@ const user = await Astro.locals.currentUser();
     <meta name="theme-color" content="#1e3a5f" />
 
     <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-TSGKWJRP');</script>
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-TSGKWJRP");
+    </script>
     <!-- End Google Tag Manager -->
+
+    <!-- Facebook Pixel -->
+    <script>
+      !(function (f, b, e, v, n, t, s) {
+        if (f.fbq) return;
+        n = f.fbq = function () {
+          n.callMethod
+            ? n.callMethod.apply(n, arguments)
+            : n.queue.push(arguments);
+        };
+        if (!f._fbq) f._fbq = n;
+        n.push = n;
+        n.loaded = !0;
+        n.version = "2.0";
+        n.queue = [];
+        t = b.createElement(e);
+        t.async = !0;
+        t.src = v;
+        s = b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t, s);
+      })(
+        window,
+        document,
+        "script",
+        "https://connect.facebook.net/en_US/fbevents.js"
+      );
+      fbq("init", "VOTRE_PIXEL_ID");
+      fbq("track", "PageView");
+    </script>
+    <noscript
+      ><img
+        height="1"
+        width="1"
+        style="display:none"
+        src="https://www.facebook.com/tr?id=VOTRE_PIXEL_ID&ev=PageView&noscript=1"
+      /></noscript
+    >
+    <!-- End Facebook Pixel -->
   </head>
   <body class="min-h-screen bg-white">
     <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TSGKWJRP"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-TSGKWJRP"
+        height="0"
+        width="0"
+        style="display:none;visibility:hidden"></iframe></noscript
+    >
     <!-- End Google Tag Manager (noscript) -->
     <header
       class:list={[
@@ -252,11 +305,11 @@ const user = await Astro.locals.currentUser();
                 alt="PrimaDopu"
                 class="h-10 md:h-16"
               />
-              <h1 class="text-xl md:text-4xl font-bold">
+              <span class="text-xl md:text-4xl font-bold">
                 <span class="text-blue-950">Prima</span><span
                   class="text-orange-600">Dopu</span
                 >
-              </h1>
+              </span>
             </a>
             <SignedIn>
               <nav class="hidden md:flex items-center gap-1">

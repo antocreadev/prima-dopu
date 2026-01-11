@@ -86,7 +86,7 @@ const subscriptionStats = db
 }>;
 
 // Dernières générations
-const latestGenerations = db
+const latestGenerationsRaw = db
   .prepare(
     `
   SELECT 
@@ -111,6 +111,50 @@ const latestGenerations = db
   generated_image_path: string | null;
   instruction_count: number;
 }>;
+
+// Récupérer les instructions détaillées pour chaque génération
+const generationIds = latestGenerationsRaw.map(g => g.id);
+const instructionsDetails = generationIds.length > 0 ? db
+  .prepare(
+    `
+  SELECT 
+    i.id,
+    i.generation_id,
+    i.location,
+    i.reference_id,
+    i.mask_image_path,
+    m.name as reference_name,
+    m.image_path as reference_image_path
+  FROM instructions i
+  LEFT JOIN material_refs m ON m.id = i.reference_id
+  WHERE i.generation_id IN (${generationIds.map(() => '?').join(',')})
+  ORDER BY i.id
+`
+  )
+  .all(...generationIds) as Array<{
+  id: string;
+  generation_id: string;
+  location: string;
+  reference_id: string;
+  mask_image_path: string | null;
+  reference_name: string | null;
+  reference_image_path: string | null;
+}> : [];
+
+// Grouper les instructions par génération
+const instructionsByGeneration = instructionsDetails.reduce((acc, inst) => {
+  if (!acc[inst.generation_id]) {
+    acc[inst.generation_id] = [];
+  }
+  acc[inst.generation_id].push(inst);
+  return acc;
+}, {} as Record<string, typeof instructionsDetails>);
+
+// Enrichir les générations avec leurs instructions
+const latestGenerations = latestGenerationsRaw.map(gen => ({
+  ...gen,
+  instructions: instructionsByGeneration[gen.id] || []
+}));
 
 // Top utilisateurs (par nombre de générations)
 const topUsersRaw = db
@@ -419,82 +463,135 @@ const planLabels: Record<string, string> = {
 
       <!-- Tab: Générations -->
       <div id="tab-generations" class="tab-content p-6 hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-left border-b border-slate-200">
-                <th class="pb-3 font-semibold text-slate-700">ID</th>
-                <th class="pb-3 font-semibold text-slate-700">Utilisateur</th>
-                <th class="pb-3 font-semibold text-slate-700">Status</th>
-                <th class="pb-3 font-semibold text-slate-700 text-center"
-                  >Instructions</th
-                >
-                <th class="pb-3 font-semibold text-slate-700">Date</th>
-                <th class="pb-3 font-semibold text-slate-700 text-right"
-                  >Images</th
-                >
-              </tr>
-            </thead>
-            <tbody>
-              {
-                latestGenerations.map((gen) => (
-                  <tr class="border-b border-slate-100 hover:bg-slate-50">
-                    <td class="py-3 font-mono text-xs text-slate-600">
-                      {gen.id.substring(0, 8)}...
-                    </td>
-                    <td class="py-3 font-mono text-xs text-slate-600">
-                      {gen.user_id.substring(0, 15)}...
-                    </td>
-                    <td class="py-3">
-                      <span
-                        class:list={[
-                          "px-2 py-1 rounded-full text-xs font-medium",
-                          gen.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : gen.status === "failed"
-                              ? "bg-red-100 text-red-700"
-                              : gen.status === "processing"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-slate-100 text-slate-600",
-                        ]}
-                      >
-                        {gen.status}
-                      </span>
-                    </td>
-                    <td class="py-3 text-center">{gen.instruction_count}</td>
-                    <td class="py-3 text-slate-600">
+        <div class="space-y-4">
+          {
+            latestGenerations.map((gen) => (
+              <div class="border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                <!-- Header de la génération -->
+                <div class="bg-slate-50 px-4 py-3 flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <span class="font-mono text-xs text-slate-500" title={gen.id}>
+                      #{gen.id.substring(0, 8)}
+                    </span>
+                    <span class="font-mono text-xs text-slate-400">
+                      👤 {gen.user_id.substring(0, 12)}...
+                    </span>
+                    <span
+                      class:list={[
+                        "px-2 py-1 rounded-full text-xs font-medium",
+                        gen.status === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : gen.status === "failed"
+                            ? "bg-red-100 text-red-700"
+                            : gen.status === "processing"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-slate-100 text-slate-600",
+                      ]}
+                    >
+                      {gen.status}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <span class="text-xs text-slate-500">
                       {new Date(gen.created_at).toLocaleDateString("fr-FR", {
                         day: "2-digit",
                         month: "2-digit",
+                        year: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </td>
-                    <td class="py-3 text-right">
-                      <div class="flex justify-end gap-2">
+                    </span>
+                    <div class="flex gap-2">
+                      <a
+                        href={`/api/images/${gen.original_image_path}`}
+                        target="_blank"
+                        class="text-xs text-indigo-600 hover:underline"
+                      >
+                        📷 Original
+                      </a>
+                      {gen.generated_image_path && (
                         <a
-                          href={`/api/images/${gen.original_image_path}`}
+                          href={`/api/images/${gen.generated_image_path}`}
                           target="_blank"
-                          class="text-xs text-indigo-600 hover:underline"
+                          class="text-xs text-green-600 hover:underline"
                         >
-                          Original
+                          ✨ Généré
                         </a>
-                        {gen.generated_image_path && (
-                          <a
-                            href={`/api/images/${gen.generated_image_path}`}
-                            target="_blank"
-                            class="text-xs text-green-600 hover:underline"
-                          >
-                            Généré
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Instructions détaillées -->
+                {gen.instructions.length > 0 ? (
+                  <div class="p-4">
+                    <div class="text-xs font-medium text-slate-600 mb-3">
+                      📝 {gen.instructions.length} instruction(s)
+                    </div>
+                    <div class="grid gap-3">
+                      {gen.instructions.map((inst, idx) => (
+                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                          <div class="flex items-start gap-3">
+                            <!-- Image de référence -->
+                            {inst.reference_image_path && (
+                              <a 
+                                href={`/api/images/${inst.reference_image_path}`}
+                                target="_blank"
+                                class="flex-shrink-0"
+                              >
+                                <img 
+                                  src={`/api/images/${inst.reference_image_path}`}
+                                  alt={inst.reference_name || "Référence"}
+                                  class="w-16 h-16 object-cover rounded-lg border border-slate-200 hover:border-indigo-400 transition-colors"
+                                />
+                              </a>
+                            )}
+                            
+                            <!-- Détails de l'instruction -->
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-medium text-slate-700">
+                                  #{idx + 1}
+                                </span>
+                                {inst.reference_name && (
+                                  <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+                                    🎨 {inst.reference_name}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div class="text-sm text-slate-800 bg-white p-2 rounded border border-slate-200">
+                                <span class="font-medium text-slate-500">Zone :</span> {inst.location}
+                              </div>
+                              
+                              <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                                <span title={inst.reference_id}>
+                                  Ref: {inst.reference_id.substring(0, 8)}...
+                                </span>
+                                {inst.mask_image_path && (
+                                  <a 
+                                    href={`/api/images/${inst.mask_image_path}`}
+                                    target="_blank"
+                                    class="text-purple-600 hover:underline"
+                                  >
+                                    🎭 Voir masque
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div class="p-4 text-center text-sm text-slate-400">
+                    Aucune instruction enregistrée
+                  </div>
+                )}
+              </div>
+            ))
+          }
         </div>
       </div>
 
