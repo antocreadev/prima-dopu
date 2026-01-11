@@ -1,0 +1,53 @@
+# Robots.txt pour PrimaDopu
+# https://primadopu.fr
+
+User-agent: *
+Allow: /
+
+# Pages autorisées explicitement
+Allow: /
+Allow: /pricing
+Allow: /legal/
+Allow: /sign-in
+Allow: /sign-up
+
+# Bloquer les ressources privées et API
+Disallow: /api/
+Disallow: /admin/
+Disallow: /profile
+Disallow: /history
+Disallow: /generate
+Disallow: /library
+Disallow: /no-credits
+
+# Bloquer les uploads générés
+Disallow: /uploads/
+
+# Sitemap
+Sitemap: https://primadopu.fr/sitemap.xml
+
+# Crawl-delay pour éviter la surcharge
+Crawl-delay: 1
+
+# Règles spécifiques pour les bots principaux
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /uploads/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /uploads/
+
+# Bloquer les bots malveillants connus
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /

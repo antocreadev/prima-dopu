@@ -10,6 +10,7 @@ import react from "@astrojs/react";
 import sentry from "@sentry/astro";
 
 export default defineConfig({
+  site: "https://primadopu.fr",
   integrations: [
     clerk({
       localization: frFR,

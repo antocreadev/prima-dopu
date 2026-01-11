@@ -1,0 +1,67 @@
+# PrimaDopu
+
+> Outil de visualisation avant/après par intelligence artificielle pour les professionnels de l'aménagement intérieur et extérieur.
+
+PrimaDopu est une application web française qui permet aux architectes, décorateurs d'intérieur, agences immobilières, artisans du bâtiment et paysagistes de créer des visuels avant/après photoréalistes en moins de 3 minutes grâce à l'IA.
+
+## Fonctionnalités principales
+
+- **Génération avant/après par IA** : Téléchargez une photo, décrivez les modifications souhaitées, obtenez un rendu photoréaliste
+- **Home staging virtuel** : Visualisez le potentiel d'un bien immobilier sans travaux réels
+- **Changement de matériaux** : Carrelage, parquet, peinture, papier peint, crépi, bardage
+- **Remplacement de mobilier** : Tables, canapés, lits, armoires, meubles de cuisine
+- **Décoration et textiles** : Rideaux, tapis, coussins, tableaux, objets déco
+- **Luminaires et éclairage** : Changement d'ambiance lumineuse
+- **Paysagisme** : Aménagement de jardins et espaces extérieurs
+- **Bibliothèque de références** : Sauvegardez vos matériaux et textures préférés
+
+## Cas d'usage
+
+- Architectes présentant des projets de rénovation à leurs clients
+- Décorateurs d'intérieur proposant des options de décoration
+- Agences immobilières réalisant du home staging virtuel
+- Cuisinistes visualisant des aménagements de cuisine
+- Artisans BTP montrant le résultat de travaux avant réalisation
+- Paysagistes présentant des projets d'aménagement extérieur
+
+## Informations techniques
+
+- **Site web** : https://primadopu.fr
+- **Langue** : Français
+- **Localisation** : France
+- **Type d'application** : SaaS (Software as a Service)
+- **Technologie** : Application web (pas d'installation requise)
+
+## Tarification
+
+- **Essai gratuit** : Disponible pour tester le service
+- **Plan Standard** : 25 projets/mois
+- **Plan Pro** : 50 projets/mois
+- Sans engagement, annulation à tout moment
+
+## Contact
+
+- **Email** : primadopu.ai@gmail.com
+- **Éditeur** : Anthony MENGHI (Entrepreneur individuel)
+- **SIRET** : 914 116 835 00010
+
+## Pages principales
+
+- / : Page d'accueil avec démonstration interactive
+- /pricing : Tarifs et abonnements
+- /sign-up : Inscription (essai gratuit)
+- /sign-in : Connexion
+- /legal/mentions : Mentions légales
+- /legal/privacy : Politique de confidentialité
+- /legal/terms : Conditions générales d'utilisation
+
+## Pages privées (authentification requise)
+
+- /generate : Interface de génération d'images
+- /library : Bibliothèque de matériaux de référence
+- /history : Historique des générations
+- /profile : Profil utilisateur
+
+## Mots-clés
+
+visualisation avant après, home staging virtuel, IA décoration intérieur, outil architecte IA, rénovation virtuelle, simulation aménagement, transformation intérieur IA, design intérieur IA, relooking maison virtuel, staging immobilier

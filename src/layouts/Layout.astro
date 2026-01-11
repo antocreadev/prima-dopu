@@ -11,9 +11,9 @@ interface Props {
 }
 
 const {
-  title = "PrimaDopu - Visualisation Avant/Après par IA",
-  description = "Créez des visuels avant/après professionnels en moins de 3 minutes. L'outil IA pour architectes, décorateurs, agences immobilières et artisans.",
-  keywords = "visualisation avant après, IA aménagement, home staging virtuel, outil architecte, décoration intérieur",
+  title = "PrimaDopu - Visualisation Avant/Après par IA | Home Staging Virtuel",
+  description = "Créez des visuels avant/après professionnels en moins de 3 minutes. L'outil IA n°1 en France pour architectes, décorateurs d'intérieur, agences immobilières et artisans du bâtiment. Transformez vos projets de rénovation avec notre intelligence artificielle.",
+  keywords = "primadopu, prima dopu, visualisation avant après, home staging virtuel, IA décoration intérieur, outil architecte IA, rénovation virtuelle, simulation aménagement, transformation intérieur IA, projet rénovation maison, décoration pièce IA, avant après travaux, visite virtuelle immobilier, staging immobilier, design intérieur IA, aménagement espace, relooking maison virtuel, visualisation projet rénovation, outil décorateur professionnel, simulation travaux maison, home design IA France",
   disableStickyHeader = false,
 } = Astro.props;
 const currentPath = Astro.url.pathname;
@@ -36,6 +36,7 @@ const user = await Astro.locals.currentUser();
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="PrimaDopu" />
     <link rel="manifest" href="/site.webmanifest" />
@@ -74,34 +75,168 @@ const user = await Astro.locals.currentUser();
       content="PrimaDopu - Visualisation Avant/Après par IA"
     />
 
-    <!-- Structured Data -->
+    <!-- Structured Data - SoftwareApplication -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "PrimaDopu",
-        "description": "Outil de visualisation avant/après par IA pour professionnels de l'aménagement",
+        "description": "Outil de visualisation avant/après par IA pour professionnels de l'aménagement, architectes, décorateurs et agences immobilières",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Web",
+        "url": "https://primadopu.fr",
+        "image": "https://primadopu.fr/og-image.png",
+        "screenshot": "https://primadopu.fr/og-image.png",
+        "softwareVersion": "1.0",
+        "author": {
+          "@type": "Organization",
+          "name": "PrimaDopu",
+          "url": "https://primadopu.fr"
+        },
         "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "EUR"
+          "@type": "AggregateOffer",
+          "lowPrice": "0",
+          "highPrice": "49.99",
+          "priceCurrency": "EUR",
+          "offerCount": "3"
         },
         "aggregateRating": {
           "@type": "AggregateRating",
           "ratingValue": "4.8",
-          "ratingCount": "150"
-        }
+          "ratingCount": "150",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "featureList": [
+          "Visualisation avant/après par IA",
+          "Home staging virtuel",
+          "Génération en moins de 3 minutes",
+          "Interface intuitive",
+          "Export haute résolution"
+        ]
       }
     </script>
+
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "PrimaDopu",
+        "url": "https://primadopu.fr",
+        "logo": "https://primadopu.fr/logo-primadopu.png",
+        "description": "Solution française de visualisation avant/après par intelligence artificielle pour les professionnels de l'immobilier et de la décoration",
+        "foundingDate": "2024",
+        "areaServed": {
+          "@type": "Country",
+          "name": "France"
+        },
+        "sameAs": []
+      }
+    </script>
+
+    <!-- Structured Data - WebSite with SearchAction -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "PrimaDopu",
+        "url": "https://primadopu.fr",
+        "description": "Créez des visuels avant/après professionnels avec l'IA",
+        "inLanguage": "fr-FR"
+      }
+    </script>
+
+    <!-- Structured Data - FAQ pour résultats enrichis -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que PrimaDopu ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PrimaDopu est un outil de visualisation avant/après par intelligence artificielle. Il permet aux professionnels (architectes, décorateurs, agences immobilières) de créer des visuels photoréalistes de projets de rénovation en moins de 3 minutes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment fonctionne PrimaDopu ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Téléchargez une photo de l'espace à transformer, décrivez les modifications souhaitées (changement de sol, mobilier, couleurs...), et l'IA génère automatiquement un visuel avant/après photoréaliste."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "PrimaDopu est-il gratuit ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PrimaDopu propose un essai gratuit pour tester le service. Des abonnements Standard et Pro sont disponibles pour une utilisation professionnelle intensive, sans engagement."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quels types de transformations puis-je réaliser ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PrimaDopu permet de visualiser tous types de transformations : changement de sol (carrelage, parquet), peinture, mobilier, décoration, luminaires, paysagisme, home staging virtuel, et bien plus encore."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Combien de temps faut-il pour générer une image ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "La génération d'un visuel avant/après prend moins de 3 minutes. L'IA analyse votre photo et vos instructions pour créer un résultat photoréaliste rapidement."
+            }
+          }
+        ]
+      }
+    </script>
+
+    <!-- Hreflang pour SEO international -->
+    <link rel="alternate" hreflang="fr" href={canonicalURL} />
+    <link rel="alternate" hreflang="x-default" href={canonicalURL} />
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="language" content="fr" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="geo.region" content="FR" />
+    <meta name="geo.placename" content="France" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
     <meta name="generator" content={Astro.generator} />
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#1e3a5f" />
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TSGKWJRP');</script>
+    <!-- End Google Tag Manager -->
   </head>
   <body class="min-h-screen bg-white">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TSGKWJRP"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <header
       class:list={[
         "bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-100",
