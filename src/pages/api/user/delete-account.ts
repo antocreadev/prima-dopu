@@ -7,10 +7,9 @@ export const POST: APIRoute = async (context) => {
     const userId = auth.userId;
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Non authentifié" }),
-        { status: 401 }
-      );
+      return new Response(JSON.stringify({ error: "Non authentifié" }), {
+        status: 401,
+      });
     }
 
     // Supprimer l'utilisateur via Clerk

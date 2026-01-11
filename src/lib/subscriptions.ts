@@ -185,7 +185,26 @@ export function cancelSubscription(stripeSubscriptionId: string): void {
 // ==========================================
 
 /**
+ * Vérifie si un customer Stripe existe et est valide
+ * Retourne null si le customer n'existe plus
+ */
+export async function validateStripeCustomer(
+  customerId: string
+): Promise<boolean> {
+  try {
+    await stripe.customers.retrieve(customerId);
+    return true;
+  } catch (error: any) {
+    if (error.code === 'resource_missing') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
  * Crée ou récupère un customer Stripe pour un utilisateur
+ * Si le customer existe en DB mais pas sur Stripe, il est recréé automatiquement
  */
 export async function getOrCreateStripeCustomer(
   userId: string,
@@ -195,7 +214,13 @@ export async function getOrCreateStripeCustomer(
   const sub = getSubscription(userId);
 
   if (sub?.stripe_customer_id) {
-    return sub.stripe_customer_id;
+    // Vérifier que le customer existe toujours sur Stripe
+    const isValid = await validateStripeCustomer(sub.stripe_customer_id);
+    if (isValid) {
+      return sub.stripe_customer_id;
+    }
+    // Customer supprimé sur Stripe, on va le recréer
+    console.log(`[Stripe] Customer ${sub.stripe_customer_id} introuvable, recréation...`);
   }
 
   // Créer un nouveau customer Stripe
@@ -210,6 +235,7 @@ export async function getOrCreateStripeCustomer(
     stripe_customer_id: customer.id,
   });
 
+  console.log(`[Stripe] Nouveau customer créé: ${customer.id} pour user ${userId}`);
   return customer.id;
 }
 

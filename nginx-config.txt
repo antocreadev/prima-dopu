@@ -1,6 +1,48 @@
 server {
     server_name primadopu.fr www.primadopu.fr;
     client_max_body_size 100M;
+    
+    # CRUCIAL pour mobile : timeouts pour les uploads lents
+    client_body_timeout 300;
+    client_header_timeout 300;
+
+    # Configuration spécifique pour les endpoints SSE (Server-Sent Events)
+    location /api/generate-stream {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection '';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Origin https://$host;
+        proxy_cache_bypass $http_upgrade;
+
+        # CRITIQUE pour SSE : désactiver tout buffering
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding off;
+        
+        # CRUCIAL pour mobile : désactiver gzip sur SSE
+        gzip off;
+        
+        # Désactiver le buffering au niveau du proxy
+        proxy_request_buffering off;
+
+        # Timeouts très longs pour les générations d'images
+        proxy_connect_timeout 600;
+        proxy_send_timeout 600;
+        proxy_read_timeout 600;
+        send_timeout 600;
+        
+        # Keepalive
+        keepalive_timeout 600;
+        
+        # IMPORTANT pour mobile : ignorer les fermetures client
+        proxy_ignore_client_abort on;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:3000;

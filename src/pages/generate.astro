@@ -965,6 +965,13 @@ folders.forEach((f) => {
 </Layout>
 
 <script>
+  // Type pour l'API Wake Lock
+  interface WakeLockSentinel {
+    readonly released: boolean;
+    readonly type: 'screen';
+    release(): Promise<void>;
+  }
+
   interface Instruction {
     id: string;
     location: string;
@@ -1629,6 +1636,63 @@ folders.forEach((f) => {
     resetGenerationSteps();
     startTimer();
 
+    // Afficher l'avertissement mobile si on est sur mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const mobileWarning = document.getElementById("mobileWarning");
+    if (isMobile && mobileWarning) {
+      mobileWarning.classList.remove("hidden");
+    }
+
+    // Empêcher la mise en veille sur mobile pendant la génération
+    let wakeLock: WakeLockSentinel | null = null;
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await (navigator as any).wakeLock.request('screen');
+        console.log('[Mobile] Wake Lock activé');
+      }
+    } catch (e) {
+      console.log('[Mobile] Wake Lock non disponible');
+    }
+
+    // Variables pour le polling de fallback (déclarées ici pour être accessibles dans le catch)
+    let currentGenerationId: string | null = null;
+
+    // Fonction de polling pour récupérer le résultat si déconnecté
+    const pollForResult = async (genId: string): Promise<void> => {
+      addLog("🔄", "Vérification du statut...");
+      for (let i = 0; i < 60; i++) { // Max 5 minutes (60 * 5s)
+        await new Promise(r => setTimeout(r, 5000));
+        try {
+          const statusRes = await fetch(`/api/generation-status?id=${genId}`);
+          if (!statusRes.ok) continue;
+          const status = await statusRes.json();
+          
+          if (status.status === 'completed' && status.generatedImage) {
+            // Succès!
+            stopTimer();
+            ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(id => updateGenerationStep(id, "done"));
+            
+            const cleanPath = (p: string) => p.startsWith("/") ? p.slice(1) : p;
+            resultBeforeImg.src = `/api/images/${cleanPath(status.originalImage)}`;
+            resultAfterImg.src = `/api/images/${cleanPath(status.generatedImage)}`;
+            resultAfterImg.classList.remove("hidden");
+            
+            generatingState.classList.add("hidden");
+            resultState.classList.remove("hidden");
+            addLog("✅", "Génération terminée!", "success");
+            return;
+          } else if (status.status === 'failed') {
+            throw new Error("La génération a échoué");
+          }
+          // processing - on continue à attendre
+          addLog("⏳", `En cours... (${i + 1})`);
+        } catch (e) {
+          // Erreur réseau, on réessaie
+        }
+      }
+      throw new Error("Délai d'attente dépassé");
+    };
+
     try {
       const formData = new FormData();
       formData.append("image", selectedImage!);
@@ -1663,14 +1727,24 @@ folders.forEach((f) => {
         }
       }
 
+      // AbortController avec timeout de 10 minutes pour mobile
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes
+
       // Utiliser fetch avec streaming pour le SSE
       const response = await fetch("/api/generate-stream", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
+        // Keepalive pour maintenir la connexion sur mobile
+        keepalive: true,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error("Erreur de connexion au serveur");
+        const errorText = await response.text().catch(() => "");
+        throw new Error(errorText || "Erreur de connexion au serveur");
       }
 
       const reader = response.body?.getReader();
@@ -1695,7 +1769,11 @@ folders.forEach((f) => {
               const data = JSON.parse(line.substring(6));
               console.log("[SSE] Processing event:", currentEvent, "data:", data);
 
-              if (currentEvent === "log") {
+              // Capturer l'ID de génération pour le polling
+              if (currentEvent === "generationId") {
+                currentGenerationId = data.id;
+                console.log("[SSE] Generation ID captured:", currentGenerationId);
+              } else if (currentEvent === "log") {
                 addLog(data.icon || "📝", data.message, data.type);
               } else if (currentEvent === "step") {
                 updateGenerationStep(`step-${data.step}`, data.status);
@@ -1809,9 +1887,30 @@ folders.forEach((f) => {
         processLines(lines);
       }
     } catch (error: any) {
-      console.error("Erreur:", error);
+      console.error("Erreur SSE:", error);
+      
+      // Si on a un ID de génération, essayer le polling
+      if (currentGenerationId) {
+        addLog("📡", "Connexion perdue, vérification du statut...");
+        try {
+          await pollForResult(currentGenerationId);
+          return; // Succès via polling
+        } catch (pollError: any) {
+          console.error("Polling échoué:", pollError);
+        }
+      }
+      
       stopTimer();
-      addLog("❌", error.message || "Erreur inconnue", "error");
+      
+      // Déterminer un message d'erreur plus clair
+      let errorMsg = error.message || "Erreur inconnue";
+      if (error.name === 'AbortError') {
+        errorMsg = "La génération a pris trop de temps. Veuillez réessayer.";
+      } else if (error.message === 'Failed to fetch' || error.message?.includes('network')) {
+        errorMsg = "Connexion perdue. Vérifiez votre connexion internet et réessayez.";
+      }
+      
+      addLog("❌", errorMsg, "error");
       // Marquer l'étape en cours comme erreur
       ["step-upload", "step-analyze", "step-plan", "step-generate"].forEach(
         (id) => {
@@ -1823,7 +1922,15 @@ folders.forEach((f) => {
       );
       generatingState.classList.add("hidden");
       errorState.classList.remove("hidden");
-      errorMessage.textContent = error.message || "Erreur inconnue";
+      errorMessage.textContent = errorMsg;
+    } finally {
+      // Libérer le wake lock
+      if (wakeLock) {
+        try {
+          await wakeLock.release();
+          console.log('[Mobile] Wake Lock libéré');
+        } catch (e) {}
+      }
     }
   });
 
